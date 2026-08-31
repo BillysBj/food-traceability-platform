@@ -85,3 +85,31 @@ Check readiness, including PostgreSQL connectivity:
 ```powershell
 Invoke-WebRequest http://localhost:5080/health/ready
 ```
+
+## API security baseline
+
+Every API response includes these transport-level security headers:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+- `X-Permitted-Cross-Domain-Policies: none`
+- `Content-Security-Policy`
+
+The regular Content Security Policy is restrictive. Swagger uses a narrowly scoped,
+development-only policy on `/swagger` paths because Swashbuckle requires inline scripts and
+styles. The server implementation header is suppressed.
+
+CORS denies all cross-origin access by default. Configure only explicitly trusted origins as
+an array under `Cors:AllowedOrigins`; no frontend origin is preconfigured. For example, use
+the standard .NET configuration keys `Cors__AllowedOrigins__0`,
+`Cors__AllowedOrigins__1`, and so on in the deployment environment.
+
+The global fixed-window rate limiter is applied per remote IP address. Its defaults are 100
+requests per 60-second window. Override them with `RateLimiting:PermitLimit` and
+`RateLimiting:WindowSeconds`, or the environment variables
+`RateLimiting__PermitLimit` and `RateLimiting__WindowSeconds`. Requests rejected by the
+limiter receive an HTTP 429 Problem Details response. `/health` and `/health/ready` are
+exempt so monitoring cannot lock itself out.
+
+HTTPS redirection and HSTS are enabled only outside the `Development` environment.

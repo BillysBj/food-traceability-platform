@@ -68,7 +68,8 @@ public sealed class ApiFoundationTests
         await using var factory = new ApiWebApplicationFactory(Environments.Production);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
         });
 
         using var response = await client.GetAsync(path, CancellationToken.None);
