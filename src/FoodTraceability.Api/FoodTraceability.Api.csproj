@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Identity\FoodTraceability.Modules.Identity.Infrastructure\FoodTraceability.Modules.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Organizations\FoodTraceability.Modules.Organizations.Infrastructure\FoodTraceability.Modules.Organizations.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\FoodTraceability.Modules.Catalog.Infrastructure\FoodTraceability.Modules.Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Traceability\FoodTraceability.Modules.Traceability.Infrastructure\FoodTraceability.Modules.Traceability.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Quality\FoodTraceability.Modules.Quality.Infrastructure\FoodTraceability.Modules.Quality.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Documents\FoodTraceability.Modules.Documents.Infrastructure\FoodTraceability.Modules.Documents.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Logistics\FoodTraceability.Modules.Logistics.Infrastructure\FoodTraceability.Modules.Logistics.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\PublicTrace\FoodTraceability.Modules.PublicTrace.Infrastructure\FoodTraceability.Modules.PublicTrace.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Audit\FoodTraceability.Modules.Audit.Infrastructure\FoodTraceability.Modules.Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Industries\OliveOil\FoodTraceability.Modules.Industries.OliveOil.Infrastructure\FoodTraceability.Modules.Industries.OliveOil.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

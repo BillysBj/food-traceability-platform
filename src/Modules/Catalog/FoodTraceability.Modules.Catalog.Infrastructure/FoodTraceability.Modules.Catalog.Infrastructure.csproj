@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\FoodTraceability.Modules.Catalog.Application\FoodTraceability.Modules.Catalog.Application.csproj" />
+    <ProjectReference Include="..\FoodTraceability.Modules.Catalog.Domain\FoodTraceability.Modules.Catalog.Domain.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\FoodTraceability.BuildingBlocks\FoodTraceability.BuildingBlocks.csproj" />
+  </ItemGroup>
+</Project>
