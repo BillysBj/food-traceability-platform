@@ -271,7 +271,7 @@ Später: `sensor_device`, `sensor_measurement`.
 Öffentliche API:
 
 ```text
-GET /api/public/trace/{token}
+GET /api/public/v1/trace/{token}
 ```
 
 Token ist zufällig und getrennt von internen IDs. Sichtbare Felder werden über Public Trace Profile gesteuert.

@@ -519,8 +519,8 @@ Retailers
 Erforderliche Endpunkte:
 
 ```text
-GET /api/lots/{id}/traceability/backward
-GET /api/lots/{id}/traceability/forward
+GET /api/v1/lots/{id}/traceability/backward
+GET /api/v1/lots/{id}/traceability/forward
 ```
 
 Anforderungen:
@@ -859,7 +859,7 @@ Pilot 1: vorbereiten, nicht zwingend vollständig implementieren.
 Beispiel:
 
 ```text
-GET /api/public/trace/{publicToken}
+GET /api/public/v1/trace/{publicToken}
 ```
 
 Public Token:
@@ -1067,43 +1067,43 @@ REST-API.
 Beispiele:
 
 ```text
-POST /api/auth/login
+POST /api/v1/auth/login
 
-GET  /api/organizations
-POST /api/organizations
+GET  /api/v1/organizations
+POST /api/v1/organizations
 
-GET  /api/locations
-POST /api/locations
+GET  /api/v1/locations
+POST /api/v1/locations
 
-GET  /api/products
-POST /api/products
+GET  /api/v1/products
+POST /api/v1/products
 
-GET  /api/articles
-POST /api/articles
+GET  /api/v1/articles
+POST /api/v1/articles
 
-GET  /api/lots
-POST /api/lots
-GET  /api/lots/{id}
+GET  /api/v1/lots
+POST /api/v1/lots
+GET  /api/v1/lots/{id}
 
-POST /api/traceability/events
+POST /api/v1/traceability/events
 
-GET /api/lots/{id}/traceability/backward
-GET /api/lots/{id}/traceability/forward
+GET /api/v1/lots/{id}/traceability/backward
+GET /api/v1/lots/{id}/traceability/forward
 
-POST /api/samples
-POST /api/lab-results
+POST /api/v1/samples
+POST /api/v1/lab-results
 
-POST /api/lots/{id}/block
-POST /api/lots/{id}/release
+POST /api/v1/lots/{id}/block
+POST /api/v1/lots/{id}/release
 
-POST /api/transports
-POST /api/deliveries
+POST /api/v1/transports
+POST /api/v1/deliveries
 
-POST /api/documents
+POST /api/v1/documents
 
-POST /api/trace-codes
+POST /api/v1/trace-codes
 
-GET /api/public/trace/{code}
+GET /api/public/v1/trace/{code}
 ```
 
 Regeln:
@@ -2014,7 +2014,7 @@ Jeder geschützte Endpunkt:
 Beispiel:
 
 ```text
-POST /api/lots
+POST /api/v1/lots
 ```
 
 erfordert:
