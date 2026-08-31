@@ -93,6 +93,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTraceability.Modules.In
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTraceability.Modules.Industries.OliveOil.Infrastructure", "src\Modules\Industries\OliveOil\FoodTraceability.Modules.Industries.OliveOil.Infrastructure\FoodTraceability.Modules.Industries.OliveOil.Infrastructure.csproj", "{D8A02EB6-8EE5-466D-B315-377B60457F69}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Platform", "Platform", "{AE8919A2-495D-4D18-9D4A-9CF09BFCAD42}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTraceability.Platform.Persistence", "src\Platform\FoodTraceability.Platform.Persistence\FoodTraceability.Platform.Persistence.csproj", "{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodTraceability.Api", "src\FoodTraceability.Api\FoodTraceability.Api.csproj", "{A17B5F89-4E68-442F-B323-92C1E73A6E93}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
@@ -113,6 +117,18 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|x64.Build.0 = Release|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB}.Release|x86.Build.0 = Release|Any CPU
 		{A7B35DA9-BF91-424B-A434-BCCED3591A43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A7B35DA9-BF91-424B-A434-BCCED3591A43}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7B35DA9-BF91-424B-A434-BCCED3591A43}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -538,6 +554,8 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{AE8919A2-495D-4D18-9D4A-9CF09BFCAD42} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F3578C1C-A14C-45A7-9228-B5E7929AD5EB} = {AE8919A2-495D-4D18-9D4A-9CF09BFCAD42}
 		{90298CBA-BD6F-3A0A-69D5-97CAD7B05E7E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A7B35DA9-BF91-424B-A434-BCCED3591A43} = {90298CBA-BD6F-3A0A-69D5-97CAD7B05E7E}
 		{EC447DCF-ABFA-6E24-52A5-D7FD48A5C558} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}

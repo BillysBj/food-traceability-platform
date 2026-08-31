@@ -15,6 +15,7 @@ public sealed class SolutionStructureTests
         {
             "src/FoodTraceability.Api/FoodTraceability.Api.csproj",
             "src/BuildingBlocks/FoodTraceability.BuildingBlocks/FoodTraceability.BuildingBlocks.csproj",
+            "src/Platform/FoodTraceability.Platform.Persistence/FoodTraceability.Platform.Persistence.csproj",
             "src/Modules/Identity/FoodTraceability.Modules.Identity.Domain/FoodTraceability.Modules.Identity.Domain.csproj",
             "src/Modules/Identity/FoodTraceability.Modules.Identity.Application/FoodTraceability.Modules.Identity.Application.csproj",
             "src/Modules/Identity/FoodTraceability.Modules.Identity.Infrastructure/FoodTraceability.Modules.Identity.Infrastructure.csproj",

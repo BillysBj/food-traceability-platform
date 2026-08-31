@@ -1,5 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Platform\FoodTraceability.Platform.Persistence\FoodTraceability.Platform.Persistence.csproj" />
     <ProjectReference Include="..\Modules\Identity\FoodTraceability.Modules.Identity.Infrastructure\FoodTraceability.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Organizations\FoodTraceability.Modules.Organizations.Infrastructure\FoodTraceability.Modules.Organizations.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Catalog\FoodTraceability.Modules.Catalog.Infrastructure\FoodTraceability.Modules.Catalog.Infrastructure.csproj" />
