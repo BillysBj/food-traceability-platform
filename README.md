@@ -54,3 +54,34 @@ dotnet ef migrations has-pending-model-changes --project src/Platform/FoodTracea
 ```
 
 Migrations deliberately do not run automatically when the API starts. Apply them explicitly during deployment or local setup.
+
+## Running the API
+
+Set the PostgreSQL connection string through the standard .NET configuration environment variable before starting the API:
+
+```powershell
+$env:ConnectionStrings__FoodTraceability = "Host=localhost;Port=5432;Database=<database>;Username=<user>;Password=<password>"
+dotnet run --project src/FoodTraceability.Api
+```
+
+Keep the real value local and do not add it to tracked configuration. The API deliberately fails at startup when `ConnectionStrings:FoodTraceability` is missing. Starting the API does not apply migrations.
+
+In the Development environment, Swagger is available at:
+
+```text
+http://localhost:5080/swagger
+http://localhost:5080/swagger/index.html
+http://localhost:5080/swagger/v1/swagger.json
+```
+
+Check liveness without contacting external dependencies:
+
+```powershell
+Invoke-WebRequest http://localhost:5080/health
+```
+
+Check readiness, including PostgreSQL connectivity:
+
+```powershell
+Invoke-WebRequest http://localhost:5080/health/ready
+```
