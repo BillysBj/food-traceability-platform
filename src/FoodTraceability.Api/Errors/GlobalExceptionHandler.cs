@@ -16,8 +16,8 @@ public sealed class GlobalExceptionHandler(
         CancellationToken cancellationToken)
     {
         logger.LogError(
-            "An unhandled exception occurred while processing the request. Exception type: {ExceptionType}",
-            exception.GetType().FullName);
+            exception,
+            "An unhandled exception occurred while processing the request.");
 
         var problemDetails = new ProblemDetails
         {

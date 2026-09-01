@@ -101,10 +101,39 @@ public sealed class ApiFoundationTests
             ApiWebApplicationFactory.ExceptionEndpoint,
             factory.RequestCancellationToken);
         var content = await response.Content.ReadAsStringAsync(factory.RequestCancellationToken);
+        using var document = JsonDocument.Parse(content);
 
+        Assert.False(document.RootElement.TryGetProperty("detail", out _));
         Assert.DoesNotContain(ApiWebApplicationFactory.TestExceptionMessage, content, StringComparison.Ordinal);
         Assert.DoesNotContain("InvalidOperationException", content, StringComparison.Ordinal);
         Assert.DoesNotContain("stackTrace", content, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UnhandledExceptionIsLoggedOnceWithExceptionDetails()
+    {
+        const string correlationId = "fix-002-exception-correlation";
+        await using var factory = new ApiWebApplicationFactory(Environments.Production);
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            ApiWebApplicationFactory.ExceptionEndpoint);
+        request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
+
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
+        var errorEvent = Assert.Single(
+            factory.LogSink.Events,
+            logEvent => logEvent.Level == LogEventLevel.Error);
+
+        Assert.NotNull(errorEvent.Exception);
+        Assert.Contains(
+            ApiWebApplicationFactory.TestExceptionMessage,
+            errorEvent.Exception.ToString(),
+            StringComparison.Ordinal);
+        Assert.NotNull(errorEvent.Exception.StackTrace);
+        var loggedCorrelationId = Assert.IsType<ScalarValue>(
+            errorEvent.Properties[CorrelationIdMiddleware.LogPropertyName]);
+        Assert.Equal(correlationId, loggedCorrelationId.Value);
     }
 
     [Fact]
