@@ -59,6 +59,7 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 - **ID-002a** Identity Persistence Foundation
 - **ID-002** Roles
 - **ID-003** Permissions
+- **ID-003a** Role-Permission-Zuordnung
 - **ID-004** Organization Membership + optional Location Scope
 - **ID-005** Authentication
 - **ID-006** Permission-based Authorization
@@ -88,6 +89,21 @@ Scope:
 Nicht enthalten: Roles, Permissions, Organization Assignments, ASP.NET Core
 Identity, Authentifizierung, JWT, Refresh Tokens, API-Endpunkte. Die Migration
 nimmt keine künftigen Identity-Tabellen vorweg.
+
+## ID-003a – Role-Permission-Zuordnung
+
+Bewusst eingeschobener Task, im ursprünglichen Plan nicht vorgesehen.
+
+Der Rollenkatalog (ID-002) und der Permission-Katalog (ID-003) stehen
+unverbunden nebeneinander. ID-003a verbindet sie über `identity.role_permission`
+gemäß der in D-20 freigegebenen Matrix.
+
+Die Zuordnung erforderte eine eigene fachliche Freigabe und konnte deshalb
+nicht Teil von ID-003 sein: welche Rolle welche Rechte bündelt, ist eine
+Sicherheitsentscheidung und keine technische Ableitung.
+
+Nicht enthalten: Authorization Middleware, Endpoint-Policies, Claims. Diese
+folgen mit ID-006.
 
 # EPIC 2 – Organizations
 
