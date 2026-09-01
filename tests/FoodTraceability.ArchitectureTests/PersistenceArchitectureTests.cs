@@ -18,6 +18,14 @@ public sealed class PersistenceArchitectureTests
         "EFCore."
     ];
 
+    private static readonly string[] AspNetCorePackagePrefixes =
+    [
+        "Microsoft.AspNetCore.",
+        "Microsoft.Extensions.Identity."
+    ];
+
+    private const string AspNetCoreFrameworkReference = "Microsoft.AspNetCore.App";
+
     [Fact]
     public void DomainAndApplicationProjectsDoNotReferenceEfCore()
     {
@@ -44,6 +52,59 @@ public sealed class PersistenceArchitectureTests
                 $"{guardedProject.Name} transitively reaches EF Core packages: "
                 + string.Join(", ", forbiddenPackages.Select(reference => $"{reference.Name}:{reference.Package}")));
         }
+    }
+
+    [Fact]
+    public void DomainAndApplicationProjectsDoNotReachAspNetCore()
+    {
+        var projects = LoadProjectGraph();
+        var guardedProjects = projects.Values
+            .Where(project =>
+                project.Name.EndsWith(".Domain", StringComparison.Ordinal)
+                || project.Name.EndsWith(".Application", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(20, guardedProjects.Length);
+
+        foreach (var guardedProject in guardedProjects)
+        {
+            var reachableProjects = GetReachableProjects(guardedProject, projects);
+            var forbiddenReferences = reachableProjects
+                .SelectMany(project => project.FrameworkReferences
+                    .Where(reference => string.Equals(
+                        reference,
+                        AspNetCoreFrameworkReference,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(reference => $"{project.Name}:FrameworkReference:{reference}")
+                    .Concat(project.PackageReferences
+                        .Where(package => AspNetCorePackagePrefixes.Any(prefix =>
+                            package.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                        .Select(package => $"{project.Name}:PackageReference:{package}")))
+                .ToArray();
+
+            Assert.True(
+                forbiddenReferences.Length == 0,
+                $"{guardedProject.Name} transitively reaches ASP.NET Core references: "
+                + string.Join(", ", forbiddenReferences));
+        }
+    }
+
+    [Fact]
+    public void NoProjectDeclaresAspNetCoreFrameworkReference()
+    {
+        var projects = LoadProjectGraph();
+        var projectsWithAspNetCoreFrameworkReference = projects.Values
+            .Where(project => project.FrameworkReferences.Contains(
+                AspNetCoreFrameworkReference,
+                StringComparer.OrdinalIgnoreCase))
+            .Select(project => project.Name)
+            .OrderBy(static projectName => projectName, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(
+            projectsWithAspNetCoreFrameworkReference.Length == 0,
+            "Projects declaring FrameworkReference Microsoft.AspNetCore.App: "
+            + string.Join(", ", projectsWithAspNetCoreFrameworkReference));
     }
 
     [Fact]
@@ -236,12 +297,17 @@ public sealed class PersistenceArchitectureTests
                     .Select(element => element.Attribute("Include")?.Value)
                     .OfType<string>()
                     .ToArray();
+                var frameworkReferences = GetElements(document, "FrameworkReference")
+                    .Select(element => element.Attribute("Include")?.Value)
+                    .OfType<string>()
+                    .ToArray();
 
                 return new ProjectNode(
                     fullPath,
                     Path.GetFileNameWithoutExtension(fullPath),
                     projectReferences,
-                    packageReferences);
+                    packageReferences,
+                    frameworkReferences);
             })
             .ToDictionary(project => project.Path, StringComparer.OrdinalIgnoreCase);
     }
@@ -271,5 +337,6 @@ public sealed class PersistenceArchitectureTests
         string Path,
         string Name,
         string[] ProjectReferences,
-        string[] PackageReferences);
+        string[] PackageReferences,
+        string[] FrameworkReferences);
 }

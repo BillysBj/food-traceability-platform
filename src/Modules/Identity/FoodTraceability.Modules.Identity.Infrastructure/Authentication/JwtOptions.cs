@@ -1,6 +1,6 @@
 namespace FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 
-internal sealed class JwtOptions
+public sealed class JwtOptions
 {
     public const string SectionName = "Jwt";
 
