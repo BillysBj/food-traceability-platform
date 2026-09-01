@@ -4,6 +4,7 @@ using FoodTraceability.Api.HealthChecks;
 using FoodTraceability.Api.Middleware;
 using FoodTraceability.Api.OpenApi;
 using FoodTraceability.Api.Security;
+using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
@@ -27,6 +28,7 @@ builder.Services.AddDbContext<PlatformDbContext>((serviceProvider, options) =>
     options.UseFoodTraceabilityPostgres(connectionString, PlatformDbContext.MigrationsHistorySchema);
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddControllers();
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -42,6 +44,7 @@ builder.Services.AddProblemDetails(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddApiSwagger();
 builder.Services.AddApiSecurity(builder.Configuration);
+builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services
     .AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>(
@@ -64,6 +67,7 @@ app.UseExceptionHandler();
 app.UseRouting();
 app.UseCors(ApiSecurityConfiguration.CorsPolicyName);
 app.UseRateLimiter();
+app.UseAuthentication();
 
 if (app.Environment.IsDevelopment())
 {
@@ -86,6 +90,7 @@ app.MapHealthChecks(
         Predicate = static registration => registration.Tags.Contains(HealthCheckTags.Readiness)
     })
     .DisableRateLimiting();
+app.MapControllers();
 
 app.Run();
 

@@ -9,10 +9,15 @@ namespace FoodTraceability.Api.Security;
 public static class ApiSecurityConfiguration
 {
     public const string CorsPolicyName = "ConfiguredOrigins";
+    public const string AuthenticationRateLimitPolicyName = "Authentication";
 
     private const string AllowedOriginsConfigurationKey = "Cors:AllowedOrigins";
     private const string PermitLimitConfigurationKey = "RateLimiting:PermitLimit";
     private const string WindowSecondsConfigurationKey = "RateLimiting:WindowSeconds";
+    private const string AuthenticationPermitLimitConfigurationKey =
+        "RateLimiting:Authentication:PermitLimit";
+    private const string AuthenticationWindowSecondsConfigurationKey =
+        "RateLimiting:Authentication:WindowSeconds";
     private const string UnknownClientPartition = "unknown";
     private const string RateLimitErrorCode = "RATE_LIMIT_EXCEEDED";
     private const int DefaultPermitLimit = 100;
@@ -51,18 +56,15 @@ public static class ApiSecurityConfiguration
                 ?? DefaultPermitLimit;
             var windowSeconds = configuration.GetValue<int?>(WindowSecondsConfigurationKey)
                 ?? DefaultWindowSeconds;
+            var authenticationPermitLimit = configuration.GetValue<int>(
+                AuthenticationPermitLimitConfigurationKey);
+            var authenticationWindowSeconds = configuration.GetValue<int>(
+                AuthenticationWindowSecondsConfigurationKey);
 
-            if (permitLimit <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Configuration value '{PermitLimitConfigurationKey}' must be greater than zero.");
-            }
-
-            if (windowSeconds <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Configuration value '{WindowSecondsConfigurationKey}' must be greater than zero.");
-            }
+            EnsurePositive(permitLimit, PermitLimitConfigurationKey);
+            EnsurePositive(windowSeconds, WindowSecondsConfigurationKey);
+            EnsurePositive(authenticationPermitLimit, AuthenticationPermitLimitConfigurationKey);
+            EnsurePositive(authenticationWindowSeconds, AuthenticationWindowSecondsConfigurationKey);
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -76,10 +78,31 @@ public static class ApiSecurityConfiguration
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         Window = TimeSpan.FromSeconds(windowSeconds)
                     }));
+            options.AddPolicy(
+                AuthenticationRateLimitPolicyName,
+                httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? UnknownClientPartition,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = authenticationPermitLimit,
+                        QueueLimit = 0,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        Window = TimeSpan.FromSeconds(authenticationWindowSeconds)
+                    }));
             options.OnRejected = WriteRateLimitProblemDetailsAsync;
         });
 
         return services;
+    }
+
+    private static void EnsurePositive(int value, string configurationKey)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Configuration value '{configurationKey}' must be greater than zero.");
+        }
     }
 
     private static async ValueTask WriteRateLimitProblemDetailsAsync(
