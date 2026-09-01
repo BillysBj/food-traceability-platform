@@ -14,6 +14,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 
     public DbSet<Permission> Permissions => Set<Permission>();
 
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
