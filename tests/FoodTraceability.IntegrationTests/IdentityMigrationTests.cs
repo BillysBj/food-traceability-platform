@@ -23,10 +23,11 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             .GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(3, migrations.Length);
+        Assert.Equal(4, migrations.Length);
         Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddPermissions", migrations[2], StringComparison.Ordinal);
+        Assert.EndsWith("_AddRolePermissions", migrations[3], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -126,7 +127,13 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var tables = await QueryAsync(sql, static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "permission", "role", "user"],
+            [
+                PersistenceConventions.MigrationsHistoryTableName,
+                "permission",
+                "role",
+                "role_permission",
+                "user",
+            ],
             tables);
     }
 
@@ -426,6 +433,293 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
+    public async Task RolePermissionTableExistsWithExpectedColumns()
+    {
+        const string sql = """
+            SELECT column_name, is_nullable, data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'identity'
+              AND table_name = 'role_permission'
+            ORDER BY ordinal_position;
+            """;
+
+        var columns = await QueryAsync(
+            sql,
+            static reader => new DatabaseColumn(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [
+                new DatabaseColumn("role_id", "NO", "uuid", null),
+                new DatabaseColumn("permission_id", "NO", "uuid", null),
+            ],
+            columns);
+    }
+
+    [Fact]
+    public async Task RolePermissionHasCompositePrimaryKey()
+    {
+        const string sql = """
+            SELECT column_definition.attname
+            FROM pg_catalog.pg_constraint AS constraint_definition
+            JOIN pg_catalog.pg_class AS table_definition
+              ON table_definition.oid = constraint_definition.conrelid
+            JOIN pg_catalog.pg_namespace AS schema_definition
+              ON schema_definition.oid = table_definition.relnamespace
+            CROSS JOIN LATERAL unnest(constraint_definition.conkey)
+              WITH ORDINALITY AS key_column(attnum, ordinal_position)
+            JOIN pg_catalog.pg_attribute AS column_definition
+              ON column_definition.attrelid = table_definition.oid
+             AND column_definition.attnum = key_column.attnum
+            WHERE schema_definition.nspname = 'identity'
+              AND table_definition.relname = 'role_permission'
+              AND constraint_definition.contype = 'p'
+            ORDER BY key_column.ordinal_position;
+            """;
+
+        var columns = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Equal(["role_id", "permission_id"], columns);
+    }
+
+    [Fact]
+    public async Task RolePermissionHasForeignKeysToRoleAndPermission()
+    {
+        const string sql = """
+            SELECT source_column.attname,
+                   target_table.relname,
+                   target_column.attname,
+                   CASE foreign_key.confdeltype
+                       WHEN 'a' THEN 'NO ACTION'
+                       WHEN 'r' THEN 'RESTRICT'
+                       WHEN 'c' THEN 'CASCADE'
+                       WHEN 'n' THEN 'SET NULL'
+                       WHEN 'd' THEN 'SET DEFAULT'
+                   END
+            FROM pg_catalog.pg_constraint AS foreign_key
+            JOIN pg_catalog.pg_class AS source_table
+              ON source_table.oid = foreign_key.conrelid
+            JOIN pg_catalog.pg_namespace AS source_schema
+              ON source_schema.oid = source_table.relnamespace
+            JOIN pg_catalog.pg_class AS target_table
+              ON target_table.oid = foreign_key.confrelid
+            CROSS JOIN LATERAL unnest(foreign_key.conkey, foreign_key.confkey)
+              WITH ORDINALITY AS key_pair(source_attnum, target_attnum, ordinal_position)
+            JOIN pg_catalog.pg_attribute AS source_column
+              ON source_column.attrelid = source_table.oid
+             AND source_column.attnum = key_pair.source_attnum
+            JOIN pg_catalog.pg_attribute AS target_column
+              ON target_column.attrelid = target_table.oid
+             AND target_column.attnum = key_pair.target_attnum
+            WHERE source_schema.nspname = 'identity'
+              AND source_table.relname = 'role_permission'
+              AND foreign_key.contype = 'f'
+            ORDER BY source_column.attname;
+            """;
+
+        var foreignKeys = await QueryAsync(
+            sql,
+            static reader => new RolePermissionForeignKey(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3)));
+
+        Assert.Equal(2, foreignKeys.Count);
+        Assert.Equal("permission_id", foreignKeys[0].SourceColumn);
+        Assert.Equal("permission", foreignKeys[0].TargetTable);
+        Assert.Equal("permission_id", foreignKeys[0].TargetColumn);
+        Assert.True(foreignKeys[0].DeleteRule is "NO ACTION" or "RESTRICT");
+        Assert.Equal("role_id", foreignKeys[1].SourceColumn);
+        Assert.Equal("role", foreignKeys[1].TargetTable);
+        Assert.Equal("role_id", foreignKeys[1].TargetColumn);
+        Assert.True(foreignKeys[1].DeleteRule is "NO ACTION" or "RESTRICT");
+    }
+
+    [Fact]
+    public async Task SixtyEightAssignmentsAreSeeded()
+    {
+        const string sql = "SELECT COUNT(*) FROM identity.role_permission;";
+
+        var counts = await QueryAsync(sql, static reader => reader.GetInt64(0));
+
+        Assert.Equal(68, Assert.Single(counts));
+    }
+
+    [Fact]
+    public async Task EachRoleHasExactlyTheApprovedPermissions()
+    {
+        const string sql = """
+            SELECT role.code, permission.code
+            FROM identity.role_permission AS role_permission
+            JOIN identity.role AS role
+              ON role.role_id = role_permission.role_id
+            JOIN identity.permission AS permission
+              ON permission.permission_id = role_permission.permission_id
+            ORDER BY role.code, permission.code;
+            """;
+
+        var assignments = await QueryAsync(
+            sql,
+            static reader => new SeededRolePermission(reader.GetString(0), reader.GetString(1)));
+        var actual = assignments
+            .GroupBy(assignment => assignment.RoleCode, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(assignment => assignment.PermissionCode).ToArray(),
+                StringComparer.Ordinal);
+        var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["PLATFORM_ADMIN"] =
+            [
+                "organization.manage",
+                "organization.read",
+                "permission.read",
+                "product.create",
+                "product.read",
+                "product.update",
+                "role.read",
+                "user.manage",
+                "user.read",
+            ],
+            ["ORGANIZATION_ADMIN"] =
+            [
+                "organization.manage",
+                "organization.read",
+                "role.read",
+                "user.manage",
+                "user.read",
+            ],
+            ["PRODUCER"] =
+            [
+                "document.read",
+                "document.upload",
+                "lot.create",
+                "lot.read",
+                "lot.update",
+                "product.read",
+                "trace.event.create",
+                "trace.read",
+            ],
+            ["PROCESSOR"] =
+            [
+                "document.read",
+                "document.upload",
+                "lot.create",
+                "lot.read",
+                "lot.update",
+                "product.read",
+                "trace.event.create",
+                "trace.read",
+            ],
+            ["BOTTLER"] =
+            [
+                "document.read",
+                "document.upload",
+                "lot.create",
+                "lot.read",
+                "lot.update",
+                "product.read",
+                "trace.event.create",
+                "trace.read",
+            ],
+            ["QUALITY_MANAGER"] =
+            [
+                "document.read",
+                "document.upload",
+                "lot.read",
+                "quality.block",
+                "quality.read",
+                "quality.release",
+                "quality.sample.create",
+                "trace.read",
+            ],
+            ["LABORATORY"] =
+            [
+                "document.read",
+                "document.upload",
+                "lot.read",
+                "quality.read",
+                "quality.result.create",
+            ],
+            ["LOGISTICS"] =
+            [
+                "delivery.create",
+                "delivery.read",
+                "document.read",
+                "document.upload",
+                "lot.read",
+                "trace.read",
+                "transport.create",
+                "transport.read",
+            ],
+            ["RETAILER"] =
+            [
+                "delivery.read",
+                "document.read",
+                "lot.read",
+                "trace.read",
+            ],
+            ["AUDITOR"] =
+            [
+                "audit.read",
+                "document.read",
+                "lot.read",
+                "quality.read",
+                "trace.read",
+            ],
+        };
+
+        Assert.Equal(
+            expected.Keys.Order(StringComparer.Ordinal),
+            actual.Keys.Order(StringComparer.Ordinal));
+
+        foreach (var (roleCode, expectedPermissions) in expected)
+        {
+            Assert.Equal(expectedPermissions, actual[roleCode]);
+        }
+    }
+
+    [Fact]
+    public async Task EveryPermissionIsAssignedToAtLeastOneRole()
+    {
+        const string sql = """
+            SELECT permission.code
+            FROM identity.permission AS permission
+            LEFT JOIN identity.role_permission AS role_permission
+              ON role_permission.permission_id = permission.permission_id
+            WHERE role_permission.permission_id IS NULL
+            ORDER BY permission.code;
+            """;
+
+        var unassignedPermissionCodes = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Empty(unassignedPermissionCodes);
+    }
+
+    [Fact]
+    public async Task NoOrphanedRolePermissionRowsExist()
+    {
+        const string sql = """
+            SELECT COUNT(*)
+            FROM identity.role_permission AS role_permission
+            LEFT JOIN identity.role AS role
+              ON role.role_id = role_permission.role_id
+            LEFT JOIN identity.permission AS permission
+              ON permission.permission_id = role_permission.permission_id
+            WHERE role.role_id IS NULL
+               OR permission.permission_id IS NULL;
+            """;
+
+        var counts = await QueryAsync(sql, static reader => reader.GetInt64(0));
+
+        Assert.Equal(0, Assert.Single(counts));
+    }
+
+    [Fact]
     public async Task IdentityMigrationsCreateNoUnexpectedTables()
     {
         const string sql = """
@@ -438,7 +732,13 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var tables = await QueryAsync(sql, static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "permission", "role", "user"],
+            [
+                PersistenceConventions.MigrationsHistoryTableName,
+                "permission",
+                "role",
+                "role_permission",
+                "user",
+            ],
             tables);
     }
 
@@ -524,4 +824,12 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     private sealed record SeededRole(string Code, Guid Id);
 
     private sealed record SeededPermission(string Code, Guid Id);
+
+    private sealed record RolePermissionForeignKey(
+        string SourceColumn,
+        string TargetTable,
+        string TargetColumn,
+        string DeleteRule);
+
+    private sealed record SeededRolePermission(string RoleCode, string PermissionCode);
 }

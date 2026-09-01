@@ -46,6 +46,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-17 | Default Role Seeding und `role.code` | ENTSCHIEDEN |
 | D-18 | Kanonische Permission-Liste Pilot 1 v1 | ENTSCHIEDEN |
 | D-19 | Collation-Strategie | ENTSCHIEDEN |
+| D-20 | Role-Permission-Matrix Pilot 1 v1 | ENTSCHIEDEN |
 
 ---
 
@@ -403,6 +404,120 @@ in DOCS-002 als D-19 konsolidiert.
 
 ---
 
+## D-20 – Role-Permission-Matrix Pilot 1 v1
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Setzt voraus:** D-16 (globaler Rollenkatalog), D-17 (Rollen), D-18 (Permissions)
+
+Jede Zuordnung ist aus den Rollenbeschreibungen in Master Specification 5.2
+abgeleitet. Grundprinzip ist Least Privilege: ein Recht wird nur vergeben, wenn
+die Rolle es für ihre Aufgabe tatsächlich benötigt.
+
+**Grundsatz:** Rollen-Permissions definieren ausschließlich **Fähigkeiten**.
+Tenant-/Organization-Scope, Entity-Zugriff und fachliche Zustandsregeln müssen
+zusätzlich durchgesetzt werden. **Eine Permission allein darf niemals
+organisationsübergreifenden Zugriff ermöglichen.**
+
+Privilegiert und daher besonders zu prüfen: `organization.manage`,
+`user.manage`, `lot.update`, `quality.result.create`, `quality.release`,
+`quality.block`, `audit.read`.
+
+### PlatformAdmin (9)
+```text
+organization.read  organization.manage
+user.read          user.manage
+role.read          permission.read
+product.read       product.create      product.update
+```
+Plattformadministration und Pflege des globalen Produktkatalogs.
+**Bewusst ohne Zugriff auf fachliche Kundendaten** (OPEN-A): kein `lot.read`,
+`trace.read`, `quality.read` oder `audit.read` aufgrund der Plattformrolle.
+Ein späterer Supportzugriff muss separat und auditierbar modelliert werden.
+
+### OrganizationAdmin (5)
+```text
+organization.read  organization.manage
+user.read          user.manage
+role.read
+```
+Benutzer, Standorte und Einstellungen der **eigenen** Organisation.
+Kein Schreibzugriff auf globale Produktstammdaten (OPEN-B).
+Kein `audit.read` in Pilot 1 (OPEN-F).
+
+### Producer (8), Processor (8), Bottler (8) – identisch
+```text
+product.read
+lot.read           lot.create          lot.update
+trace.read         trace.event.create
+document.read      document.upload
+```
+Erzeugung und Transformation von Lots samt zugehöriger Events und Dokumente.
+
+### QualityManager (8)
+```text
+lot.read           trace.read
+quality.read       quality.sample.create
+quality.release    quality.block
+document.read      document.upload
+```
+**Bewusst ohne `quality.result.create`:** Laborwerte einzutragen ist Aufgabe
+des Laboratory. Wer freigibt, erzeugt nicht die Messwerte.
+
+### Laboratory (5)
+```text
+lot.read
+quality.read       quality.result.create
+document.read      document.upload
+```
+Nur Ergebniserfassung. Ohne `quality.release` und `quality.block`.
+
+### Logistics (8)
+```text
+lot.read           trace.read
+transport.read     transport.create
+delivery.read      delivery.create
+document.read      document.upload
+```
+
+### Retailer (4)
+```text
+lot.read           trace.read          delivery.read      document.read
+```
+
+### Auditor (5)
+```text
+lot.read           trace.read          quality.read
+document.read      audit.read
+```
+Ausschließlich lesend.
+
+### Auflösung der offenen Punkte
+
+- **OPEN-A** PlatformAdmin erhält standardmäßig keinen Zugriff auf fachliche
+  Kundendaten.
+- **OPEN-B** Der Pilot-1-Produktkatalog ist global. PlatformAdmin erhält
+  `product.create` und `product.update`; OrganizationAdmin keinen Schreibzugriff.
+  Organisationsspezifische Artikel/SKUs werden später separat behandelt.
+- **OPEN-C** Producer, Processor und Bottler erhalten `lot.update`. Diese
+  Permission ist später **zwingend durch Domain-Regeln einzuschränken**: nur
+  erlaubte Felder beziehungsweise bearbeitbare Zustände, keine Umschreibung
+  bereits fachlich verwendeter oder finalisierter Historie. Danach gelten
+  append-orientierte Korrekturen (BR-008).
+- **OPEN-D** `document.upload` erhalten Producer, Processor, Bottler,
+  QualityManager, Laboratory, Logistics.
+- **OPEN-E** `document.read` erhalten zusätzlich Retailer und Auditor.
+- **OPEN-F** OrganizationAdmin erhält in Pilot 1 kein `audit.read`.
+
+**Summe:** 68 Zuordnungen. Alle 26 Permissions aus D-18 sind mindestens einer
+Rolle zugeordnet.
+
+**Ableitung:** PlatformAdmin erhält `product.read` als notwendige Ergänzung zu
+`product.create`/`product.update` — Katalogpflege ohne Lesezugriff wäre nicht
+durchführbar. Diese Ergänzung ist nicht ausdrücklich freigegeben worden,
+sondern eine Folgerung aus OPEN-B.
+
+---
+
 ## Nächste freie ID
 
-`D-20`
+`D-21`
