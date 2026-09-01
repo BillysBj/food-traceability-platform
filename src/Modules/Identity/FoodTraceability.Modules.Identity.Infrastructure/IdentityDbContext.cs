@@ -10,6 +10,10 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 
     public DbSet<User> Users => Set<User>();
 
+    public DbSet<UserCredential> UserCredentials => Set<UserCredential>();
+
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     public DbSet<Role> Roles => Set<Role>();
 
     public DbSet<Permission> Permissions => Set<Permission>();

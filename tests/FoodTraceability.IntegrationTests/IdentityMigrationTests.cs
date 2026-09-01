@@ -23,12 +23,13 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             .GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(5, migrations.Length);
+        Assert.Equal(6, migrations.Length);
         Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddPermissions", migrations[2], StringComparison.Ordinal);
         Assert.EndsWith("_AddRolePermissions", migrations[3], StringComparison.Ordinal);
         Assert.EndsWith("_AddOrganizationMemberships", migrations[4], StringComparison.Ordinal);
+        Assert.EndsWith("_AddUserCredentialsAndRefreshTokens", migrations[5], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -135,9 +136,11 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
                 "organization_role_assignment",
                 "permission",
                 "platform_role_assignment",
+                "refresh_token",
                 "role",
                 "role_permission",
                 "user",
+                "user_credential",
             ],
             tables);
     }
@@ -749,9 +752,11 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
                 "organization_role_assignment",
                 "permission",
                 "platform_role_assignment",
+                "refresh_token",
                 "role",
                 "role_permission",
                 "user",
+                "user_credential",
             ],
             tables);
     }
