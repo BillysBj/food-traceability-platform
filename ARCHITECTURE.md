@@ -111,6 +111,17 @@ produce.*
 
 Jedes Modul besitzt seine Tabellen. Direkte Schreibzugriffe auf Tabellen anderer Module werden vermieden.
 
+### Cross-Schema-Fremdschlüssel (D-11)
+
+Schemaübergreifende Fremdschlüssel sind erlaubt, wenn sie ausschließlich auf einen Primärschlüssel oder einen eindeutigen Constraint einer fremden Tabelle zeigen. Sie dienen nur der referenziellen Integrität und begründen keine Ownership.
+
+- Direkte Schreibzugriffe eines Moduls auf fremde Tabellen bleiben strikt verboten. Fachliche Änderungen laufen ausschließlich über die Application-/API-Abstraktionen des besitzenden Moduls.
+- `ON DELETE CASCADE` über Modulgrenzen ist standardmäßig nicht zulässig; bevorzugt `RESTRICT` beziehungsweise `NO ACTION`.
+- Keine modulübergreifende EF-Navigation darf fremde Aggregate ändern.
+- Lesen fremder Daten erfolgt über Application Services, Read Models oder ausdrücklich vorgesehene Read Queries.
+
+Ein solcher Fremdschlüssel entsteht nicht über die EF-Modellkonfiguration — das würde den Typ des fremden Moduls erfordern und die Modulisolation brechen —, sondern wird in der Migration über Tabellen- und Schemanamen angelegt und per Integrationstest abgesichert.
+
 ## 6. Abhängigkeiten
 
 ```text
