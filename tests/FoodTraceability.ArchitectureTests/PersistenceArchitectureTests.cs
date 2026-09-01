@@ -192,6 +192,9 @@ public sealed class PersistenceArchitectureTests
                 var projectReferences = GetElements(document, "ProjectReference")
                     .Select(element => element.Attribute("Include")?.Value)
                     .OfType<string>()
+                    .Select(reference => reference
+                        .Replace('\\', Path.DirectorySeparatorChar)
+                        .Replace('/', Path.DirectorySeparatorChar))
                     .Select(reference => Path.GetFullPath(Path.Combine(projectDirectory, reference)))
                     .ToArray();
                 var packageReferences = GetElements(document, "PackageReference")
