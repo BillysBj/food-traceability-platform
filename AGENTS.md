@@ -14,6 +14,10 @@ WICHTIG:
 - Neue Produktgruppen sollen möglichst über Konfiguration und klar getrennte Industry Modules ergänzt werden.
 - Keine unnötigen Microservices in der ersten Phase.
 
+## Verbindlichkeit des Decision Logs
+
+`docs/DECISIONS.md` ist die Source of Truth für explizite Architektur- und Modellentscheidungen. Bei Widersprüchen gilt eine dort als `ENTSCHIEDEN` geführte Entscheidung; als `OFFEN` geführte Entscheidungen dürfen nicht durch Implementierung vorweggenommen werden.
+
 ---
 
 # 2. Technologie-Stack
@@ -220,7 +224,7 @@ Retailer
 Auditor
 ```
 
-Beispiele für Permissions:
+Kanonische Permission-Liste für Pilot 1 gemäß D-18 in `docs/DECISIONS.md`:
 
 ```text
 organization.read
@@ -228,6 +232,9 @@ organization.manage
 
 user.read
 user.manage
+
+role.read
+permission.read
 
 product.read
 product.create

@@ -1,6 +1,10 @@
 # DEVELOPMENT_PLAN.md
 # Food Traceability Platform – Entwicklungsplan
 
+## Verbindlichkeit des Decision Logs
+
+`docs/DECISIONS.md` ist die Source of Truth für explizite Architektur- und Modellentscheidungen. Bei Widersprüchen gilt eine dort als `ENTSCHIEDEN` geführte Entscheidung; als `OFFEN` geführte Entscheidungen dürfen nicht durch Implementierung vorweggenommen werden.
+
 ## 1. Arbeitsmodell
 
 ```text
@@ -34,6 +38,20 @@ Jeder Task enthält: ID, Titel, Ziel, Scope, Out of Scope, Abhängigkeiten, tech
 - **FND-005** Unit/Integration/Architecture Test Foundation
 
 Milestone: `M0 – Foundation Ready`
+
+## Hinweis zur tatsächlichen Foundation-Tasknummerierung
+
+Die tatsächliche Umsetzung weicht von der ursprünglichen EPIC-0-Liste ab:
+
+- **FND-001** Solution- und Repository-Struktur
+- **FND-002** PostgreSQL via Docker Compose
+- **FND-003** EF Core Foundation und erste Migration
+- **FND-004** OpenAPI, Problem Details, Logging, Correlation ID, Health Checks
+- **FND-005** API Security Baseline (Rate Limiting, CORS, Security Headers)
+- **FND-006** Test Foundation (Testcontainers, NetArchTest, Testisolation)
+- **CI-001** GitHub-Actions-Pipeline
+
+Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CORS und Security Headers hatten dort überhaupt keinen eigenen Task, obwohl `AGENTS.md` §38 sie verbindlich fordert.
 
 # EPIC 1 – Identity
 
