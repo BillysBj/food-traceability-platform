@@ -127,14 +127,15 @@ so branch-protection rules continue to apply.
 
 ## Running the API
 
-Set the PostgreSQL connection string through the standard .NET configuration environment variable before starting the API:
+Set the PostgreSQL connection string and a private JWT signing key of at least 32 bytes through standard .NET configuration environment variables before starting the API:
 
 ```powershell
 $env:ConnectionStrings__FoodTraceability = "Host=localhost;Port=5432;Database=<database>;Username=<user>;Password=<password>"
+$env:Jwt__SigningKey = "<a-random-secret-with-at-least-32-bytes>"
 dotnet run --project src/FoodTraceability.Api
 ```
 
-Keep the real value local and do not add it to tracked configuration. The API deliberately fails at startup when `ConnectionStrings:FoodTraceability` is missing. Starting the API does not apply migrations.
+Keep the real values local and do not add them to tracked configuration. The API deliberately fails at startup when the JWT signing key is missing or shorter than 256 bits. Starting the API does not apply migrations.
 
 In the Development environment, Swagger is available at:
 
