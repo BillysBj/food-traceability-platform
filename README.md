@@ -65,6 +65,18 @@ Check that the Identity migration matches the current model:
 dotnet ef migrations has-pending-model-changes --project src/Modules/Identity/FoodTraceability.Modules.Identity.Infrastructure --startup-project src/FoodTraceability.Api --context IdentityDbContext
 ```
 
+Apply the Organizations module migrations through its design-time factory:
+
+```sh
+dotnet ef database update --project src/Modules/Organizations/FoodTraceability.Modules.Organizations.Infrastructure --startup-project src/FoodTraceability.Api --context OrganizationsDbContext
+```
+
+Check that the Organizations migration matches the current model:
+
+```sh
+dotnet ef migrations has-pending-model-changes --project src/Modules/Organizations/FoodTraceability.Modules.Organizations.Infrastructure --startup-project src/FoodTraceability.Api --context OrganizationsDbContext
+```
+
 Migrations deliberately do not run automatically when the API starts. Apply them explicitly during deployment or local setup.
 
 ## Running the tests

@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Domain\FoodTraceability.Modules.Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Organizations\FoodTraceability.Modules.Organizations.Domain\FoodTraceability.Modules.Organizations.Domain.csproj" />
   </ItemGroup>
 </Project>
