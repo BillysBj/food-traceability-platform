@@ -23,11 +23,12 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             .GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(4, migrations.Length);
+        Assert.Equal(5, migrations.Length);
         Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddPermissions", migrations[2], StringComparison.Ordinal);
         Assert.EndsWith("_AddRolePermissions", migrations[3], StringComparison.Ordinal);
+        Assert.EndsWith("_AddOrganizationMemberships", migrations[4], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -106,6 +107,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             SELECT table_schema
             FROM information_schema.tables
             WHERE table_name = '__ef_migrations_history'
+              AND table_schema = 'identity'
             ORDER BY table_schema;
             """;
 
@@ -129,7 +131,10 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(
             [
                 PersistenceConventions.MigrationsHistoryTableName,
+                "organization_membership",
+                "organization_role_assignment",
                 "permission",
+                "platform_role_assignment",
                 "role",
                 "role_permission",
                 "user",
@@ -166,6 +171,11 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
                     "YES",
                     "character varying",
                     Role.MaximumDescriptionLength),
+                new DatabaseColumn(
+                    "assignment_scope",
+                    "NO",
+                    "character varying",
+                    RoleAssignmentScopeCodes.MaximumLength),
             ],
             columns);
     }
@@ -264,6 +274,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         context.Roles.Add(Role.Create(
             Guid.Parse("b51e253e-fbb0-4a33-a8f4-791d0ebc50f1"),
             RoleCode.Create("PRODUCER"),
+            RoleAssignmentScope.Organization,
             "DuplicateProducer"));
 
         var exception = await Assert.ThrowsAsync<DbUpdateException>(
@@ -734,7 +745,10 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(
             [
                 PersistenceConventions.MigrationsHistoryTableName,
+                "organization_membership",
+                "organization_role_assignment",
                 "permission",
+                "platform_role_assignment",
                 "role",
                 "role_permission",
                 "user",

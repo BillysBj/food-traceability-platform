@@ -5,10 +5,16 @@ public sealed class Role
     public const int MaximumNameLength = 100;
     public const int MaximumDescriptionLength = 500;
 
-    private Role(Guid id, RoleCode code, string name, string? description)
+    private Role(
+        Guid id,
+        RoleCode code,
+        RoleAssignmentScope assignmentScope,
+        string name,
+        string? description)
     {
         Id = id;
         Code = code;
+        AssignmentScope = assignmentScope;
         Name = name;
         Description = description;
     }
@@ -18,11 +24,18 @@ public sealed class Role
     // This stable, language-neutral code is the future authorization key. Name is display text only.
     public RoleCode Code { get; }
 
+    public RoleAssignmentScope AssignmentScope { get; }
+
     public string Name { get; }
 
     public string? Description { get; }
 
-    public static Role Create(Guid id, RoleCode? code, string? name, string? description = null)
+    public static Role Create(
+        Guid id,
+        RoleCode? code,
+        RoleAssignmentScope? assignmentScope,
+        string? name,
+        string? description = null)
     {
         if (id == Guid.Empty)
         {
@@ -34,9 +47,16 @@ public sealed class Role
             throw new IdentityDomainException("Role code must be provided.");
         }
 
+        if (assignmentScope is not RoleAssignmentScope.Platform
+            and not RoleAssignmentScope.Organization)
+        {
+            throw new IdentityDomainException("Role assignment scope must be provided and valid.");
+        }
+
         return new Role(
             id,
             code,
+            assignmentScope.Value,
             NormalizeName(name),
             NormalizeDescription(description));
     }
