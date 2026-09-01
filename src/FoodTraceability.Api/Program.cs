@@ -1,5 +1,6 @@
 using FoodTraceability.Api;
 using FoodTraceability.Api.Errors;
+using FoodTraceability.Api.HealthChecks;
 using FoodTraceability.Api.Middleware;
 using FoodTraceability.Api.OpenApi;
 using FoodTraceability.Api.Security;
@@ -43,7 +44,7 @@ builder.Services.AddApiSwagger();
 builder.Services.AddApiSecurity(builder.Configuration);
 builder.Services
     .AddHealthChecks()
-    .AddDbContextCheck<PlatformDbContext>(
+    .AddCheck<DatabaseHealthCheck>(
         "database",
         tags: [HealthCheckTags.Readiness]);
 
