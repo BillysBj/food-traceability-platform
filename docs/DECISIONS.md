@@ -49,6 +49,9 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-20 | Role-Permission-Matrix Pilot 1 v1 | ENTSCHIEDEN |
 | D-21 | Zuweisbarkeit von Rollen (assignment_scope) | ENTSCHIEDEN |
 | D-22 | Membership- und Rollenzuweisungsmodell | ENTSCHIEDEN |
+| D-23 | Umfang der ASP.NET Core Identity-Nutzung | ENTSCHIEDEN |
+| D-24 | Token- und Login-Parameter | ENTSCHIEDEN |
+| D-25 | Startverhalten bei fehlender Datenbankkonfiguration | OFFEN |
 
 ---
 
@@ -292,6 +295,8 @@ Node-Toolchain nicht innerhalb von `src/` liegt.
 User-Domain-Modell auf. Ein Benutzer hat unter Umständen gar kein lokales
 Passwort; Credentials gehören zur Authentifizierung, nicht zur
 Kernidentität.
+
+**Präzisiert durch:** D-23 – Umfang der ASP.NET Core Identity-Nutzung.
 
 ---
 
@@ -607,12 +612,81 @@ Zuweisungen getrennt modelliert werden. Getrennte Tabellen setzen das
 strukturell durch: eine organisationsübergreifende Zuweisung ist nicht
 darstellbar, statt nur durch eine Prüfung verboten zu sein.
 
-**Offener Punkt:** Der Bezug von `identity.organization_membership` auf
-`org.organization` ist ein schemaübergreifender Fremdschlüssel. D-11 ist noch
-OFFEN und muss vor ID-004 entschieden werden.
+**Erledigt:** Der Bezug von `identity.organization_membership` auf
+`org.organization` ist ein schemaübergreifender Fremdschlüssel. Die dafür
+nötige Regel ist mit D-11 entschieden, ID-004 ist umgesetzt.
+
+---
+
+## D-23 – Umfang der ASP.NET Core Identity-Nutzung
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Betrifft:** ID-005a, ID-005b, ID-006
+**Präzisiert:** D-13
+
+Das **Datenmodell** von ASP.NET Core Identity wird nicht verwendet:
+
+- kein `IdentityUser` und keine davon abgeleitete Entität
+- kein `UserManager`, kein `SignInManager`, kein `RoleManager`
+- keine `AspNet*`-Tabellen
+
+Maßgeblich bleibt das eigene Modell aus D-16 bis D-22.
+
+Verwendet werden darf der Passwort-Hasher `IPasswordHasher<T>` aus
+`Microsoft.Extensions.Identity.Core` — **ausschließlich als Implementierung in
+der Infrastructure-Schicht**. Sein Namespace ist `Microsoft.AspNetCore.Identity`,
+und `TypeDependencyArchitectureTests` verbietet Abhängigkeiten auf
+`Microsoft.AspNetCore.*` in Domain und Application. Die Abstraktion dafür wird
+erst eingeführt, wenn sie gebraucht wird, nicht vorab.
+
+**Begründung:** D-13 nennt als ersten Punkt „ASP.NET Core Identity“, ohne den
+Umfang zu benennen. Als vollständiges Datenmodell gelesen stünde das im
+Widerspruch zur Auswirkung von D-13 selbst — dort ist festgehalten, dass
+Credentials nicht zur Kernidentität gehören — und zum eigenen Rollenmodell.
+
+---
+
+## D-24 – Token- und Login-Parameter
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Betrifft:** ID-005b
+
+- Access Token (JWT): **15 Minuten** Gültigkeit
+- Refresh Token: **14 Tage** Gültigkeit
+- Rotation bei **jeder** erfolgreichen Verwendung eines Refresh Tokens
+- Der JWT enthält Identität, aber **keine Rollen, Permissions oder
+  Organizations**. Berechtigungen werden serverseitig aufgelöst.
+- Login liefert für unbekannten Benutzer und für falsches Passwort
+  **denselben** Fehler.
+- Login erhält einen deutlich strengeren Rate-Limit-Schutz als der globale
+  Limiter, ausdrücklich **nicht rein IP-basiert**.
+- Ein fehlender oder ungültiger JWT-Signaturschlüssel führt beim Start zu
+  **Fail Fast**. Es gibt keinen eingebauten Ersatzschlüssel.
+
+**Begründung:** Bei 15 Minuten Gültigkeit bliebe ein Rechteentzug bis zu
+15 Minuten wirkungslos, wenn Berechtigungen im Token stünden. Für den
+Signaturschlüssel gibt es keinen sicheren Ersatzbetrieb: ein eingebauter
+Standardwert erlaubte das Fälschen beliebiger Token.
+
+---
+
+## D-25 – Startverhalten bei fehlender Datenbankkonfiguration
+
+**Status:** OFFEN
+**Betrifft:** Betrieb und Deployment der API
+
+Seit FIX-001 startet die API auch ohne konfigurierten Connection String und
+meldet `/health/ready` dauerhaft als `Unhealthy`. Offen ist, ob das so bleibt
+oder ob eine fehlende Datenbankkonfiguration den Start verhindern soll.
+Praktische Wirkung entsteht erst mit der Containerisierung der API.
+
+**Abgrenzung:** D-24 legt für den JWT-Signaturschlüssel bereits Fail Fast fest.
+Das präjudiziert diese Entscheidung nicht: dort gibt es keinen sicheren
+Ersatzbetrieb, bei fehlender Datenbank gibt es mit „nicht bereit“ dagegen einen
+definierten Zustand.
 
 ---
 
 ## Nächste freie ID
 
-`D-23`
+`D-26`
