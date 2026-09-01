@@ -47,6 +47,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-18 | Kanonische Permission-Liste Pilot 1 v1 | ENTSCHIEDEN |
 | D-19 | Collation-Strategie | ENTSCHIEDEN |
 | D-20 | Role-Permission-Matrix Pilot 1 v1 | ENTSCHIEDEN |
+| D-21 | Zuweisbarkeit von Rollen (assignment_scope) | ENTSCHIEDEN |
+| D-22 | Membership- und Rollenzuweisungsmodell | ENTSCHIEDEN |
 
 ---
 
@@ -518,6 +520,75 @@ sondern eine Folgerung aus OPEN-B.
 
 ---
 
+## D-21 – Zuweisbarkeit von Rollen (assignment_scope)
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Setzt voraus:** D-05, D-17
+
+`identity.role` erhält ein explizites Feld `assignment_scope` mit den Werten
+`PLATFORM` und `ORGANIZATION`. Es legt fest, ob eine Rolle plattformweit oder
+ausschließlich organisationsgebunden zuweisbar ist.
+
+**Ausschließlich `PLATFORM_ADMIN` ist plattformweit zuweisbar.** Die übrigen
+neun Rollen sind organisationsgebunden:
+
+```text
+PLATFORM       PLATFORM_ADMIN
+ORGANIZATION   ORGANIZATION_ADMIN  PRODUCER    PROCESSOR   QUALITY_MANAGER
+               LABORATORY          BOTTLER     LOGISTICS   RETAILER
+               AUDITOR
+```
+
+`AUDITOR` ist bewusst **organisationsgebunden**. Ein plattformweiter Auditor
+hätte organisationsübergreifenden Lesezugriff auf Fachdaten und würde D-02
+und D-05 berühren; das ist nicht entschieden.
+
+**Zweck:** Das Feld verhindert strukturell, dass `PLATFORM_ADMIN` einer
+einzelnen Organisation zugewiesen wird oder `PRODUCER` plattformweit.
+
+---
+
+## D-22 – Membership- und Rollenzuweisungsmodell
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Setzt voraus:** D-05, D-21
+**Blockiert durch:** D-11 (Cross-Schema-Fremdschlüssel), noch OFFEN
+
+Mitgliedschaft und Rollenzuweisung sind **unterschiedliche Konzepte**. Ein
+Benutzer darf Mitglied einer Organisation sein, ohne dass bereits eine Rolle
+existiert. Das ER-Diagramm kennt nur `identity.user_role`; dieses Modell
+ersetzt es durch drei getrennte Strukturen.
+
+**`identity.organization_membership`**
+Bildet die Mitgliedschaft eines Benutzers in einer Organisation ab.
+`user_id` und `organization_id` sind verpflichtend. Ausdrücklich getrennt von
+Rollen.
+
+**`identity.organization_role_assignment`**
+Verweist auf eine Mitgliedschaft und enthält `role_id`. `location_id` ist
+optional und bedeutet ausschließlich eine Einschränkung der Zuweisung auf
+einen Standort **innerhalb derselben Organisation**. Ist `location_id` gesetzt,
+muss der Standort zu genau dieser Organisation gehören. `location_id = NULL`
+bedeutet organisationsweiter Geltungsbereich innerhalb dieser einen
+Organisation — **niemals Plattformzugriff**.
+Zuweisbar sind hier ausschließlich Rollen mit
+`assignment_scope = ORGANIZATION` (D-21).
+
+**`identity.platform_role_assignment`**
+Enthält `user_id` und `role_id`, **keinerlei `organization_id`**. Zuweisbar
+sind ausschließlich Rollen mit `assignment_scope = PLATFORM` (D-21).
+
+**Begründung:** D-05 verlangt, dass plattformweite und organisationsgebundene
+Zuweisungen getrennt modelliert werden. Getrennte Tabellen setzen das
+strukturell durch: eine organisationsübergreifende Zuweisung ist nicht
+darstellbar, statt nur durch eine Prüfung verboten zu sein.
+
+**Offener Punkt:** Der Bezug von `identity.organization_membership` auf
+`org.organization` ist ein schemaübergreifender Fremdschlüssel. D-11 ist noch
+OFFEN und muss vor ID-004 entschieden werden.
+
+---
+
 ## Nächste freie ID
 
-`D-21`
+`D-23`

@@ -107,10 +107,32 @@ folgen mit ID-006.
 
 # EPIC 2 – Organizations
 
+- **ORG-001a** Organization- und Location-Persistence Foundation
 - **ORG-001** Organization CRUD
 - **ORG-002** Location CRUD
 - **ORG-003** Membership Management
 - **ORG-004** Tenant Isolation Integration Tests
+
+## ORG-001a – Organization- und Location-Persistence Foundation
+
+Bewusst eingeschobener Task, im ursprünglichen Plan nicht vorgesehen. Er wird
+**vor** ORG-001 ausgeführt.
+
+Grund: ID-004 (Organization Membership) verweist laut D-22 auf
+`org.organization` und `org.location`. Beide Tabellen existierten nicht, und
+ohne sie liessen sich weder Fremdschlüssel setzen noch die Regel durchsetzen,
+dass ein Standort zur selben Organisation gehören muss. Tabellen mit nackten
+UUID-Spalten ohne Fremdschlüssel anzulegen widerspricht `AGENTS.md` §36.
+
+ORG-001 („Organization CRUD") setzt Authentifizierung und Autorisierung
+voraus, die es noch nicht gibt. ORG-001a bricht diese Zirkularität auf:
+Domain-Modell und Persistenz ohne API, analog zu ID-002a.
+
+Scope: `Organization` und `Location` als Domain-Modell, `OrganizationsDbContext`,
+Schema `org` mit eigener Migration-History, erste Migration.
+
+Nicht enthalten: API, CRUD-Endpunkte, Application Services, Mitgliedschaften,
+Rollenzuweisungen.
 
 Milestone: `M2 – Organizations Ready`
 

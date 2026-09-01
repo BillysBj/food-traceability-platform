@@ -1,4 +1,5 @@
 using FoodTraceability.Modules.Identity.Infrastructure;
+using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -12,11 +13,15 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     private PostgreSqlContainer? _container;
     private string? _identityConnectionString;
+    private string? _organizationsConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
 
     public string IdentityConnectionString => _identityConnectionString
         ?? throw new InvalidOperationException("The Identity test database is not initialized.");
+
+    public string OrganizationsConnectionString => _organizationsConnectionString
+        ?? throw new InvalidOperationException("The Organizations test database is not initialized.");
 
     public async Task InitializeAsync()
     {
@@ -34,6 +39,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             _identityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_identity_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _organizationsConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_organizations_tests_{Guid.NewGuid():N}",
                 timeout.Token);
         }
         catch (Exception exception)
@@ -57,6 +65,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             await using var identityContext = CreateIdentityDbContext();
             await identityContext.Database.MigrateAsync(timeout.Token);
+
+            await using var organizationsContext = CreateOrganizationsDbContext();
+            await organizationsContext.Database.MigrateAsync(timeout.Token);
         }
         catch
         {
@@ -90,6 +101,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             IdentityDbContext.Schema);
 
         return new IdentityDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            OrganizationsConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
     }
 
     private async Task<string> CreateDatabaseAsync(
