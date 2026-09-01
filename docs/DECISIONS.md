@@ -1,0 +1,408 @@
+# DECISIONS.md
+# Food Traceability Platform – Decision Log
+
+Dieses Dokument ist ab DOCS-002 die **Source of Truth für explizite
+Architektur- und Modellentscheidungen**.
+
+Bei Widersprüchen zwischen diesem Dokument und `AGENTS.md`,
+`ARCHITECTURE.md`, `DEVELOPMENT_PLAN.md`, `docs/MASTER_SPECIFICATION.docx`
+oder `docs/MASTER_ER_DIAGRAM.drawio` gilt **dieses Dokument**, sofern die
+Entscheidung hier als `ENTSCHIEDEN` geführt wird.
+
+## Regeln für dieses Log
+
+- Jede Entscheidung erhält eine **fortlaufende, nie wiederverwendete** ID
+  (`D-01`, `D-02`, …). Eine einmal vergebene Nummer wird niemals einem
+  anderen Sachverhalt zugewiesen, auch nicht nach Verwerfen der Entscheidung.
+- Status ist entweder `ENTSCHIEDEN` oder `OFFEN`.
+- `OFFEN` bedeutet: die Entscheidung ist noch nicht getroffen. Kein Agent darf
+  sie durch Implementierung vorwegnehmen. Betroffene Tasks nennen sie
+  ausdrücklich als blockierend.
+- Eine Entscheidung wird nicht gelöscht. Wird sie revidiert, bleibt der
+  Eintrag bestehen und verweist auf die ablösende Entscheidung.
+- Neue Entscheidungen werden **am Ende** angehängt. Die nächste freie Nummer
+  steht unten unter „Nächste freie ID".
+
+## Übersicht
+
+| ID | Titel | Status |
+|----|-------|--------|
+| D-01 | Lot-Eigentum bei Organisationswechsel | OFFEN |
+| D-02 | Sichtbarkeitsregel im Cross-Organisation-Trace | OFFEN |
+| D-03 | `traceable_object`-Supertyp in Pilot 1 | OFFEN |
+| D-04 | `organization_id` als durchgängige Tenant-Spalte | ENTSCHIEDEN |
+| D-05 | Modellierung plattformweiter Rechte | ENTSCHIEDEN |
+| D-06 | API-Pfadpräfix und Versionierung | ENTSCHIEDEN |
+| D-07 | Verbindlichkeit und Umfang von i18n | OFFEN |
+| D-08 | Semantik von `trace.lot.quantity` | OFFEN |
+| D-09 | Einheitenkonvertierung (BR-003) | OFFEN |
+| D-10 | Zukunft von `trace.object_relation` | OFFEN |
+| D-11 | Regel für Cross-Schema-Fremdschlüssel | OFFEN |
+| D-12 | Ablageort des Frontends | OFFEN |
+| D-13 | Authentifizierungs- und Token-Modell | ENTSCHIEDEN |
+| D-14 | Zielplattform und Versionspinning | ENTSCHIEDEN |
+| D-15 | Public Trace Identifier Naming | OFFEN |
+| D-16 | Custom Organization Roles | ENTSCHIEDEN |
+| D-17 | Default Role Seeding und `role.code` | ENTSCHIEDEN |
+| D-18 | Kanonische Permission-Liste Pilot 1 v1 | ENTSCHIEDEN |
+| D-19 | Collation-Strategie | ENTSCHIEDEN |
+
+---
+
+## D-01 – Lot-Eigentum bei Organisationswechsel
+
+**Status:** OFFEN
+**Blockiert:** TRC-003, TRC-008, LOG-003, ORG-004
+
+`trace.lot.organization_id` zusammen mit `UNIQUE (organization_id, lot_number)`
+impliziert Eigentum. Die Pilot-Kette Producer → Mill → Bottler → Retailer
+überschreitet zwingend Organisationsgrenzen. Kein Dokument legt fest, ob beim
+`RECEIVE` ein neues Lot der empfangenden Organisation entsteht oder ob
+`organization_id` wechselt.
+
+**Optionen:** (a) neues Lot pro Organisation, verknüpft über ein
+`RECEIVE`-Event; (b) `organization_id` wandert mit dem Lot; (c) Lot bleibt beim
+Erzeuger, Empfänger erhält einen Lese-Grant.
+
+**Empfehlung bis zur Klärung:** (a) – nutzt ausschließlich den bereits
+definierten Event-Mechanismus und ist mit D-04 konfliktfrei.
+
+---
+
+## D-02 – Sichtbarkeitsregel im Cross-Organisation-Trace
+
+**Status:** OFFEN
+**Blockiert:** TRC-010, TRC-011, TRC-016, PUB-003, PUB-004
+
+Master Specification 5.4 verweist auf eine „relationship/trace disclosure
+rule", die in keinem Dokument existiert. Backward Trace liefert per Definition
+Lots fremder Organisationen; welche Felder ein nachgelagerter Partner sehen
+darf, ist ungeklärt.
+
+**Empfehlung bis zur Klärung:** Traversierung endet an der
+Organisationsgrenze, fremde Knoten erscheinen anonymisiert. Die
+Sichtbarkeitsentscheidung liegt an genau einer Stelle im Algorithmus, damit
+eine spätere Lockerung additiv möglich ist.
+
+---
+
+## D-03 – `traceable_object`-Supertyp in Pilot 1
+
+**Status:** OFFEN
+**Blockiert:** TRC-002, TRC-007, LOG-002, LOG-004, PUB-001
+
+Das ER-Diagramm führt `trace.traceable_object` als Supertyp; alle Referenzen
+laufen über `traceable_object_id`. Master Specification 6.2 und `AGENTS.md`
+§10/§20 verwenden durchgängig `lot_id`. Der Widerspruch betrifft praktisch
+jeden Fremdschlüssel im Kernmodell.
+
+**Empfehlung bis zur Klärung:** nur `trace.lot` physisch, aber Signaturen und
+DTOs sprechen von `traceableObjectId`, damit ein Supertyp später additiv
+einziehen kann (entspricht Master Specification 4.1).
+
+---
+
+## D-04 – `organization_id` als durchgängige Tenant-Spalte
+
+**Status:** ENTSCHIEDEN (2026-08-31)
+
+`organization_id` ist die durchgängige Mandantenspalte auf **allen**
+mandantenbezogenen fachlichen Tabellen. Global gültige Referenz- und
+Konfigurationstabellen brauchen sie nicht. Beziehungen zwischen
+mandantenbezogenen Entitäten dürfen keine organisationsübergreifenden
+Verknüpfungen ermöglichen.
+
+**Begründung:** Ohne redundante Mandantenspalte ist Isolation nur über
+Join-Ketten erzwingbar; ein einziger vergessener Join wäre ein
+Cross-Tenant-Leak.
+
+**Ausnahme:** `identity.user` ist eine globale Identitätsentität. Ein Benutzer
+kann mehreren Organisationen angehören; der Organisationsbezug liegt an der
+Rollenzuweisung, nicht am Benutzer. Siehe ID-001.
+
+---
+
+## D-05 – Modellierung plattformweiter Rechte
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+
+Plattformweite Rollen und Rechte werden **explizit getrennt** von
+organisationsgebundenen Rollenzuweisungen modelliert.
+`organization_id = NULL` darf **niemals** implizit Plattformzugriff bedeuten.
+
+**Begründung:** Nullable-Spalten in Sicherheitsprädikaten sind eine häufige
+Quelle stiller Autorisierungsfehler. Plattformrechte sollen explizit und
+auditierbar sein.
+
+**Hinweis:** Eine globale Rollen*definition* bedeutet keinen globalen
+*Zugriff*. Der Katalog aus D-16 ist global; die Trennung findet in der
+Zuweisung statt.
+
+---
+
+## D-06 – API-Pfadpräfix und Versionierung
+
+**Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in DOCS-001
+
+- `/api/v1` für die authentifizierte API
+- `/api/public/v1` für öffentliche Endpunkte
+- `/swagger/v1/swagger.json` bleibt unverändert
+
+Beispiele: `POST /api/v1/auth/login`, `GET /api/v1/lots/{id}`,
+`GET /api/public/v1/trace/{code}`.
+
+**Begründung:** Master Specification 11.1 ist an dieser Stelle präziser als
+`AGENTS.md` §30, passt zum ohnehin vorgeschriebenen Swagger-Pfad, und ein
+gedruckter QR-Pfad ohne Version wäre nicht mehr änderbar.
+
+---
+
+## D-07 – Verbindlichkeit und Umfang von i18n
+
+**Status:** OFFEN
+
+Die Master Specification enthält **keine** i18n-Anforderung; das ER-Diagramm
+hat keine Translation-Tabellen. `AGENTS.md`, `ARCHITECTURE.md`,
+`DEVELOPMENT_PLAN.md` und `CLAUDE_REVIEWER.md` erklären Multilanguage dagegen
+für verbindlich.
+
+**Zu entscheiden:** Gilt der i18n-Block als Ergänzung der Spezifikation?
+Welche Entitäten erhalten `*_translation`-Tabellen? Braucht `identity.user`
+eine bevorzugte Sprache? Wie wählt Public Trace die Sprache?
+
+**Auswirkung bisher:** Seed-Daten für Rollen (D-17) und Permissions (D-18)
+lassen `description` bewusst leer, um keine englische Anzeigeprosa
+festzuschreiben, die später übersetzt werden müsste.
+
+---
+
+## D-08 – Semantik von `trace.lot.quantity`
+
+**Status:** OFFEN
+**Blockiert:** TRC-002, TRC-008
+
+Ist `quantity` die Initialmenge oder der verfügbare Restbestand? Es gibt kein
+Bilanz- oder Verbrauchsmodell, obwohl BR-011 („mass/volume balance rules")
+eines voraussetzt.
+
+**Empfehlung bis zur Klärung:** Initialmenge, unveränderlich; Bestand aus
+Events ableitbar. Passt zu BR-008 („append-oriented").
+
+---
+
+## D-09 – Einheitenkonvertierung (BR-003)
+
+**Status:** OFFEN
+
+BR-003 verlangt kompatible Einheitendimensionen. `catalog.unit` hat
+`dimension` und laut Spec 6.2 „conversion metadata where safe", aber weder ER
+noch Spec definieren eine Konvertierungsstruktur.
+
+**Empfehlung bis zur Klärung:** Pilot 1 erzwingt Dimensions- **und**
+Einheitengleichheit. Die strengere Regel lässt sich später lockern, ohne
+bereits erfasste Daten falsch werden zu lassen.
+
+---
+
+## D-10 – Zukunft von `trace.object_relation`
+
+**Status:** OFFEN
+
+`trace.object_relation` (parent/child/relation_type) existiert ausschließlich
+im ER-Diagramm. Die Abstammung ist bereits vollständig über
+`event_input`/`event_output` definiert. Zwei parallele Lineage-Quellen sind
+ein Datenintegritätsrisiko.
+
+**Empfehlung bis zur Klärung:** für Pilot 1 streichen. Falls behalten, dann
+eng begrenzt auf Behälterschachtelung und niemals für Abstammung.
+
+---
+
+## D-11 – Regel für Cross-Schema-Fremdschlüssel
+
+**Status:** OFFEN
+
+Das Modell enthält systematisch schemaübergreifende Fremdschlüssel
+(`quality.sample → trace.lot`, `olive.*_detail → trace.traceability_event`,
+`production.parameter_value → trace.traceability_event`). Das kollidiert
+wörtlich mit „keine unkontrollierten Cross-Module Writes".
+
+**Empfehlung bis zur Klärung:** Schemaübergreifende FKs sind erlaubt, wenn sie
+ausschließlich auf den Primärschlüssel einer fremden Tabelle zeigen. Lesen
+erfolgt über Application Services oder Read Models. Schreiben in fremde
+Tabellen bleibt ausnahmslos verboten.
+
+---
+
+## D-12 – Ablageort des Frontends
+
+**Status:** OFFEN
+
+Weder `src/`, `frontend/` noch `apps/web/` ist festgelegt. `I18N-001` ist im
+`DEVELOPMENT_PLAN.md` definiert, aber keinem Epic und keinem Meilenstein
+zugeordnet.
+
+**Bisherige Handhabung:** FND-001 bis FND-006 haben bewusst **keinen**
+Frontend-Ordner angelegt.
+
+**Empfehlung bis zur Klärung:** `frontend/` auf Repository-Ebene, damit die
+Node-Toolchain nicht innerhalb von `src/` liegt.
+
+---
+
+## D-13 – Authentifizierungs- und Token-Modell
+
+**Status:** ENTSCHIEDEN (2026-09-01)
+**Betrifft:** ID-005, ID-006
+
+- ASP.NET Core Identity
+- kurzlebiges JWT als Access Token
+- Refresh Tokens mit Rotation und Widerruf
+- Refresh Tokens werden **nicht im Klartext** persistiert
+- Externe OIDC-Provider müssen später integrierbar bleiben
+
+**Auswirkung:** ID-001 nimmt bewusst **kein** `password_hash` in das
+User-Domain-Modell auf. Ein Benutzer hat unter Umständen gar kein lokales
+Passwort; Credentials gehören zur Authentifizierung, nicht zur
+Kernidentität.
+
+---
+
+## D-14 – Zielplattform und Versionspinning
+
+**Status:** ENTSCHIEDEN (2026-08-31)
+
+- .NET 10 (LTS)
+- xUnit als Testframework
+- Central Package Management über `Directory.Packages.props`
+- SDK-Pinning über `global.json`
+
+---
+
+## D-15 – Public Trace Identifier Naming
+
+**Status:** OFFEN
+**Zu klären vor:** PUB-001, PUB-003
+
+Der Pfadparameter des öffentlichen Trace-Endpunkts trägt drei verschiedene
+Namen:
+
+- `AGENTS.md` §23: `{publicToken}`
+- `AGENTS.md` §30: `{code}`
+- `ARCHITECTURE.md` §15: `{token}`
+
+DOCS-001 hat ausschließlich die Pfadpräfixe vereinheitlicht (D-06), die
+Parameterbenennung bewusst **nicht**.
+
+**Historie:** Diese Entscheidung wurde zunächst als „D-07" bezeichnet; D-07
+war bereits für i18n vergeben. Verbindlich ist **D-15**.
+
+---
+
+## D-16 – Custom Organization Roles
+
+**Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in ID-002
+
+Für Pilot 1 dürfen Organisationen **keine eigenen Rollen** definieren.
+`identity.role` ist ein global definierter Rollenkatalog. Organisationsspezifische
+Rollenverwaltung ist ausdrücklich out of scope. Autorisierung erfolgt
+langfristig über Permissions; Rollen sind Permission-Bündel.
+
+**Folge:** `identity.role` trägt keine `organization_id` und keinerlei
+Organisationsbezug.
+
+**Historie:** Zunächst als „D-08" bezeichnet; D-08 war bereits für die
+Mengensemantik vergeben. Verbindlich ist **D-16**.
+
+---
+
+## D-17 – Default Role Seeding und `role.code`
+
+**Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in ID-002
+
+Die zehn Standardrollen aus Master Specification 5.2 werden deterministisch
+als System-/Seed-Daten angelegt: PlatformAdmin, OrganizationAdmin, Producer,
+Processor, QualityManager, Laboratory, Bottler, Logistics, Retailer, Auditor.
+
+`identity.role` erhält zusätzlich einen **stabilen, sprachneutralen `code`**
+in `SCREAMING_SNAKE_CASE` (`PLATFORM_ADMIN`). Der Code ist der Schlüssel, an
+dem Autorisierung hängt. **Anzeigenamen dürfen niemals für
+Autorisierungslogik verwendet werden.**
+
+Deterministisch heißt: feste, im Quellcode hinterlegte Guid-Literale,
+abgeleitet als `uuid5(DNS, "food-traceability.identity.role.<CODE>")` und
+damit unabhängig nachrechenbar. Kein `Guid.NewGuid`.
+
+**Abweichung von der Spezifikation:** Master Specification 6.2 und das
+ER-Diagramm kennen kein `role.code`. Das Feld ist eine bewusste Ergänzung
+dieser Entscheidung. Die Quelldokumente wurden nicht geändert.
+
+**Historie:** Zunächst als „D-09" bezeichnet; D-09 war bereits für die
+Einheitenkonvertierung vergeben. Verbindlich ist **D-17**.
+
+---
+
+## D-18 – Kanonische Permission-Liste Pilot 1 v1
+
+**Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in ID-003
+
+Genau diese 26 Permission-Codes gelten für Pilot 1, Version 1:
+
+```text
+organization.read        organization.manage
+user.read                user.manage
+role.read                permission.read
+product.read             product.create           product.update
+lot.read                 lot.create               lot.update
+trace.read               trace.event.create
+quality.read             quality.sample.create    quality.result.create
+quality.release          quality.block
+document.read            document.upload
+transport.read           transport.create
+delivery.read            delivery.create
+audit.read
+```
+
+Permission-Codes sind kleingeschrieben und punktgetrennt, mit mindestens zwei
+Segmenten. Sie sind stabile, sprachneutrale technische Identifikatoren;
+Autorisierung hängt ausschließlich am Code, niemals an `description` oder
+Anzeigenamen.
+
+Seed-Ids sind feste Literale, abgeleitet als
+`uuid5(DNS, "food-traceability.identity.permission.<code>")`.
+
+**`shipment.read` und `shipment.create` entfallen.** Logistics verwendet die
+fachlich getrennten Begriffe `transport.*` und `delivery.*`.
+`ARCHITECTURE.md` §8 führte `shipment.*` und wurde in DOCS-002 angeglichen.
+
+**`identity.role_permission` gehört nicht zu D-18.** Die Zuordnung von
+Permissions zu Rollen erfordert eine eigene fachliche Freigabe der
+Role-Permission-Matrix.
+
+---
+
+## D-19 – Collation-Strategie
+
+**Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in FND-003
+
+- Es wird **kein** sprachspezifischer Collation-Standard für die Plattform
+  festgelegt.
+- UTF-8 ist Pflicht.
+- Die Datenbank behält ihre Standard-Collation (`en_US.utf8`).
+- Sprachspezifische Sortierung erfolgt über **explizite ICU-Collations** dort,
+  wo sie gebraucht wird. Die Collations `en` (`en-US`) und `el` (`el-GR`)
+  existieren als deterministische ICU-Objekte in der Datenbank.
+- Weitere Sprachen sind je eine zusätzliche Migrationszeile.
+
+**Wichtig:** `datcollate` wird bei `CREATE DATABASE` festgelegt und ist danach
+nicht mehr änderbar. Für produktive Umgebungen muss die Entscheidung vor dem
+Anlegen der Datenbank fallen.
+
+**Historie:** Diese Entscheidung wurde ursprünglich ohne Nummer geführt und
+in DOCS-002 als D-19 konsolidiert.
+
+---
+
+## Nächste freie ID
+
+`D-20`
