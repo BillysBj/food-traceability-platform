@@ -63,6 +63,11 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var context = CreateDbContext();
             await context.Database.MigrateAsync(timeout.Token);
 
+            // Identity owns no Organizations entities. Its migration-level cross-schema FKs
+            // nevertheless require the referenced org tables to exist in the same database.
+            await using var identityOrganizationsContext = CreateIdentityOrganizationsDbContext();
+            await identityOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
             await using var identityContext = CreateIdentityDbContext();
             await identityContext.Database.MigrateAsync(timeout.Token);
 
@@ -108,6 +113,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             OrganizationsConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateIdentityOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            IdentityConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);

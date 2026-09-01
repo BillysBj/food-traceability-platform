@@ -24,10 +24,16 @@ public sealed class RoleTests
     {
         var code = RoleCode.Create("QUALITY_MANAGER");
 
-        var role = Role.Create(RoleId, code, "QualityManager", "Quality decisions");
+        var role = Role.Create(
+            RoleId,
+            code,
+            RoleAssignmentScope.Organization,
+            "QualityManager",
+            "Quality decisions");
 
         Assert.Equal(RoleId, role.Id);
         Assert.Equal(code, role.Code);
+        Assert.Equal(RoleAssignmentScope.Organization, role.AssignmentScope);
         Assert.Equal("QualityManager", role.Name);
         Assert.Equal("Quality decisions", role.Description);
     }
@@ -73,15 +79,28 @@ public sealed class RoleTests
     {
         var code = RoleCode.Create("AUDITOR");
 
-        var role = Role.Create(RoleId, code, "  Auditor  ");
+        var role = Role.Create(RoleId, code, RoleAssignmentScope.Organization, "  Auditor  ");
 
         Assert.Equal("Auditor", role.Name);
-        Assert.Throws<IdentityDomainException>(() => Role.Create(RoleId, code, null));
-        Assert.Throws<IdentityDomainException>(() => Role.Create(RoleId, code, string.Empty));
-        Assert.Throws<IdentityDomainException>(() => Role.Create(RoleId, code, "   "));
         Assert.Throws<IdentityDomainException>(() => Role.Create(
             RoleId,
             code,
+            RoleAssignmentScope.Organization,
+            null));
+        Assert.Throws<IdentityDomainException>(() => Role.Create(
+            RoleId,
+            code,
+            RoleAssignmentScope.Organization,
+            string.Empty));
+        Assert.Throws<IdentityDomainException>(() => Role.Create(
+            RoleId,
+            code,
+            RoleAssignmentScope.Organization,
+            "   "));
+        Assert.Throws<IdentityDomainException>(() => Role.Create(
+            RoleId,
+            code,
+            RoleAssignmentScope.Organization,
             new string('A', Role.MaximumNameLength + 1)));
     }
 
@@ -94,6 +113,7 @@ public sealed class RoleTests
         var role = Role.Create(
             RoleId,
             RoleCode.Create("PRODUCER"),
+            RoleAssignmentScope.Organization,
             "Producer",
             description);
 
@@ -106,6 +126,7 @@ public sealed class RoleTests
         var role = Role.Create(
             RoleId,
             RoleCode.Create("PRODUCER"),
+            RoleAssignmentScope.Organization,
             "Producer",
             "  Creates primary lots  ");
 
@@ -113,6 +134,7 @@ public sealed class RoleTests
         Assert.Throws<IdentityDomainException>(() => Role.Create(
             RoleId,
             RoleCode.Create("PRODUCER"),
+            RoleAssignmentScope.Organization,
             "Producer",
             new string('A', Role.MaximumDescriptionLength + 1)));
     }
@@ -123,6 +145,24 @@ public sealed class RoleTests
         Assert.Throws<IdentityDomainException>(() => Role.Create(
             Guid.Empty,
             RoleCode.Create("PRODUCER"),
+            RoleAssignmentScope.Organization,
+            "Producer"));
+    }
+
+    [Fact]
+    public void RoleRequiresAssignmentScope()
+    {
+        var code = RoleCode.Create("PRODUCER");
+
+        Assert.Throws<IdentityDomainException>(() => Role.Create(
+            RoleId,
+            code,
+            null,
+            "Producer"));
+        Assert.Throws<IdentityDomainException>(() => Role.Create(
+            RoleId,
+            code,
+            (RoleAssignmentScope)999,
             "Producer"));
     }
 }

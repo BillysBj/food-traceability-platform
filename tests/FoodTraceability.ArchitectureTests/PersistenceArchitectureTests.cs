@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using FoodTraceability.Modules.Identity.Infrastructure;
+using FoodTraceability.Modules.Organizations.Domain;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -137,6 +139,29 @@ public sealed class PersistenceArchitectureTests
             script);
     }
 
+    [Fact]
+    public void IdentityDbContextKnowsNoOrganizationsEntities()
+    {
+        var organizationsAssembly = typeof(Organization).Assembly;
+        var dbSetEntityTypes = typeof(IdentityDbContext)
+            .GetProperties()
+            .Where(property => property.PropertyType.IsGenericType)
+            .Where(property => property.PropertyType.GetGenericTypeDefinition() == typeof(DbSet<>))
+            .Select(property => property.PropertyType.GetGenericArguments()[0])
+            .ToArray();
+
+        Assert.DoesNotContain(dbSetEntityTypes, type => type.Assembly == organizationsAssembly);
+
+        using var context = CreateIdentityDbContext();
+        var mappedOrganizationsTypes = context.Model
+            .GetEntityTypes()
+            .Select(entityType => entityType.ClrType)
+            .Where(type => type.Assembly == organizationsAssembly)
+            .ToArray();
+
+        Assert.Empty(mappedOrganizationsTypes);
+    }
+
     private static PlatformDbContext CreatePlatformDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<PlatformDbContext>();
@@ -145,6 +170,16 @@ public sealed class PersistenceArchitectureTests
             PlatformDbContext.MigrationsHistorySchema);
 
         return new PlatformDbContext(optionsBuilder.Options);
+    }
+
+    private static IdentityDbContext CreateIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            "Host=localhost;Database=architecture_tests;Username=unused",
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
     }
 
     private static IReadOnlyCollection<ProjectNode> GetReachableProjects(

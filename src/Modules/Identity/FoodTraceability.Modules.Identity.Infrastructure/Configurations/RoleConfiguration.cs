@@ -12,9 +12,19 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         roleCode => roleCode.Value,
         value => RoleCode.Create(value));
 
+    private static readonly ValueConverter<RoleAssignmentScope, string> AssignmentScopeConverter =
+        new(
+            scope => RoleAssignmentScopeCodes.ToCode(scope),
+            code => RoleAssignmentScopeCodes.FromCode(code));
+
     public void Configure(EntityTypeBuilder<Role> builder)
     {
-        builder.ToTable("role", IdentityDbContext.Schema);
+        builder.ToTable(
+            "role",
+            IdentityDbContext.Schema,
+            table => table.HasCheckConstraint(
+                "ck_role_assignment_scope",
+                $"assignment_scope IN ('{RoleAssignmentScopeCodes.Platform}', '{RoleAssignmentScopeCodes.Organization}')"));
 
         builder.HasKey(role => role.Id);
 
@@ -29,6 +39,20 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         builder.HasIndex(role => role.Code)
             .IsUnique();
+
+        builder.Property(role => role.AssignmentScope)
+            .HasColumnName("assignment_scope")
+            .HasConversion(AssignmentScopeConverter)
+            .HasMaxLength(RoleAssignmentScopeCodes.MaximumLength)
+            .IsRequired();
+
+        // This alternate key is intentionally redundant with the primary key. It is the
+        // target of composite FKs that structurally enforce each role's assignment scope.
+        builder.HasAlternateKey(role => new
+        {
+            role.Id,
+            role.AssignmentScope,
+        });
 
         builder.Property(role => role.Name)
             .HasMaxLength(Role.MaximumNameLength)
@@ -47,16 +71,16 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
     {
         return
         [
-            Role.Create(StandardRoleIds.PlatformAdmin, RoleCode.Create("PLATFORM_ADMIN"), "PlatformAdmin"),
-            Role.Create(StandardRoleIds.OrganizationAdmin, RoleCode.Create("ORGANIZATION_ADMIN"), "OrganizationAdmin"),
-            Role.Create(StandardRoleIds.Producer, RoleCode.Create("PRODUCER"), "Producer"),
-            Role.Create(StandardRoleIds.Processor, RoleCode.Create("PROCESSOR"), "Processor"),
-            Role.Create(StandardRoleIds.QualityManager, RoleCode.Create("QUALITY_MANAGER"), "QualityManager"),
-            Role.Create(StandardRoleIds.Laboratory, RoleCode.Create("LABORATORY"), "Laboratory"),
-            Role.Create(StandardRoleIds.Bottler, RoleCode.Create("BOTTLER"), "Bottler"),
-            Role.Create(StandardRoleIds.Logistics, RoleCode.Create("LOGISTICS"), "Logistics"),
-            Role.Create(StandardRoleIds.Retailer, RoleCode.Create("RETAILER"), "Retailer"),
-            Role.Create(StandardRoleIds.Auditor, RoleCode.Create("AUDITOR"), "Auditor"),
+            Role.Create(StandardRoleIds.PlatformAdmin, RoleCode.Create("PLATFORM_ADMIN"), RoleAssignmentScope.Platform, "PlatformAdmin"),
+            Role.Create(StandardRoleIds.OrganizationAdmin, RoleCode.Create("ORGANIZATION_ADMIN"), RoleAssignmentScope.Organization, "OrganizationAdmin"),
+            Role.Create(StandardRoleIds.Producer, RoleCode.Create("PRODUCER"), RoleAssignmentScope.Organization, "Producer"),
+            Role.Create(StandardRoleIds.Processor, RoleCode.Create("PROCESSOR"), RoleAssignmentScope.Organization, "Processor"),
+            Role.Create(StandardRoleIds.QualityManager, RoleCode.Create("QUALITY_MANAGER"), RoleAssignmentScope.Organization, "QualityManager"),
+            Role.Create(StandardRoleIds.Laboratory, RoleCode.Create("LABORATORY"), RoleAssignmentScope.Organization, "Laboratory"),
+            Role.Create(StandardRoleIds.Bottler, RoleCode.Create("BOTTLER"), RoleAssignmentScope.Organization, "Bottler"),
+            Role.Create(StandardRoleIds.Logistics, RoleCode.Create("LOGISTICS"), RoleAssignmentScope.Organization, "Logistics"),
+            Role.Create(StandardRoleIds.Retailer, RoleCode.Create("RETAILER"), RoleAssignmentScope.Organization, "Retailer"),
+            Role.Create(StandardRoleIds.Auditor, RoleCode.Create("AUDITOR"), RoleAssignmentScope.Organization, "Auditor"),
         ];
     }
 }

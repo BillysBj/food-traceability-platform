@@ -37,7 +37,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-08 | Semantik von `trace.lot.quantity` | OFFEN |
 | D-09 | Einheitenkonvertierung (BR-003) | OFFEN |
 | D-10 | Zukunft von `trace.object_relation` | OFFEN |
-| D-11 | Regel für Cross-Schema-Fremdschlüssel | OFFEN |
+| D-11 | Regel für Cross-Schema-Fremdschlüssel | ENTSCHIEDEN |
 | D-12 | Ablageort des Frontends | OFFEN |
 | D-13 | Authentifizierungs- und Token-Modell | ENTSCHIEDEN |
 | D-14 | Zielplattform und Versionspinning | ENTSCHIEDEN |
@@ -223,17 +223,41 @@ eng begrenzt auf Behälterschachtelung und niemals für Abstammung.
 
 ## D-11 – Regel für Cross-Schema-Fremdschlüssel
 
-**Status:** OFFEN
+**Status:** ENTSCHIEDEN (2026-09-01)
 
-Das Modell enthält systematisch schemaübergreifende Fremdschlüssel
-(`quality.sample → trace.lot`, `olive.*_detail → trace.traceability_event`,
-`production.parameter_value → trace.traceability_event`). Das kollidiert
-wörtlich mit „keine unkontrollierten Cross-Module Writes".
+Schemaübergreifende Fremdschlüssel sind im modularen Monolithen **erlaubt**,
+wenn sie ausschließlich auf einen Primärschlüssel oder einen eindeutigen
+Constraint einer fremden Tabelle zeigen.
 
-**Empfehlung bis zur Klärung:** Schemaübergreifende FKs sind erlaubt, wenn sie
-ausschließlich auf den Primärschlüssel einer fremden Tabelle zeigen. Lesen
-erfolgt über Application Services oder Read Models. Schreiben in fremde
-Tabellen bleibt ausnahmslos verboten.
+**Direkte Schreibzugriffe eines Moduls auf Tabellen eines anderen Moduls
+bleiben strikt verboten.** Fachliche Änderungen an einem fremden Modul dürfen
+ausschließlich über dessen Application- oder API-Abstraktionen erfolgen.
+
+Ein Cross-Schema-Fremdschlüssel dient **nur der referenziellen Integrität** und
+begründet **keine Ownership** der referenzierten Daten.
+
+Ergänzende Regeln:
+
+- Ziel eines Cross-Schema-Fremdschlüssels muss PK oder UNIQUE sein.
+- `ON DELETE CASCADE` über Modulgrenzen ist standardmäßig nicht zulässig.
+  Bevorzugt `RESTRICT` beziehungsweise `NO ACTION`, sofern nicht ausdrücklich
+  anders entschieden.
+- Keine modulübergreifende EF-Navigation darf zum Ändern fremder Aggregate
+  verwendet werden.
+- Lesen fremder Daten erfolgt über Application Services, Read Models oder
+  ausdrücklich vorgesehene Read Queries.
+
+**Begründung:** Das Datenmodell verlangt solche Verweise an vielen Stellen —
+`quality.sample → trace.lot`, `logistics.delivery_item → trace.lot`, sämtliche
+Industry-Detailtabellen auf `trace.traceability_event`. Ein generelles Verbot
+wäre nicht durchhaltbar. Was die Modulgrenze schützt, ist das Schreibverbot,
+nicht das Leseverbot.
+
+**Praktische Folge:** Ein Fremdschlüssel auf eine Tabelle eines anderen Moduls
+kann nicht über die EF-Modellkonfiguration entstehen, weil das den Typ des
+fremden Moduls erfordern würde und die Modulisolation bräche. Er wird
+stattdessen in der Migration explizit über Tabellen- und Schemanamen angelegt
+und durch einen Integrationstest abgesichert.
 
 ---
 
