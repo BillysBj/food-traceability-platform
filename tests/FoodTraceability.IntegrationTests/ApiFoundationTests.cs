@@ -17,10 +17,10 @@ public sealed class ApiFoundationTests
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/health", CancellationToken.None);
+        using var response = await client.GetAsync("/health", factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(CancellationToken.None));
+        Assert.Equal("Healthy", await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
     }
 
     [Fact]
@@ -31,8 +31,8 @@ public sealed class ApiFoundationTests
 
         using var response = await client.GetAsync(
             "/swagger/v1/swagger.json",
-            CancellationToken.None);
-        var content = await response.Content.ReadAsStringAsync(CancellationToken.None);
+            factory.RequestCancellationToken);
+        var content = await response.Content.ReadAsStringAsync(factory.RequestCancellationToken);
         using var document = JsonDocument.Parse(content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -53,7 +53,7 @@ public sealed class ApiFoundationTests
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync(path, CancellationToken.None);
+        using var response = await client.GetAsync(path, factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
@@ -72,7 +72,7 @@ public sealed class ApiFoundationTests
             BaseAddress = new Uri("https://localhost")
         });
 
-        using var response = await client.GetAsync(path, CancellationToken.None);
+        using var response = await client.GetAsync(path, factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -85,7 +85,7 @@ public sealed class ApiFoundationTests
 
         using var response = await client.GetAsync(
             ApiWebApplicationFactory.ExceptionEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
@@ -99,8 +99,8 @@ public sealed class ApiFoundationTests
 
         using var response = await client.GetAsync(
             ApiWebApplicationFactory.ExceptionEndpoint,
-            CancellationToken.None);
-        var content = await response.Content.ReadAsStringAsync(CancellationToken.None);
+            factory.RequestCancellationToken);
+        var content = await response.Content.ReadAsStringAsync(factory.RequestCancellationToken);
 
         Assert.DoesNotContain(ApiWebApplicationFactory.TestExceptionMessage, content, StringComparison.Ordinal);
         Assert.DoesNotContain("InvalidOperationException", content, StringComparison.Ordinal);
@@ -116,7 +116,7 @@ public sealed class ApiFoundationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
 
         Assert.Equal(correlationId, GetCorrelationId(response));
     }
@@ -127,7 +127,7 @@ public sealed class ApiFoundationTests
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/health", CancellationToken.None);
+        using var response = await client.GetAsync("/health", factory.RequestCancellationToken);
 
         Assert.False(string.IsNullOrWhiteSpace(GetCorrelationId(response)));
     }
@@ -141,9 +141,9 @@ public sealed class ApiFoundationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiWebApplicationFactory.ExceptionEndpoint);
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
         using var document = JsonDocument.Parse(
-            await response.Content.ReadAsStringAsync(CancellationToken.None));
+            await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
 
         Assert.Equal(correlationId, GetCorrelationId(response));
         Assert.Equal(correlationId, document.RootElement.GetProperty("correlationId").GetString());
@@ -160,7 +160,7 @@ public sealed class ApiFoundationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiWebApplicationFactory.ExceptionEndpoint);
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
 
         Assert.Contains(factory.LogSink.Events, logEvent =>
             logEvent.Properties.TryGetValue(CorrelationIdMiddleware.LogPropertyName, out var value)
@@ -177,7 +177,7 @@ public sealed class ApiFoundationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
         var renderedLogs = string.Join(
             Environment.NewLine,
             factory.LogSink.Events.Select(logEvent => logEvent.RenderMessage()));
@@ -194,7 +194,7 @@ public sealed class ApiFoundationTests
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
         request.Headers.TryAddWithoutValidation(CorrelationIdMiddleware.HeaderName, unsafeCorrelationId);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
         var returnedCorrelationId = GetCorrelationId(response);
 
         Assert.NotEqual(unsafeCorrelationId, returnedCorrelationId);

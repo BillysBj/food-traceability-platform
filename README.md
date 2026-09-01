@@ -55,6 +55,41 @@ dotnet ef migrations has-pending-model-changes --project src/Platform/FoodTracea
 
 Migrations deliberately do not run automatically when the API starts. Apply them explicitly during deployment or local setup.
 
+## Running the tests
+
+The solution contains three test projects:
+
+- Unit tests cover isolated behavior without external services; currently they verify the
+  unit-test project configuration.
+- Integration tests cover the ASP.NET Core API foundation and apply the real EF Core
+  platform migration to PostgreSQL.
+- Architecture tests cover project/package/Compose guards and compiled type dependencies
+  between layers and modules.
+
+Run the complete test suite from the repository root:
+
+```sh
+dotnet test FoodTraceability.sln
+```
+
+Database integration tests require a running Docker Desktop or Docker Engine. They start one
+`postgres:17` Testcontainer on a random host port, initialize it with UTF-8, apply the platform
+migration, and remove the container after the test collection. The fixture uses a generated
+connection string and never reads `ConnectionStrings__FoodTraceability`, so it cannot use or
+modify the local Compose database.
+
+Run only the fast tests without Docker:
+
+```sh
+dotnet test FoodTraceability.sln --filter "Category!=Database"
+```
+
+API, unit, and architecture test classes may run in parallel because each API test owns its
+`WebApplicationFactory` and log sink and the other tests do not share mutable state. All tests
+tagged `Category=Database` belong to one xUnit collection: they share one migrated container,
+run serially, and are read-only after fixture initialization. Future database tests that mutate
+state must add transaction rollback or explicit cleanup so one test cannot affect another.
+
 ## Running the API
 
 Set the PostgreSQL connection string through the standard .NET configuration environment variable before starting the API:

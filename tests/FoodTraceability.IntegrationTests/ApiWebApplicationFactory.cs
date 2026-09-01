@@ -11,6 +11,8 @@ namespace FoodTraceability.IntegrationTests;
 
 public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
     public const string ExceptionEndpoint = "/_test/unhandled-exception";
     public const string SuccessEndpoint = "/_test/success";
     public const string TestExceptionMessage = "Synthetic failure for API integration tests.";
@@ -18,6 +20,8 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
     private readonly IReadOnlyDictionary<string, string?> _configuration;
     private readonly bool _disableHealthChecks;
     private readonly string _environment;
+    private readonly Lazy<CancellationTokenSource> _requestTimeout = new(
+        () => new CancellationTokenSource(RequestTimeout));
 
     public ApiWebApplicationFactory()
         : this(Environments.Development, null)
@@ -52,6 +56,18 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
     }
 
     public TestLogSink LogSink { get; } = new();
+
+    public CancellationToken RequestCancellationToken => _requestTimeout.Value.Token;
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && _requestTimeout.IsValueCreated)
+        {
+            _requestTimeout.Value.Dispose();
+        }
+
+        base.Dispose(disposing);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

@@ -19,7 +19,7 @@ public sealed class ApiSecurityTests
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync(path, CancellationToken.None);
+        using var response = await client.GetAsync(path, factory.RequestCancellationToken);
 
         Assert.Equal("nosniff", GetSingleHeader(response, "X-Content-Type-Options"));
         Assert.Equal("DENY", GetSingleHeader(response, "X-Frame-Options"));
@@ -38,7 +38,7 @@ public sealed class ApiSecurityTests
 
         using var response = await client.GetAsync(
             ApiWebApplicationFactory.SuccessEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
 
         Assert.False(response.Headers.Contains("Server"));
     }
@@ -50,7 +50,7 @@ public sealed class ApiSecurityTests
         using var client = factory.CreateClient();
         using var request = CreateCrossOriginRequest(AllowedOrigin);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
 
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
     }
@@ -66,7 +66,7 @@ public sealed class ApiSecurityTests
         using var client = factory.CreateClient();
         using var request = CreateCrossOriginRequest(AllowedOrigin);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
 
         var returnedOrigin = GetSingleHeader(response, "Access-Control-Allow-Origin");
         Assert.Equal(AllowedOrigin, returnedOrigin);
@@ -81,13 +81,13 @@ public sealed class ApiSecurityTests
 
         using var firstResponse = await client.GetAsync(
             ApiWebApplicationFactory.SuccessEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
         using var secondResponse = await client.GetAsync(
             ApiWebApplicationFactory.SuccessEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
         using var rejectedResponse = await client.GetAsync(
             ApiWebApplicationFactory.SuccessEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
@@ -102,15 +102,15 @@ public sealed class ApiSecurityTests
         using var client = factory.CreateClient();
         using var acceptedResponse = await client.GetAsync(
             ApiWebApplicationFactory.SuccessEndpoint,
-            CancellationToken.None);
+            factory.RequestCancellationToken);
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
             ApiWebApplicationFactory.SuccessEndpoint);
         request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
 
-        using var response = await client.SendAsync(request, CancellationToken.None);
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
         using var document = JsonDocument.Parse(
-            await response.Content.ReadAsStringAsync(CancellationToken.None));
+            await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
 
         Assert.Equal(HttpStatusCode.OK, acceptedResponse.StatusCode);
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
@@ -133,7 +133,7 @@ public sealed class ApiSecurityTests
         {
             for (var requestNumber = 0; requestNumber < requestCountPerEndpoint; requestNumber++)
             {
-                using var response = await client.GetAsync(path, CancellationToken.None);
+                using var response = await client.GetAsync(path, factory.RequestCancellationToken);
                 Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             }
         }
@@ -148,7 +148,7 @@ public sealed class ApiSecurityTests
             BaseAddress = new Uri("https://localhost")
         });
 
-        using var response = await client.GetAsync("/health", CancellationToken.None);
+        using var response = await client.GetAsync("/health", factory.RequestCancellationToken);
 
         Assert.False(response.Headers.Contains("Strict-Transport-Security"));
     }
@@ -163,7 +163,7 @@ public sealed class ApiSecurityTests
             BaseAddress = new Uri("https://api.foodtraceability.test")
         });
 
-        using var response = await client.GetAsync("/health", CancellationToken.None);
+        using var response = await client.GetAsync("/health", factory.RequestCancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(string.IsNullOrWhiteSpace(
@@ -176,7 +176,9 @@ public sealed class ApiSecurityTests
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/swagger/index.html", CancellationToken.None);
+        using var response = await client.GetAsync(
+            "/swagger/index.html",
+            factory.RequestCancellationToken);
         var contentSecurityPolicy = GetSingleHeader(
             response,
             SecurityHeadersMiddleware.ContentSecurityPolicyHeaderName);
