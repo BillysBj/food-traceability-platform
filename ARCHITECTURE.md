@@ -7,6 +7,10 @@ Die Food Traceability Platform ist eine generische Plattform zur Rückverfolgbar
 
 **Leitregel:** Der Core bleibt lebensmittelunabhängig. Produktspezifische Besonderheiten gehören in Industry Modules oder Product Profiles.
 
+## Verbindlichkeit des Decision Logs
+
+`docs/DECISIONS.md` ist die Source of Truth für explizite Architektur- und Modellentscheidungen. Bei Widersprüchen gilt eine dort als `ENTSCHIEDEN` geführte Entscheidung; als `OFFEN` geführte Entscheidungen dürfen nicht durch Implementierung vorweggenommen werden.
+
 ## 2. Zielarchitektur
 
 - Backend: C# / .NET / ASP.NET Core Web API
@@ -140,25 +144,44 @@ Organisation A darf interne Daten von B weder lesen noch verändern. Tenant-Isol
 
 Beispielrollen: PlatformAdmin, OrganizationAdmin, Producer, Processor, QualityManager, Laboratory, Bottler, Logistics, Retailer, Auditor.
 
-Beispielpermissions:
+Kanonische Permission-Liste für Pilot 1 gemäß D-18 in `docs/DECISIONS.md`:
 
 ```text
+organization.read
+organization.manage
+
+user.read
+user.manage
+
+role.read
+permission.read
+
+product.read
+product.create
+product.update
+
 lot.read
 lot.create
 lot.update
+
 trace.read
 trace.event.create
+
 quality.read
 quality.sample.create
 quality.result.create
 quality.release
 quality.block
+
 document.read
 document.upload
-shipment.read
-shipment.create
-user.read
-user.manage
+
+transport.read
+transport.create
+
+delivery.read
+delivery.create
+
 audit.read
 ```
 
