@@ -90,6 +90,17 @@ tagged `Category=Database` belong to one xUnit collection: they share one migrat
 run serially, and are read-only after fixture initialization. Future database tests that mutate
 state must add transaction rollback or explicit cleanup so one test cannot affect another.
 
+## Continuous integration
+
+[![CI](https://github.com/BillysBj/food-traceability-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/BillysBj/food-traceability-platform/actions/workflows/ci.yml)
+
+The CI workflow restores dependencies, builds the complete solution in Release configuration,
+and runs the full test suite, including the PostgreSQL tests backed by Testcontainers. It runs
+for pull requests targeting `main`, pushes to `main`, and manual reviewer dispatches. The single
+job uses `ubuntu-latest` because the Testcontainers tests require an available Linux Docker
+daemon. Its name, `Build and test`, is the intended Required Status Check and must remain stable
+so branch-protection rules continue to apply.
+
 ## Running the API
 
 Set the PostgreSQL connection string through the standard .NET configuration environment variable before starting the API:
