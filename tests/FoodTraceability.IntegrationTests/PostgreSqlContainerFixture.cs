@@ -1,5 +1,7 @@
+using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace FoodTraceability.IntegrationTests;
@@ -9,8 +11,12 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private static readonly TimeSpan InitializationTimeout = TimeSpan.FromMinutes(2);
 
     private PostgreSqlContainer? _container;
+    private string? _identityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
+
+    public string IdentityConnectionString => _identityConnectionString
+        ?? throw new InvalidOperationException("The Identity test database is not initialized.");
 
     public async Task InitializeAsync()
     {
@@ -19,12 +25,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         try
         {
             _container = new PostgreSqlBuilder("postgres:17")
-                .WithDatabase($"food_traceability_tests_{Guid.NewGuid():N}")
+                .WithDatabase($"food_traceability_platform_tests_{Guid.NewGuid():N}")
                 .WithUsername("test_user")
                 .WithPassword(Guid.NewGuid().ToString("N"))
                 .WithEnvironment("POSTGRES_INITDB_ARGS", "--encoding=UTF8")
                 .Build();
             await _container.StartAsync(timeout.Token);
+
+            _identityConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_identity_tests_{Guid.NewGuid():N}",
+                timeout.Token);
         }
         catch (Exception exception)
         {
@@ -44,6 +54,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         {
             await using var context = CreateDbContext();
             await context.Database.MigrateAsync(timeout.Token);
+
+            await using var identityContext = CreateIdentityDbContext();
+            await identityContext.Database.MigrateAsync(timeout.Token);
         }
         catch
         {
@@ -67,6 +80,34 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             PlatformDbContext.MigrationsHistorySchema);
 
         return new PlatformDbContext(optionsBuilder.Options);
+    }
+
+    public IdentityDbContext CreateIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            IdentityConnectionString,
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
+    }
+
+    private async Task<string> CreateDatabaseAsync(
+        string databaseName,
+        CancellationToken cancellationToken)
+    {
+        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(ConnectionString);
+        await using var connection = new NpgsqlConnection(connectionStringBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var quotedDatabaseName = new NpgsqlCommandBuilder().QuoteIdentifier(databaseName);
+        await using var command = new NpgsqlCommand(
+            $"CREATE DATABASE {quotedDatabaseName}",
+            connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+
+        connectionStringBuilder.Database = databaseName;
+        return connectionStringBuilder.ConnectionString;
     }
 
     private PostgreSqlContainer GetContainer()

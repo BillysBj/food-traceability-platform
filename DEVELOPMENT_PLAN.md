@@ -38,6 +38,7 @@ Milestone: `M0 – Foundation Ready`
 # EPIC 1 – Identity
 
 - **ID-001** User Domain Model
+- **ID-002a** Identity Persistence Foundation
 - **ID-002** Roles
 - **ID-003** Permissions
 - **ID-004** Organization Membership + optional Location Scope
@@ -46,6 +47,29 @@ Milestone: `M0 – Foundation Ready`
 - **ID-007** Security & Cross-Tenant Tests
 
 Milestone: `M1 – Identity Ready`
+
+## ID-002a – Identity Persistence Foundation
+
+Bewusst eingeschobener Architektur-Task, im ursprünglichen Plan nicht
+vorgesehen. Er etabliert die Persistenzmechanik des ersten Fachmoduls anhand
+des bereits vorhandenen User-Domain-Modells aus ID-001.
+
+Begründung: Der erste Modul-DbContext ist eine Weichenstellung für alle zehn
+Module. FND-003 hat festgelegt, dass modulspezifische Kontexte eine eigene
+Migration-History im jeweiligen Modul-Schema erhalten. Dieses Muster soll
+isoliert entstehen und reviewbar sein, statt vermischt mit Rollenlogik in
+ID-002.
+
+Scope:
+- `IdentityDbContext` in `Modules/Identity/...Infrastructure`
+- Schema `identity` mit eigener Migration-History
+- EF-Core-Mapping des bestehenden `User` inklusive Value Object `EmailAddress`
+- erste modulbezogene Migration, ausschließlich für das heute vorhandene Modell
+- Integrationstests gegen PostgreSQL via Testcontainers
+
+Nicht enthalten: Roles, Permissions, Organization Assignments, ASP.NET Core
+Identity, Authentifizierung, JWT, Refresh Tokens, API-Endpunkte. Die Migration
+nimmt keine künftigen Identity-Tabellen vorweg.
 
 # EPIC 2 – Organizations
 

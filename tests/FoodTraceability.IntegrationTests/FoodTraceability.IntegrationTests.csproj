@@ -18,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\FoodTraceability.Api\FoodTraceability.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Infrastructure\FoodTraceability.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Platform\FoodTraceability.Platform.Persistence\FoodTraceability.Platform.Persistence.csproj" />
   </ItemGroup>
 </Project>
