@@ -23,9 +23,10 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             .GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(2, migrations.Length);
+        Assert.Equal(3, migrations.Length);
         Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
+        Assert.EndsWith("_AddPermissions", migrations[2], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var tables = await QueryAsync(sql, static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "role", "user"],
+            [PersistenceConventions.MigrationsHistoryTableName, "permission", "role", "user"],
             tables);
     }
 
@@ -266,6 +267,165 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
+    public async Task PermissionTableExistsWithExpectedColumns()
+    {
+        const string sql = """
+            SELECT column_name, is_nullable, data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'identity'
+              AND table_name = 'permission'
+            ORDER BY ordinal_position;
+            """;
+
+        var columns = await QueryAsync(
+            sql,
+            static reader => new DatabaseColumn(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [
+                new DatabaseColumn("permission_id", "NO", "uuid", null),
+                new DatabaseColumn("code", "NO", "character varying", PermissionCode.MaximumLength),
+                new DatabaseColumn(
+                    "description",
+                    "YES",
+                    "character varying",
+                    Permission.MaximumDescriptionLength),
+            ],
+            columns);
+    }
+
+    [Fact]
+    public async Task PermissionCodeHasUniqueConstraint()
+    {
+        const string sql = """
+            SELECT DISTINCT index_definition.indisunique
+            FROM pg_catalog.pg_class AS table_definition
+            JOIN pg_catalog.pg_namespace AS schema_definition
+              ON schema_definition.oid = table_definition.relnamespace
+            JOIN pg_catalog.pg_index AS index_definition
+              ON index_definition.indrelid = table_definition.oid
+            JOIN pg_catalog.pg_attribute AS column_definition
+              ON column_definition.attrelid = table_definition.oid
+             AND column_definition.attnum = ANY(index_definition.indkey)
+            WHERE schema_definition.nspname = 'identity'
+              AND table_definition.relname = 'permission'
+              AND column_definition.attname = 'code';
+            """;
+
+        var uniqueFlags = await QueryAsync(sql, static reader => reader.GetBoolean(0));
+
+        Assert.True(Assert.Single(uniqueFlags));
+    }
+
+    [Fact]
+    public async Task AllTwentySixPermissionsAreSeededWithExpectedCodes()
+    {
+        const string sql = """
+            SELECT code
+            FROM identity.permission
+            ORDER BY code;
+            """;
+
+        var codes = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Equal(
+            [
+                "audit.read",
+                "delivery.create",
+                "delivery.read",
+                "document.read",
+                "document.upload",
+                "lot.create",
+                "lot.read",
+                "lot.update",
+                "organization.manage",
+                "organization.read",
+                "permission.read",
+                "product.create",
+                "product.read",
+                "product.update",
+                "quality.block",
+                "quality.read",
+                "quality.release",
+                "quality.result.create",
+                "quality.sample.create",
+                "role.read",
+                "trace.event.create",
+                "trace.read",
+                "transport.create",
+                "transport.read",
+                "user.manage",
+                "user.read",
+            ],
+            codes);
+        Assert.All(codes, code => Assert.Equal(code.ToLowerInvariant(), code));
+    }
+
+    [Fact]
+    public async Task SeededPermissionIdsAreStable()
+    {
+        const string sql = """
+            SELECT code, permission_id
+            FROM identity.permission
+            ORDER BY code;
+            """;
+
+        var permissions = await QueryAsync(
+            sql,
+            static reader => new SeededPermission(reader.GetString(0), reader.GetGuid(1)));
+
+        Assert.Equal(
+            [
+                new SeededPermission("audit.read", StandardPermissionIds.AuditRead),
+                new SeededPermission("delivery.create", StandardPermissionIds.DeliveryCreate),
+                new SeededPermission("delivery.read", StandardPermissionIds.DeliveryRead),
+                new SeededPermission("document.read", StandardPermissionIds.DocumentRead),
+                new SeededPermission("document.upload", StandardPermissionIds.DocumentUpload),
+                new SeededPermission("lot.create", StandardPermissionIds.LotCreate),
+                new SeededPermission("lot.read", StandardPermissionIds.LotRead),
+                new SeededPermission("lot.update", StandardPermissionIds.LotUpdate),
+                new SeededPermission("organization.manage", StandardPermissionIds.OrganizationManage),
+                new SeededPermission("organization.read", StandardPermissionIds.OrganizationRead),
+                new SeededPermission("permission.read", StandardPermissionIds.PermissionRead),
+                new SeededPermission("product.create", StandardPermissionIds.ProductCreate),
+                new SeededPermission("product.read", StandardPermissionIds.ProductRead),
+                new SeededPermission("product.update", StandardPermissionIds.ProductUpdate),
+                new SeededPermission("quality.block", StandardPermissionIds.QualityBlock),
+                new SeededPermission("quality.read", StandardPermissionIds.QualityRead),
+                new SeededPermission("quality.release", StandardPermissionIds.QualityRelease),
+                new SeededPermission("quality.result.create", StandardPermissionIds.QualityResultCreate),
+                new SeededPermission("quality.sample.create", StandardPermissionIds.QualitySampleCreate),
+                new SeededPermission("role.read", StandardPermissionIds.RoleRead),
+                new SeededPermission("trace.event.create", StandardPermissionIds.TraceEventCreate),
+                new SeededPermission("trace.read", StandardPermissionIds.TraceRead),
+                new SeededPermission("transport.create", StandardPermissionIds.TransportCreate),
+                new SeededPermission("transport.read", StandardPermissionIds.TransportRead),
+                new SeededPermission("user.manage", StandardPermissionIds.UserManage),
+                new SeededPermission("user.read", StandardPermissionIds.UserRead),
+            ],
+            permissions);
+    }
+
+    [Fact]
+    public async Task DuplicatePermissionCodeIsRejectedByDatabase()
+    {
+        await using var context = database.CreateIdentityDbContext();
+        context.Permissions.Add(Permission.Create(
+            Guid.Parse("a2410543-a52c-4a4f-a0b3-c462aba3094f"),
+            PermissionCode.Create("lot.read")));
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(
+            () => context.SaveChangesAsync());
+
+        var postgresException = Assert.IsType<PostgresException>(exception.InnerException);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, postgresException.SqlState);
+    }
+
+    [Fact]
     public async Task IdentityMigrationsCreateNoUnexpectedTables()
     {
         const string sql = """
@@ -278,7 +438,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var tables = await QueryAsync(sql, static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "role", "user"],
+            [PersistenceConventions.MigrationsHistoryTableName, "permission", "role", "user"],
             tables);
     }
 
@@ -362,4 +522,6 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     private sealed record UniqueIndex(string ColumnName, bool IsUnique);
 
     private sealed record SeededRole(string Code, Guid Id);
+
+    private sealed record SeededPermission(string Code, Guid Id);
 }
