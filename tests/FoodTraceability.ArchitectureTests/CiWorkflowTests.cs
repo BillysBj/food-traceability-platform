@@ -34,7 +34,7 @@ public sealed partial class CiWorkflowTests
         var globalJson = File.ReadAllText(Path.Combine(root, "global.json"));
         var sdkVersionMatch = SdkVersionRegex().Match(globalJson);
 
-        Assert.Contains("actions/setup-dotnet@v4", workflow, StringComparison.Ordinal);
+        Assert.Contains("actions/setup-dotnet@v6", workflow, StringComparison.Ordinal);
         Assert.Matches(GlobalJsonFileRegex(), workflow);
         Assert.True(sdkVersionMatch.Success, "global.json must declare an SDK version.");
         Assert.DoesNotContain(sdkVersionMatch.Groups["version"].Value, workflow, StringComparison.Ordinal);
