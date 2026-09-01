@@ -22,8 +22,10 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var appliedMigrations = await context.Database
             .GetAppliedMigrationsAsync(timeout.Token);
 
-        var migration = Assert.Single(appliedMigrations);
-        Assert.EndsWith("_InitialIdentity", migration, StringComparison.Ordinal);
+        var migrations = appliedMigrations.ToArray();
+        Assert.Equal(2, migrations.Length);
+        Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
+        Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -123,7 +125,160 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         var tables = await QueryAsync(sql, static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "user"],
+            [PersistenceConventions.MigrationsHistoryTableName, "role", "user"],
+            tables);
+    }
+
+    [Fact]
+    public async Task RoleTableExistsWithExpectedColumns()
+    {
+        const string sql = """
+            SELECT column_name, is_nullable, data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'identity'
+              AND table_name = 'role'
+            ORDER BY ordinal_position;
+            """;
+
+        var columns = await QueryAsync(
+            sql,
+            static reader => new DatabaseColumn(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [
+                new DatabaseColumn("role_id", "NO", "uuid", null),
+                new DatabaseColumn("code", "NO", "character varying", RoleCode.MaximumLength),
+                new DatabaseColumn("name", "NO", "character varying", Role.MaximumNameLength),
+                new DatabaseColumn(
+                    "description",
+                    "YES",
+                    "character varying",
+                    Role.MaximumDescriptionLength),
+            ],
+            columns);
+    }
+
+    [Fact]
+    public async Task RoleCodeAndNameHaveUniqueConstraints()
+    {
+        const string sql = """
+            SELECT column_definition.attname, index_definition.indisunique
+            FROM pg_catalog.pg_class AS table_definition
+            JOIN pg_catalog.pg_namespace AS schema_definition
+              ON schema_definition.oid = table_definition.relnamespace
+            JOIN pg_catalog.pg_index AS index_definition
+              ON index_definition.indrelid = table_definition.oid
+            JOIN pg_catalog.pg_attribute AS column_definition
+              ON column_definition.attrelid = table_definition.oid
+             AND column_definition.attnum = ANY(index_definition.indkey)
+            WHERE schema_definition.nspname = 'identity'
+              AND table_definition.relname = 'role'
+              AND column_definition.attname IN ('code', 'name')
+            ORDER BY column_definition.attname;
+            """;
+
+        var indexes = await QueryAsync(
+            sql,
+            static reader => new UniqueIndex(reader.GetString(0), reader.GetBoolean(1)));
+
+        Assert.Equal(
+            [
+                new UniqueIndex("code", true),
+                new UniqueIndex("name", true),
+            ],
+            indexes);
+    }
+
+    [Fact]
+    public async Task TenDefaultRolesAreSeededWithExpectedCodes()
+    {
+        const string sql = """
+            SELECT code
+            FROM identity.role
+            ORDER BY code;
+            """;
+
+        var codes = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Equal(
+            [
+                "AUDITOR",
+                "BOTTLER",
+                "LABORATORY",
+                "LOGISTICS",
+                "ORGANIZATION_ADMIN",
+                "PLATFORM_ADMIN",
+                "PROCESSOR",
+                "PRODUCER",
+                "QUALITY_MANAGER",
+                "RETAILER",
+            ],
+            codes);
+    }
+
+    [Fact]
+    public async Task SeededRoleIdsAreStable()
+    {
+        const string sql = """
+            SELECT code, role_id
+            FROM identity.role
+            ORDER BY code;
+            """;
+
+        var roles = await QueryAsync(
+            sql,
+            static reader => new SeededRole(reader.GetString(0), reader.GetGuid(1)));
+
+        Assert.Equal(
+            [
+                new SeededRole("AUDITOR", StandardRoleIds.Auditor),
+                new SeededRole("BOTTLER", StandardRoleIds.Bottler),
+                new SeededRole("LABORATORY", StandardRoleIds.Laboratory),
+                new SeededRole("LOGISTICS", StandardRoleIds.Logistics),
+                new SeededRole("ORGANIZATION_ADMIN", StandardRoleIds.OrganizationAdmin),
+                new SeededRole("PLATFORM_ADMIN", StandardRoleIds.PlatformAdmin),
+                new SeededRole("PROCESSOR", StandardRoleIds.Processor),
+                new SeededRole("PRODUCER", StandardRoleIds.Producer),
+                new SeededRole("QUALITY_MANAGER", StandardRoleIds.QualityManager),
+                new SeededRole("RETAILER", StandardRoleIds.Retailer),
+            ],
+            roles);
+    }
+
+    [Fact]
+    public async Task DuplicateRoleCodeIsRejectedByDatabase()
+    {
+        await using var context = database.CreateIdentityDbContext();
+        context.Roles.Add(Role.Create(
+            Guid.Parse("b51e253e-fbb0-4a33-a8f4-791d0ebc50f1"),
+            RoleCode.Create("PRODUCER"),
+            "DuplicateProducer"));
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(
+            () => context.SaveChangesAsync());
+
+        var postgresException = Assert.IsType<PostgresException>(exception.InnerException);
+        Assert.Equal(PostgresErrorCodes.UniqueViolation, postgresException.SqlState);
+    }
+
+    [Fact]
+    public async Task IdentityMigrationsCreateNoUnexpectedTables()
+    {
+        const string sql = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'identity'
+            ORDER BY table_name;
+            """;
+
+        var tables = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Equal(
+            [PersistenceConventions.MigrationsHistoryTableName, "role", "user"],
             tables);
     }
 
@@ -203,4 +358,8 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         string IsNullable,
         string DataType,
         int? MaximumLength);
+
+    private sealed record UniqueIndex(string ColumnName, bool IsUnique);
+
+    private sealed record SeededRole(string Code, Guid Id);
 }
