@@ -176,11 +176,22 @@ an array under `Cors:AllowedOrigins`; no frontend origin is preconfigured. For e
 the standard .NET configuration keys `Cors__AllowedOrigins__0`,
 `Cors__AllowedOrigins__1`, and so on in the deployment environment.
 
-The global fixed-window rate limiter is applied per remote IP address. Its defaults are 100
-requests per 60-second window. Override them with `RateLimiting:PermitLimit` and
-`RateLimiting:WindowSeconds`, or the environment variables
-`RateLimiting__PermitLimit` and `RateLimiting__WindowSeconds`. Requests rejected by the
-limiter receive an HTTP 429 Problem Details response. `/health` and `/health/ready` are
-exempt so monitoring cannot lock itself out.
+### Rate limiting
+
+Three independently configurable blocks protect the API and authentication flow:
+
+- `RateLimiting:PermitLimit` and `RateLimiting:WindowSeconds` configure the global
+  fixed-window limiter per remote IP address.
+- `RateLimiting:Authentication:PermitLimit` and
+  `RateLimiting:Authentication:WindowSeconds` configure the stricter fixed-window limiter
+  per remote IP address for authentication endpoints.
+- `Authentication:LoginAttempts:PermitLimit` and
+  `Authentication:LoginAttempts:WindowSeconds` configure the failed-login counter per
+  entered email address.
+
+The configured values are deployment defaults and can be adjusted operationally. They are
+not recommendations for a particular environment. Requests rejected by an IP-based limiter
+receive an HTTP 429 Problem Details response. `/health` and `/health/ready` are exempt from
+the global limiter so monitoring cannot lock itself out.
 
 HTTPS redirection and HSTS are enabled only outside the `Development` environment.

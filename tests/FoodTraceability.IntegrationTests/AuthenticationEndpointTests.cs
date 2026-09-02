@@ -7,6 +7,9 @@ using System.Text.Json.Nodes;
 using FoodTraceability.Modules.Identity.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace FoodTraceability.IntegrationTests;
 
@@ -14,7 +17,10 @@ namespace FoodTraceability.IntegrationTests;
 [Trait("Category", "Database")]
 public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture database)
 {
+    private const int LoginAttemptPermitLimit = 2;
+    private const int LoginAttemptWindowSeconds = 60;
     private const string ValidPassword = "Valid-test-password-42!";
+    private const string WrongPassword = "wrong-password";
 
     [Fact]
     public async Task SuccessfulLoginReturnsTokensWithMinimalJwtClaimsAndDoesNotLogRefreshToken()
@@ -92,6 +98,170 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
             Assert.Equal(expected.Body, failure.Body);
         });
         Assert.Contains("\"errorCode\":\"AUTHENTICATION_FAILED\"", expected.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LoginAttemptLimitRejectsCorrectPasswordAfterConfiguredFailureLimit()
+    {
+        var account = await CreateUserAsync(isActive: true, hasCredential: true);
+        await using var factory = CreateLoginAttemptLimitFactory();
+        using var client = factory.CreateClient();
+
+        for (var attempt = 0; attempt < LoginAttemptPermitLimit; attempt++)
+        {
+            using var failedResponse = await LoginAsync(
+                client,
+                account.Email,
+                WrongPassword,
+                factory.RequestCancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, failedResponse.StatusCode);
+        }
+
+        using var correctPasswordResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, correctPasswordResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginAttemptLimitResetsAfterConfiguredWindowExpires()
+    {
+        var account = await CreateUserAsync(isActive: true, hasCredential: true);
+        var timeProvider = new TestTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = CreateLoginAttemptLimitFactory(timeProvider);
+        using var client = factory.CreateClient();
+
+        for (var attempt = 0; attempt < LoginAttemptPermitLimit; attempt++)
+        {
+            using var failedResponse = await LoginAsync(
+                client,
+                account.Email,
+                WrongPassword,
+                factory.RequestCancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, failedResponse.StatusCode);
+        }
+
+        using var blockedResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, blockedResponse.StatusCode);
+
+        timeProvider.Advance(TimeSpan.FromSeconds(LoginAttemptWindowSeconds));
+
+        using var afterWindowResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.OK, afterWindowResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task SuccessfulLoginResetsLoginAttemptCount()
+    {
+        var account = await CreateUserAsync(isActive: true, hasCredential: true);
+        await using var factory = CreateLoginAttemptLimitFactory();
+        using var client = factory.CreateClient();
+
+        using var firstFailureResponse = await LoginAsync(
+            client,
+            account.Email,
+            WrongPassword,
+            factory.RequestCancellationToken);
+        using var firstSuccessResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+        using var secondFailureResponse = await LoginAsync(
+            client,
+            account.Email,
+            WrongPassword,
+            factory.RequestCancellationToken);
+        using var secondSuccessResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, firstFailureResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, firstSuccessResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, secondFailureResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondSuccessResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task LoginAttemptLimitIsIndependentPerEnteredEmailAddress()
+    {
+        var firstAccount = await CreateUserAsync(isActive: true, hasCredential: true);
+        var secondAccount = await CreateUserAsync(isActive: true, hasCredential: true);
+        await using var factory = CreateLoginAttemptLimitFactory();
+        using var client = factory.CreateClient();
+
+        for (var attempt = 0; attempt < LoginAttemptPermitLimit; attempt++)
+        {
+            using var failedResponse = await LoginAsync(
+                client,
+                firstAccount.Email,
+                WrongPassword,
+                factory.RequestCancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, failedResponse.StatusCode);
+        }
+
+        using var firstAccountResponse = await LoginAsync(
+            client,
+            firstAccount.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+        using var secondAccountResponse = await LoginAsync(
+            client,
+            secondAccount.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, firstAccountResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondAccountResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task BlockedLoginResponseMatchesOrdinaryCredentialFailure()
+    {
+        var account = await CreateUserAsync(isActive: true, hasCredential: true);
+        await using var factory = CreateLoginAttemptLimitFactory();
+        using var client = factory.CreateClient();
+
+        using var ordinaryFailureResponse = await LoginAsync(
+            client,
+            account.Email,
+            WrongPassword,
+            factory.RequestCancellationToken);
+        var ordinaryFailureBody = RemoveCorrelationIdentifiers(
+            await ordinaryFailureResponse.Content.ReadAsStringAsync(
+                factory.RequestCancellationToken));
+
+        using var limitReachingFailureResponse = await LoginAsync(
+            client,
+            account.Email,
+            WrongPassword,
+            factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.Unauthorized, limitReachingFailureResponse.StatusCode);
+
+        using var blockedResponse = await LoginAsync(
+            client,
+            account.Email,
+            ValidPassword,
+            factory.RequestCancellationToken);
+        var blockedBody = RemoveCorrelationIdentifiers(
+            await blockedResponse.Content.ReadAsStringAsync(factory.RequestCancellationToken));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, ordinaryFailureResponse.StatusCode);
+        Assert.Equal(ordinaryFailureResponse.StatusCode, blockedResponse.StatusCode);
+        Assert.Equal(ordinaryFailureBody, blockedBody);
     }
 
     [Fact]
@@ -248,6 +418,33 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
             });
     }
 
+    private ApiWebApplicationFactory CreateLoginAttemptLimitFactory(
+        TimeProvider? timeProvider = null)
+    {
+        return new ApiWebApplicationFactory(
+            Environments.Development,
+            new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:FoodTraceability"] = database.IdentityConnectionString,
+                ["RateLimiting:PermitLimit"] = "100",
+                ["RateLimiting:Authentication:PermitLimit"] = "100",
+                ["Authentication:LoginAttempts:PermitLimit"] =
+                    LoginAttemptPermitLimit.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["Authentication:LoginAttempts:WindowSeconds"] =
+                    LoginAttemptWindowSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            },
+            configureTestServices: services =>
+            {
+                if (timeProvider is null)
+                {
+                    return;
+                }
+
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton(timeProvider);
+            });
+    }
+
     private async Task<TestAccount> CreateUserAsync(
         bool isActive,
         bool hasCredential,
@@ -379,6 +576,15 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
     private sealed record LoginAttempt(string Email, string Password);
 
     private sealed record LoginFailure(HttpStatusCode StatusCode, string Body);
+
+    private sealed class TestTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        private DateTimeOffset _utcNow = utcNow;
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
+
+        public void Advance(TimeSpan elapsed) => _utcNow = _utcNow.Add(elapsed);
+    }
 
     private sealed record TokenResponse(
         string AccessToken,
