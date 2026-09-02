@@ -1,5 +1,6 @@
 using FoodTraceability.Modules.Catalog.Domain;
 using FoodTraceability.Modules.Catalog.Infrastructure;
+using FoodTraceability.Modules.Organizations.Domain;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -23,8 +24,16 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         await context.Database.MigrateAsync(timeout.Token);
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
-        var migration = Assert.Single(appliedMigrations);
-        Assert.EndsWith("_InitialCatalog", migration, StringComparison.Ordinal);
+        Assert.Collection(
+            appliedMigrations,
+            migration => Assert.EndsWith(
+                "_InitialCatalog",
+                migration,
+                StringComparison.Ordinal),
+            migration => Assert.EndsWith(
+                "_AddArticle",
+                migration,
+                StringComparison.Ordinal));
     }
 
     [Fact]
@@ -42,6 +51,7 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(
             [
                 PersistenceConventions.MigrationsHistoryTableName,
+                "article",
                 "product",
             ],
             tables);
@@ -90,6 +100,381 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         Assert.DoesNotContain(columns, column => column.Name == "status");
         Assert.DoesNotContain(columns, column => column.Name == "updated_at");
         Assert.DoesNotContain(columns, column => column.Name == "category_id");
+    }
+
+    [Fact]
+    public async Task ArticleTableHasExactlyTheExpectedColumns()
+    {
+        const string sql = """
+            SELECT column_name,
+                   is_nullable,
+                   data_type,
+                   character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'catalog'
+              AND table_name = 'article'
+            ORDER BY ordinal_position;
+            """;
+
+        var columns = await QueryAsync(
+            sql,
+            static reader => new DatabaseColumn(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [
+                new DatabaseColumn("article_id", "NO", "uuid", null),
+                new DatabaseColumn("organization_id", "NO", "uuid", null),
+                new DatabaseColumn("product_id", "NO", "uuid", null),
+                new DatabaseColumn(
+                    "article_number",
+                    "NO",
+                    "character varying",
+                    Article.MaximumArticleNumberLength),
+                new DatabaseColumn(
+                    "gtin",
+                    "YES",
+                    "character varying",
+                    Article.MaximumGtinLength),
+                new DatabaseColumn("created_at", "NO", "timestamp with time zone", null),
+            ],
+            columns);
+
+        Assert.DoesNotContain(columns, column => column.Name == "unit_id");
+        Assert.DoesNotContain(columns, column => column.Name == "net_quantity");
+        Assert.DoesNotContain(columns, column => column.Name == "updated_at");
+    }
+
+    [Fact]
+    public async Task ArticleHasRequiredCompositeAlternateKey()
+    {
+        const string sql = """
+            SELECT constraint_name
+            FROM information_schema.table_constraints
+            WHERE table_schema = 'catalog'
+              AND table_name = 'article'
+              AND constraint_type = 'UNIQUE';
+            """;
+
+        var constraints = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Contains("ak_article_article_id_organization_id", constraints);
+    }
+
+    [Fact]
+    public async Task DuplicateArticleNumberInSameOrganizationIsRejected()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        await CreateArticleAsync(organizationId, productId, "DUPLICATE-ARTICLE", null);
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(Article.Create(
+            Guid.NewGuid(),
+            organizationId,
+            productId,
+            "DUPLICATE-ARTICLE",
+            null,
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.UniqueViolation);
+    }
+
+    [Fact]
+    public async Task ArticleNumberIsCaseInsensitivelyUniqueWithinOrganization()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        await CreateArticleAsync(organizationId, productId, "ART-1", null);
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(Article.Create(
+            Guid.NewGuid(),
+            organizationId,
+            productId,
+            "art-1",
+            null,
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.UniqueViolation);
+    }
+
+    [Fact]
+    public async Task SameArticleNumberInDifferentOrganizationsIsAccepted()
+    {
+        var firstOrganizationId = await CreateOrganizationAsync();
+        var secondOrganizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.AddRange(
+            Article.Create(
+                Guid.NewGuid(),
+                firstOrganizationId,
+                productId,
+                "SHARED-ARTICLE",
+                null,
+                CreatedAt),
+            Article.Create(
+                Guid.NewGuid(),
+                secondOrganizationId,
+                productId,
+                "SHARED-ARTICLE",
+                null,
+                CreatedAt));
+
+        var affectedRows = await context.SaveChangesAsync();
+
+        Assert.Equal(2, affectedRows);
+    }
+
+    [Fact]
+    public async Task StoredArticleNumberPreservesOriginalCasing()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        var articleId = await CreateArticleAsync(
+            organizationId,
+            productId,
+            "ART-1",
+            null);
+
+        const string sql = """
+            SELECT article_number
+            FROM catalog.article
+            WHERE article_id = @article_id;
+            """;
+
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var connection = new NpgsqlConnection(database.CatalogConnectionString);
+        await connection.OpenAsync(timeout.Token);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("article_id", articleId);
+
+        var storedArticleNumber = await command.ExecuteScalarAsync(timeout.Token);
+
+        Assert.Equal("ART-1", Assert.IsType<string>(storedArticleNumber));
+    }
+
+    [Fact]
+    public async Task DuplicateGtinInSameOrganizationIsRejected()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        await CreateArticleAsync(
+            organizationId,
+            productId,
+            "GTIN-FIRST",
+            "1234567890123");
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(Article.Create(
+            Guid.NewGuid(),
+            organizationId,
+            productId,
+            "GTIN-SECOND",
+            "1234567890123",
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.UniqueViolation);
+    }
+
+    [Fact]
+    public async Task SameGtinInDifferentOrganizationsIsAccepted()
+    {
+        var firstOrganizationId = await CreateOrganizationAsync();
+        var secondOrganizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.AddRange(
+            Article.Create(
+                Guid.NewGuid(),
+                firstOrganizationId,
+                productId,
+                "FIRST-GTIN-ARTICLE",
+                "1234567890123",
+                CreatedAt),
+            Article.Create(
+                Guid.NewGuid(),
+                secondOrganizationId,
+                productId,
+                "SECOND-GTIN-ARTICLE",
+                "1234567890123",
+                CreatedAt));
+
+        var affectedRows = await context.SaveChangesAsync();
+
+        Assert.Equal(2, affectedRows);
+    }
+
+    [Fact]
+    public async Task MultipleNullGtinsInSameOrganizationAreAccepted()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.AddRange(
+            Article.Create(
+                Guid.NewGuid(),
+                organizationId,
+                productId,
+                "NULL-GTIN-FIRST",
+                null,
+                CreatedAt),
+            Article.Create(
+                Guid.NewGuid(),
+                organizationId,
+                productId,
+                "NULL-GTIN-SECOND",
+                null,
+                CreatedAt));
+
+        var affectedRows = await context.SaveChangesAsync();
+
+        Assert.Equal(2, affectedRows);
+    }
+
+    [Theory]
+    [InlineData("1234A678", PostgresErrorCodes.CheckViolation)]
+    [InlineData("1234567", PostgresErrorCodes.CheckViolation)]
+    [InlineData("123456789", PostgresErrorCodes.CheckViolation)]
+    [InlineData("12345678901", PostgresErrorCodes.CheckViolation)]
+    [InlineData("123456789012345", PostgresErrorCodes.StringDataRightTruncation)]
+    public async Task InvalidGtinFormatsAreRejectedByDatabase(
+        string gtin,
+        string expectedSqlState)
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+
+        await AssertArticleInsertErrorAsync(
+            organizationId,
+            productId,
+            $"INVALID-GTIN-{Guid.NewGuid():N}",
+            gtin,
+            expectedSqlState);
+    }
+
+    [Theory]
+    [InlineData("12345678")]
+    [InlineData("123456789012")]
+    [InlineData("1234567890123")]
+    [InlineData("12345678901234")]
+    public async Task ValidGtinLengthsAreAcceptedByDatabase(string gtin)
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+
+        var articleId = await InsertArticleAsync(
+            organizationId,
+            productId,
+            $"VALID-GTIN-{Guid.NewGuid():N}",
+            gtin);
+
+        Assert.NotEqual(Guid.Empty, articleId);
+    }
+
+    [Fact]
+    public async Task ArticleWithUnknownOrganizationIsRejected()
+    {
+        var productId = await CreateProductAsync();
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(Article.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            productId,
+            "UNKNOWN-ORGANIZATION",
+            null,
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.ForeignKeyViolation);
+    }
+
+    [Fact]
+    public async Task ArticleWithUnknownProductIsRejected()
+    {
+        var organizationId = await CreateOrganizationAsync();
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(Article.Create(
+            Guid.NewGuid(),
+            organizationId,
+            Guid.NewGuid(),
+            "UNKNOWN-PRODUCT",
+            null,
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.ForeignKeyViolation);
+    }
+
+    [Fact]
+    public async Task OrganizationWithArticleCannotBeDeleted()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        var articleId = await CreateArticleAsync(
+            organizationId,
+            productId,
+            "ORGANIZATION-RESTRICT",
+            null);
+
+        await using (var context = database.CreateCatalogOrganizationsDbContext())
+        {
+            var organization = await context.Organizations.SingleAsync(
+                candidate => candidate.Id == organizationId);
+            context.Organizations.Remove(organization);
+
+            await AssertDatabaseErrorAsync(
+                () => context.SaveChangesAsync(),
+                PostgresErrorCodes.ForeignKeyViolation);
+        }
+
+        await using var verificationContext = database.CreateCatalogDbContext();
+        Assert.True(await verificationContext.Articles.AnyAsync(
+            article => article.Id == articleId));
+    }
+
+    [Fact]
+    public async Task ProductWithArticleCannotBeDeleted()
+    {
+        var organizationId = await CreateOrganizationAsync();
+        var productId = await CreateProductAsync();
+        var articleId = await CreateArticleAsync(
+            organizationId,
+            productId,
+            "PRODUCT-RESTRICT",
+            null);
+
+        await using (var context = database.CreateCatalogDbContext())
+        {
+            var product = await context.Products.SingleAsync(
+                candidate => candidate.Id == productId);
+            context.Products.Remove(product);
+
+            await AssertDatabaseErrorAsync(
+                () => context.SaveChangesAsync(),
+                PostgresErrorCodes.ForeignKeyViolation);
+        }
+
+        await using var verificationContext = database.CreateCatalogDbContext();
+        Assert.True(await verificationContext.Articles.AnyAsync(
+            article => article.Id == articleId));
     }
 
     [Fact]
@@ -181,11 +566,29 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(CatalogDbContext.Schema, Assert.Single(schemas));
     }
 
-    private async Task<Guid> CreateProductAsync(string productCode)
+    private async Task<Guid> CreateOrganizationAsync()
+    {
+        var organization = Organization.Create(
+            Guid.NewGuid(),
+            $"Catalog Test Organization {Guid.NewGuid():N}",
+            null,
+            null,
+            null,
+            null,
+            CreatedAt);
+
+        await using var context = database.CreateCatalogOrganizationsDbContext();
+        context.Organizations.Add(organization);
+        await context.SaveChangesAsync();
+
+        return organization.Id;
+    }
+
+    private async Task<Guid> CreateProductAsync(string? productCode = null)
     {
         var product = Product.Create(
             Guid.NewGuid(),
-            productCode,
+            productCode ?? $"PRODUCT-{Guid.NewGuid():N}",
             $"Catalog Test Product {Guid.NewGuid():N}",
             CreatedAt);
 
@@ -194,6 +597,83 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         await context.SaveChangesAsync();
 
         return product.Id;
+    }
+
+    private async Task<Guid> CreateArticleAsync(
+        Guid organizationId,
+        Guid productId,
+        string articleNumber,
+        string? gtin)
+    {
+        var article = Article.Create(
+            Guid.NewGuid(),
+            organizationId,
+            productId,
+            articleNumber,
+            gtin,
+            CreatedAt);
+
+        await using var context = database.CreateCatalogDbContext();
+        context.Articles.Add(article);
+        await context.SaveChangesAsync();
+
+        return article.Id;
+    }
+
+    private async Task<Guid> InsertArticleAsync(
+        Guid organizationId,
+        Guid productId,
+        string articleNumber,
+        string? gtin)
+    {
+        const string sql = """
+            INSERT INTO catalog.article (
+                article_id,
+                organization_id,
+                product_id,
+                article_number,
+                gtin,
+                created_at)
+            VALUES (
+                @article_id,
+                @organization_id,
+                @product_id,
+                @article_number,
+                @gtin,
+                @created_at);
+            """;
+
+        var articleId = Guid.NewGuid();
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var connection = new NpgsqlConnection(database.CatalogConnectionString);
+        await connection.OpenAsync(timeout.Token);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("article_id", articleId);
+        command.Parameters.AddWithValue("organization_id", organizationId);
+        command.Parameters.AddWithValue("product_id", productId);
+        command.Parameters.AddWithValue("article_number", articleNumber);
+        command.Parameters.AddWithValue("gtin", gtin is null ? DBNull.Value : gtin);
+        command.Parameters.AddWithValue("created_at", CreatedAt);
+        await command.ExecuteNonQueryAsync(timeout.Token);
+
+        return articleId;
+    }
+
+    private async Task AssertArticleInsertErrorAsync(
+        Guid organizationId,
+        Guid productId,
+        string articleNumber,
+        string gtin,
+        string expectedSqlState)
+    {
+        var exception = await Assert.ThrowsAsync<PostgresException>(
+            () => InsertArticleAsync(
+                organizationId,
+                productId,
+                articleNumber,
+                gtin));
+
+        Assert.Equal(expectedSqlState, exception.SqlState);
     }
 
     private async Task DeleteProductByCodeAsync(string productCode)
