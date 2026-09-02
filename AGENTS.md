@@ -1071,6 +1071,16 @@ GS1 Digital Link für QR/Public Trace langfristig berücksichtigen.
 
 REST-API.
 
+**Organisationskontext:** Tenantgebundene Ressourcen führen die
+Organisation explizit im Pfad — `/api/v1/organizations/{organizationId}/...`
+gemäß D-26 in `docs/DECISIONS.md`. Plattformweite Endpunkte wie
+`/api/v1/auth/*` und `/api/v1/me` sind davon ausgenommen.
+
+Die folgende Liste zeigt **Präfix und Versionierung**, nicht den fertigen
+Pfadschnitt. Ihre flachen Beispiele sind für tenantgebundene Ressourcen
+überholt. Welche Ressourcen tenantgebunden sind und welche global bleiben —
+etwa der Produktkatalog — wird je Endpunkt entschieden, wenn er gebaut wird.
+
 Beispiele:
 
 ```text
