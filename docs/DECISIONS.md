@@ -34,8 +34,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-05 | Modellierung plattformweiter Rechte | ENTSCHIEDEN |
 | D-06 | API-Pfadpräfix und Versionierung | ENTSCHIEDEN |
 | D-07 | Verbindlichkeit und Umfang von i18n | OFFEN |
-| D-08 | Semantik von `trace.lot.quantity` | OFFEN |
-| D-09 | Einheitenkonvertierung (BR-003) | OFFEN |
+| D-08 | Semantik von `trace.lot.quantity` | ENTSCHIEDEN |
+| D-09 | Einheitenkonvertierung (BR-003) | ENTSCHIEDEN |
 | D-10 | Zukunft von `trace.object_relation` | OFFEN |
 | D-11 | Regel für Cross-Schema-Fremdschlüssel | ENTSCHIEDEN |
 | D-12 | Ablageort des Frontends | OFFEN |
@@ -58,6 +58,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-29 | Lot-Eigentum beim Organisationsuebergang | ENTSCHIEDEN |
 | D-30 | Cross-Organization Visibility: Partner View und Public View | ENTSCHIEDEN |
 | D-31 | Article-Permissions | ENTSCHIEDEN |
+| D-32 | Semantik und Modellierung von `trace.lot.quantity` | ENTSCHIEDEN |
+| D-33 | Einheitengleichheit und Unit-Katalog in Pilot 1 | ENTSCHIEDEN |
 
 ---
 
@@ -200,8 +202,9 @@ festzuschreiben, die später übersetzt werden müsste.
 
 ## D-08 – Semantik von `trace.lot.quantity`
 
-**Status:** OFFEN
-**Blockiert:** TRC-002, TRC-008
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet durch:** D-32. Der folgende Text bleibt als Herleitung der Frage stehen.
+**Betraf:** TRC-002, TRC-008
 
 Ist `quantity` die Initialmenge oder der verfügbare Restbestand? Es gibt kein
 Bilanz- oder Verbrauchsmodell, obwohl BR-011 („mass/volume balance rules")
@@ -214,7 +217,8 @@ Events ableitbar. Passt zu BR-008 („append-oriented").
 
 ## D-09 – Einheitenkonvertierung (BR-003)
 
-**Status:** OFFEN
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet durch:** D-33. Der folgende Text bleibt als Herleitung der Frage stehen.
 
 BR-003 verlangt kompatible Einheitendimensionen. `catalog.unit` hat
 `dimension` und laut Spec 6.2 „conversion metadata where safe", aber weder ER
@@ -928,6 +932,71 @@ pflegen zu müssen.
 
 ---
 
+## D-32 – Semantik und Modellierung von `trace.lot.quantity`
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet:** D-08
+**Setzt voraus:** D-28, D-29
+**Betrifft:** TRC-002, TRC-008
+
+`trace.lot.quantity` repräsentiert die **Initial- beziehungsweise
+Erzeugungsmenge** eines Lots. Sie ist nach fachlicher Finalisierung
+beziehungsweise Verwendung in der Lineage **nicht als laufender Restbestand
+überschreibbar**. Der verfügbare Bestand wird aus Traceability Events
+**abgeleitet**. Korrekturen nach Finalisierung erfolgen append-orientiert
+gemäß BR-008.
+
+Modellierung: `numeric(18,6) NOT NULL` mit `CHECK (quantity > 0)`.
+
+**Begründung:** Das Datenmodell beantwortet die Frage selbst.
+`trace.event_input` und `trace.event_output` tragen laut ER-Diagramm jeweils
+**eigene** `quantity`- und `unit_id`-Spalten. Damit ist die Bilanz aus
+Ereignissen berechenbar — genau das, was BR-011 verlangt
+(*„Expected mass/volume balance rules may warn on excessive loss/gain;
+impossible quantities are rejected."*). Wäre `lot.quantity` der Restbestand,
+müsste er bei jedem Ereignis überschrieben werden; das kollidiert mit BR-008
+(*„do not silently overwrite lineage"*) und mit der Unveränderlichkeit aus
+D-29 und TRC-001. Die Mengenspalten auf Input und Output wären dann zudem
+redundant.
+
+`quantity > 0` folgt aus `AGENTS.md` §31 und aus BR-011
+(*„impossible quantities are rejected"*). Die Genauigkeit `numeric(18,6)`
+trägt Gramm und Milliliter ebenso wie Tanklieferungen.
+
+---
+
+## D-33 – Einheitengleichheit und Unit-Katalog in Pilot 1
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet:** D-09
+**Betrifft:** CAT-003, TRC-002 und alle folgenden Mengenoperationen
+
+Pilot 1 verwendet **exakte Einheitengleichheit**. Es gibt **keine automatische
+Einheitenkonvertierung**, auch nicht innerhalb derselben Dimension.
+
+**Das ist bewusst strenger als BR-003**, das lediglich fordert:
+*„Input/output quantity unit dimensions must be compatible with their products
+and event semantics."* Die strengere Regel ist in die sichere Richtung fehlbar:
+Lockern bleibt später additiv und macht bereits erfasste Daten nicht falsch.
+Hätte man dagegen Kilogramm und Gramm gemischt zugelassen und stellte später
+fest, dass ein Umrechnungsfaktor fehlt, wären vorhandene Daten nicht mehr
+eindeutig interpretierbar.
+
+Eine spätere Erweiterung um Basiseinheiten und Konvertierungsfaktoren bleibt
+möglich und wird **nicht vorbereitet**.
+
+**`catalog.unit`** ist ein **globaler kontrollierter Katalog**, deterministisch
+geseedet. Initial mindestens `KG`, `G`, `L`, `ML` und `PCS` mit den Dimensionen
+`MASS`, `VOLUME` und `COUNT`. **Keine organisationsspezifische Anlage von Units
+in Pilot 1**, folglich kein `organization_id`.
+
+Stabile technische Unit-Codes bleiben **sprachneutral**. Lokalisierte
+Anzeigenamen folgen der i18n-Entscheidung **D-07, die weiterhin OFFEN ist**;
+`catalog.unit` erhält deshalb vorerst keine Namensspalte. `symbol` ist
+technische Notation, kein Anzeigetext.
+
+---
+
 ## Nächste freie ID
 
-`D-32`
+`D-34`
