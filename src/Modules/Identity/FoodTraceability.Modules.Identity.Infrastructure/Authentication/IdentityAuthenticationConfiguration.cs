@@ -1,5 +1,7 @@
 using System.Text;
 using FoodTraceability.Modules.Identity.Application.Authentication;
+using FoodTraceability.Modules.Identity.Application.Authorization;
+using FoodTraceability.Modules.Identity.Infrastructure.Authorization;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -69,6 +71,8 @@ public static class IdentityAuthenticationConfiguration
         services.AddSingleton<ILoginAttemptLimiter, MemoryLoginAttemptLimiter>();
         services.AddScoped<IAuthenticationSessionStore, AuthenticationSessionStore>();
         services.AddScoped<AuthenticationService>();
+        services.AddScoped<IEffectiveAuthorizationStore, EffectiveAuthorizationStore>();
+        services.AddScoped<EffectiveAuthorizationService>();
         services.AddSingleton(serviceProvider =>
         {
             var jwtOptions = serviceProvider.GetRequiredService<IOptions<JwtOptions>>().Value;

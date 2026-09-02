@@ -32,6 +32,7 @@ public static class SwaggerConfiguration
                 Scheme = "bearer",
                 BearerFormat = "JWT"
             });
+            options.OperationFilter<AuthorizeOperationFilter>();
         });
 
         return services;
