@@ -53,6 +53,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-24 | Token- und Login-Parameter | ENTSCHIEDEN |
 | D-25 | Startverhalten bei fehlender Datenbankkonfiguration | OFFEN |
 | D-26 | Organization Context in API Routes | ENTSCHIEDEN |
+| D-27 | Platform Permissions ohne Zugriff auf Organisationsressourcen | ENTSCHIEDEN |
 
 ---
 
@@ -157,6 +158,11 @@ Zuweisung statt.
 
 Beispiele: `POST /api/v1/auth/login`, `GET /api/v1/lots/{id}`,
 `GET /api/public/v1/trace/{code}`.
+
+**Präzisiert durch:** D-26 – Organization Context in API Routes. Das obige
+Beispiel `GET /api/v1/lots/{id}` ist für eine tenantgebundene Ressource
+überholt; maßgeblich ist der Pfad mit Organisationskontext. D-06 regelt
+ausschließlich Präfix und Versionierung.
 
 **Begründung:** Master Specification 11.1 ist an dieser Stelle präziser als
 `AGENTS.md` §30, passt zum ohnehin vorgeschriebenen Swagger-Pfad, und ein
@@ -582,7 +588,7 @@ einzelnen Organisation zugewiesen wird oder `PRODUCER` plattformweit.
 
 **Status:** ENTSCHIEDEN (2026-09-01)
 **Setzt voraus:** D-05, D-21
-**Blockiert durch:** D-11 (Cross-Schema-Fremdschlüssel), noch OFFEN
+**Setzt voraus:** D-11 (Cross-Schema-Fremdschlüssel), entschieden
 
 Mitgliedschaft und Rollenzuweisung sind **unterschiedliche Konzepte**. Ein
 Benutzer darf Mitglied einer Organisation sein, ohne dass bereits eine Rolle
@@ -724,6 +730,45 @@ Implementierungstask.
 
 ---
 
+## D-27 – Platform Permissions ohne Zugriff auf Organisationsressourcen
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Betrifft:** ID-006 und alle folgenden tenantgebundenen Endpunkte
+**Setzt voraus:** D-05, D-18, D-20, D-21, D-22, D-26
+
+Permissions aus `identity.platform_role_assignment` gelten **ausschließlich im
+Platform Scope** und gewähren keinen Zugriff auf organisationsgebundene
+Ressourcen.
+
+Für `/api/v1/organizations/{organizationId}/...` muss die erforderliche
+Permission aus einer gültigen Organization Role Assignment für **genau diese
+Organisation** und den erforderlichen Location Scope stammen.
+
+Gleiche Permission-Codes dürfen in unterschiedlichen Scopes vorkommen. **Der
+Permission-Code allein entscheidet nicht über Zugriff.** Entscheidend ist immer:
+
+```text
+Identity + Assignment Scope + Organization/Location Scope + Permission
+```
+
+**Auswirkung:** PlatformAdmin erhält dadurch keinen impliziten Zugriff auf
+fachliche Kundendaten. Das in D-20 zugewiesene `organization.read` ist damit
+nicht über `/api/v1/organizations/{organizationId}` nutzbar; plattformweite
+Funktionen erhalten später eigene, explizite Platform-Endpunkte, etwa
+`/api/v1/platform/organizations`.
+
+Ein zukünftiger Support-, Impersonation- oder Emergency-Access-Mechanismus
+wäre eine **eigene, explizite und auditierbare Funktion** — keine Ausnahme
+durch normale PlatformAdmin-Permissions.
+
+**Begründung:** D-20 verlangt, dass eine Permission allein niemals
+organisationsübergreifenden Zugriff ermöglicht, und hält für PlatformAdmin
+ausdrücklich fest, dass er bewusst ohne Zugriff auf fachliche Kundendaten
+bleibt. Ohne diese Entscheidung erschiene der Widerspruch zwischen D-20 und dem
+Verhalten der API als Fehler und würde vermutlich stillschweigend „repariert“.
+
+---
+
 ## Nächste freie ID
 
-`D-27`
+`D-28`
