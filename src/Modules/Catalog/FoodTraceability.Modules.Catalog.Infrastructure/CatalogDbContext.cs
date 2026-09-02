@@ -9,6 +9,8 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
 {
     public const string Schema = "catalog";
 
+    public DbSet<Article> Articles => Set<Article>();
+
     public DbSet<Product> Products => Set<Product>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

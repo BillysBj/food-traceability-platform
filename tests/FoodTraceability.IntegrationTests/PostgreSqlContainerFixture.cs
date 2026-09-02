@@ -79,6 +79,12 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var context = CreateDbContext();
             await context.Database.MigrateAsync(timeout.Token);
 
+            // Catalog owns no Organizations entities. Its migration-level cross-schema FK
+            // requires the referenced org table to exist in the same database first.
+            await using var catalogOrganizationsContext =
+                CreateCatalogOrganizationsDbContext();
+            await catalogOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
             await using var catalogContext = CreateCatalogDbContext();
             await catalogContext.Database.MigrateAsync(timeout.Token);
 
@@ -151,6 +157,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             OrganizationsConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateCatalogOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            CatalogConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);
