@@ -17,6 +17,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string AuthenticationFailedErrorCode = "AUTHENTICATION_FAILED";
     private const string AuthenticationRequiredTitle = "Authentication is required.";
     private const string AuthenticationRequiredErrorCode = "AUTHENTICATION_REQUIRED";
+    private const string ArticleConflictTitle = "The article conflicts with existing data.";
+    private const string ArticleConflictErrorCode = "ARTICLE_CONFLICT";
+    private const string ArticleNotFoundTitle = "Article not found.";
+    private const string ArticleNotFoundErrorCode = "ARTICLE_NOT_FOUND";
+    private const string ArticleValidationTitle = "The article request is invalid.";
+    private const string ArticleValidationErrorCode = "ARTICLE_VALIDATION_FAILED";
     private const string AuthorizationDeniedTitle = "Access is forbidden.";
     private const string AuthorizationDeniedErrorCode = "AUTHORIZATION_DENIED";
     private const string RateLimitExceededTitle = "Too many requests.";
@@ -42,6 +48,37 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             StatusCodes.Status401Unauthorized,
             AuthenticationRequiredTitle,
             AuthenticationRequiredErrorCode);
+
+    public ProblemDetails CreateArticleConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            ArticleConflictTitle,
+            ArticleConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateArticleNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            ArticleNotFoundTitle,
+            ArticleNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateArticleValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Article", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            ArticleValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = ArticleValidationErrorCode;
+        return problemDetails;
+    }
 
     public ProblemDetails CreateAuthorizationDenied(HttpContext httpContext) =>
         CreateApiProblemDetails(

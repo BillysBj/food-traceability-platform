@@ -5,6 +5,8 @@ namespace FoodTraceability.Api.Security;
 
 public static class ApiAuthorizationConfiguration
 {
+    private const string ArticleCreatePermission = "article.create";
+    private const string ArticleReadPermission = "article.read";
     private const string OrganizationReadPermission = "organization.read";
     private const string OrganizationManagePermission = "organization.manage";
 
@@ -14,6 +16,18 @@ public static class ApiAuthorizationConfiguration
 
         services.AddAuthorization(options =>
         {
+            options.AddPolicy(
+                AuthorizationPolicies.ArticleCreate,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(ArticleCreatePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.ArticleRead,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(ArticleReadPermission)));
             options.AddPolicy(
                 AuthorizationPolicies.ActiveUser,
                 policy => policy

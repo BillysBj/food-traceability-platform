@@ -14,12 +14,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private static readonly TimeSpan InitializationTimeout = TimeSpan.FromMinutes(2);
 
     private PostgreSqlContainer? _container;
+    private string? _articleApiConnectionString;
     private string? _catalogConnectionString;
     private string? _identityConnectionString;
     private string? _organizationsConnectionString;
     private string? _traceabilityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
+
+    public string ArticleApiConnectionString => _articleApiConnectionString
+        ?? throw new InvalidOperationException("The Article API test database is not initialized.");
 
     public string CatalogConnectionString => _catalogConnectionString
         ?? throw new InvalidOperationException("The Catalog test database is not initialized.");
@@ -49,6 +53,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             _catalogConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_catalog_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _articleApiConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_article_api_tests_{Guid.NewGuid():N}",
                 timeout.Token);
             _identityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_identity_tests_{Guid.NewGuid():N}",
@@ -99,6 +106,18 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var organizationsContext = CreateOrganizationsDbContext();
             await organizationsContext.Database.MigrateAsync(timeout.Token);
 
+            // Article API tests exercise Identity, Organizations, and Catalog together in the
+            // same modular-monolith database while each module retains its own DbContext.
+            await using var articleApiOrganizationsContext =
+                CreateArticleApiOrganizationsDbContext();
+            await articleApiOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var articleApiCatalogContext = CreateArticleApiCatalogDbContext();
+            await articleApiCatalogContext.Database.MigrateAsync(timeout.Token);
+
+            await using var articleApiIdentityContext = CreateArticleApiIdentityDbContext();
+            await articleApiIdentityContext.Database.MigrateAsync(timeout.Token);
+
             // Traceability owns no Organizations entities. Its migration-level cross-schema FK
             // requires the referenced org table to exist in the same database first.
             await using var traceabilityOrganizationsContext =
@@ -142,6 +161,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         return new CatalogDbContext(optionsBuilder.Options);
     }
 
+    public CatalogDbContext CreateArticleApiCatalogDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            ArticleApiConnectionString,
+            CatalogDbContext.Schema);
+
+        return new CatalogDbContext(optionsBuilder.Options);
+    }
+
     public IdentityDbContext CreateIdentityDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
@@ -152,11 +181,31 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         return new IdentityDbContext(optionsBuilder.Options);
     }
 
+    public IdentityDbContext CreateArticleApiIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            ArticleApiConnectionString,
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
+    }
+
     public OrganizationsDbContext CreateOrganizationsDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             OrganizationsConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateArticleApiOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            ArticleApiConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);
