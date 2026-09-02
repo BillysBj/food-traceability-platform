@@ -1,13 +1,11 @@
 using System.Text;
 using FoodTraceability.Modules.Identity.Application.Authentication;
 using FoodTraceability.Platform.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 
@@ -62,27 +60,6 @@ public static class IdentityAuthenticationConfiguration
                 static options => options.WindowSeconds > 0,
                 "Authentication:LoginAttempts:WindowSeconds must be greater than zero.")
             .ValidateOnStart();
-
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer();
-        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<IOptions<JwtOptions>>(static (bearerOptions, jwtOptionsAccessor) =>
-            {
-                var jwtOptions = jwtOptionsAccessor.Value;
-                bearerOptions.MapInboundClaims = false;
-                bearerOptions.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwtOptions.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwtOptions.Audience,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtOptions.SigningKey!)),
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
 
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);

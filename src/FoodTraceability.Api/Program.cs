@@ -45,6 +45,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddApiSwagger();
 builder.Services.AddApiSecurity(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
+builder.Services.AddApiJwtBearerAuthentication();
 builder.Services
     .AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>(
