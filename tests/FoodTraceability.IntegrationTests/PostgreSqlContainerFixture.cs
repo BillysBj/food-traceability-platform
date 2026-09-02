@@ -1,3 +1,4 @@
+using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Modules.Traceability.Infrastructure;
@@ -13,11 +14,15 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private static readonly TimeSpan InitializationTimeout = TimeSpan.FromMinutes(2);
 
     private PostgreSqlContainer? _container;
+    private string? _catalogConnectionString;
     private string? _identityConnectionString;
     private string? _organizationsConnectionString;
     private string? _traceabilityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
+
+    public string CatalogConnectionString => _catalogConnectionString
+        ?? throw new InvalidOperationException("The Catalog test database is not initialized.");
 
     public string IdentityConnectionString => _identityConnectionString
         ?? throw new InvalidOperationException("The Identity test database is not initialized.");
@@ -42,6 +47,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
                 .Build();
             await _container.StartAsync(timeout.Token);
 
+            _catalogConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_catalog_tests_{Guid.NewGuid():N}",
+                timeout.Token);
             _identityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_identity_tests_{Guid.NewGuid():N}",
                 timeout.Token);
@@ -70,6 +78,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         {
             await using var context = CreateDbContext();
             await context.Database.MigrateAsync(timeout.Token);
+
+            await using var catalogContext = CreateCatalogDbContext();
+            await catalogContext.Database.MigrateAsync(timeout.Token);
 
             // Identity owns no Organizations entities. Its migration-level cross-schema FKs
             // nevertheless require the referenced org tables to exist in the same database.
@@ -113,6 +124,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             PlatformDbContext.MigrationsHistorySchema);
 
         return new PlatformDbContext(optionsBuilder.Options);
+    }
+
+    public CatalogDbContext CreateCatalogDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            CatalogConnectionString,
+            CatalogDbContext.Schema);
+
+        return new CatalogDbContext(optionsBuilder.Options);
     }
 
     public IdentityDbContext CreateIdentityDbContext()

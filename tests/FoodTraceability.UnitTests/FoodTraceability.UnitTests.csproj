@@ -15,6 +15,7 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Catalog\FoodTraceability.Modules.Catalog.Domain\FoodTraceability.Modules.Catalog.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Application\FoodTraceability.Modules.Identity.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Domain\FoodTraceability.Modules.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organizations\FoodTraceability.Modules.Organizations.Application\FoodTraceability.Modules.Organizations.Application.csproj" />
