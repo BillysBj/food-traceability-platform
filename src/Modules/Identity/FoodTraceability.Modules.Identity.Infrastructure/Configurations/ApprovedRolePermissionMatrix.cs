@@ -33,9 +33,13 @@ internal static class ApprovedRolePermissionMatrix
             Assign(StandardRoleIds.OrganizationAdmin, StandardPermissionIds.UserRead),
             Assign(StandardRoleIds.OrganizationAdmin, StandardPermissionIds.UserManage),
             Assign(StandardRoleIds.OrganizationAdmin, StandardPermissionIds.RoleRead),
+            Assign(StandardRoleIds.OrganizationAdmin, StandardPermissionIds.ArticleRead),
 
             // PRODUCER
             Assign(StandardRoleIds.Producer, StandardPermissionIds.ProductRead),
+            Assign(StandardRoleIds.Producer, StandardPermissionIds.ArticleRead),
+            Assign(StandardRoleIds.Producer, StandardPermissionIds.ArticleCreate),
+            Assign(StandardRoleIds.Producer, StandardPermissionIds.ArticleUpdate),
             Assign(StandardRoleIds.Producer, StandardPermissionIds.LotRead),
             Assign(StandardRoleIds.Producer, StandardPermissionIds.LotCreate),
             Assign(StandardRoleIds.Producer, StandardPermissionIds.LotUpdate),
@@ -46,6 +50,9 @@ internal static class ApprovedRolePermissionMatrix
 
             // PROCESSOR
             Assign(StandardRoleIds.Processor, StandardPermissionIds.ProductRead),
+            Assign(StandardRoleIds.Processor, StandardPermissionIds.ArticleRead),
+            Assign(StandardRoleIds.Processor, StandardPermissionIds.ArticleCreate),
+            Assign(StandardRoleIds.Processor, StandardPermissionIds.ArticleUpdate),
             Assign(StandardRoleIds.Processor, StandardPermissionIds.LotRead),
             Assign(StandardRoleIds.Processor, StandardPermissionIds.LotCreate),
             Assign(StandardRoleIds.Processor, StandardPermissionIds.LotUpdate),
@@ -56,6 +63,9 @@ internal static class ApprovedRolePermissionMatrix
 
             // BOTTLER
             Assign(StandardRoleIds.Bottler, StandardPermissionIds.ProductRead),
+            Assign(StandardRoleIds.Bottler, StandardPermissionIds.ArticleRead),
+            Assign(StandardRoleIds.Bottler, StandardPermissionIds.ArticleCreate),
+            Assign(StandardRoleIds.Bottler, StandardPermissionIds.ArticleUpdate),
             Assign(StandardRoleIds.Bottler, StandardPermissionIds.LotRead),
             Assign(StandardRoleIds.Bottler, StandardPermissionIds.LotCreate),
             Assign(StandardRoleIds.Bottler, StandardPermissionIds.LotUpdate),

@@ -65,6 +65,9 @@ public static class StandardPermissionIds
     public static readonly Guid ProductRead = Guid.Parse("13fae5e7-0a2d-5b72-9401-3c9e398b2b55");
     public static readonly Guid ProductCreate = Guid.Parse("becb86f7-1a71-5ccb-b0ab-3aade89e6177");
     public static readonly Guid ProductUpdate = Guid.Parse("06de594f-5714-5198-b877-5b84fdb8a1bc");
+    public static readonly Guid ArticleRead = Guid.Parse("f57cf66c-3591-54bd-a12e-5f53f141c48e");
+    public static readonly Guid ArticleCreate = Guid.Parse("b2d81829-2d1c-5e6a-9b19-7d275f3aa0cf");
+    public static readonly Guid ArticleUpdate = Guid.Parse("953dda24-0a71-57bc-b06c-dfc895a1fae2");
     public static readonly Guid LotRead = Guid.Parse("8d153853-ab36-5e34-8537-2e05556feeee");
     public static readonly Guid LotCreate = Guid.Parse("da54dd5a-9013-5c1b-8b4e-fdc30258e02f");
     public static readonly Guid LotUpdate = Guid.Parse("a131fb8f-4ffb-510e-8aa3-2d7fa78c3383");

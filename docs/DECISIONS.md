@@ -57,6 +57,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-28 | Kein physischer `traceable_object`-Supertyp in Pilot 1 | ENTSCHIEDEN |
 | D-29 | Lot-Eigentum beim Organisationsuebergang | ENTSCHIEDEN |
 | D-30 | Cross-Organization Visibility: Partner View und Public View | ENTSCHIEDEN |
+| D-31 | Article-Permissions | ENTSCHIEDEN |
 
 ---
 
@@ -393,13 +394,14 @@ Einheitenkonvertierung vergeben. Verbindlich ist **D-17**.
 
 **Status:** ENTSCHIEDEN (2026-09-01), umgesetzt in ID-003
 
-Genau diese 26 Permission-Codes gelten für Pilot 1, Version 1:
+Genau diese 29 Permission-Codes gelten für Pilot 1, Version 1:
 
 ```text
 organization.read        organization.manage
 user.read                user.manage
 role.read                permission.read
 product.read             product.create           product.update
+article.read             article.create           article.update
 lot.read                 lot.create               lot.update
 trace.read               trace.event.create
 quality.read             quality.sample.create    quality.result.create
@@ -480,19 +482,21 @@ Plattformadministration und Pflege des globalen Produktkatalogs.
 `trace.read`, `quality.read` oder `audit.read` aufgrund der Plattformrolle.
 Ein späterer Supportzugriff muss separat und auditierbar modelliert werden.
 
-### OrganizationAdmin (5)
+### OrganizationAdmin (6)
 ```text
 organization.read  organization.manage
 user.read          user.manage
 role.read
+article.read
 ```
 Benutzer, Standorte und Einstellungen der **eigenen** Organisation.
 Kein Schreibzugriff auf globale Produktstammdaten (OPEN-B).
 Kein `audit.read` in Pilot 1 (OPEN-F).
 
-### Producer (8), Processor (8), Bottler (8) – identisch
+### Producer (11), Processor (11), Bottler (11) – identisch
 ```text
 product.read
+article.read        article.create       article.update
 lot.read           lot.create          lot.update
 trace.read         trace.event.create
 document.read      document.upload
@@ -554,7 +558,7 @@ Ausschließlich lesend.
 - **OPEN-E** `document.read` erhalten zusätzlich Retailer und Auditor.
 - **OPEN-F** OrganizationAdmin erhält in Pilot 1 kein `audit.read`.
 
-**Summe:** 68 Zuordnungen. Alle 26 Permissions aus D-18 sind mindestens einer
+**Summe:** 78 Zuordnungen. Alle 29 Permissions aus D-18 sind mindestens einer
 Rolle zugeordnet.
 
 **Ableitung:** PlatformAdmin erhält `product.read` als notwendige Ergänzung zu
@@ -875,6 +879,55 @@ Entscheidung liefert sie.
 
 ---
 
+## D-31 – Article-Permissions
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Erweitert:** D-18, D-20
+**Setzt voraus:** D-26, D-27
+**Betrifft:** CAT-002 und alle folgenden Article-Endpunkte
+
+D-18 wird um drei Codes erweitert: `article.read`, `article.create`,
+`article.update`. Damit umfasst die kanonische Liste **29 Permissions**.
+
+**Kein `article.delete` in Pilot 1.** D-18 enthielt bis hierher kein einziges
+Löschrecht — es gibt weder `lot.delete` noch `organization.delete` noch
+`product.delete`. Ein Artikel, auf den ein Lot verweist, darf zudem nicht
+verschwinden, ohne dessen Historie zu brechen; Rückverfolgbarkeit ist
+append-orientiert. Das Ausmustern eines Artikels wäre ein Status-Thema, keine
+Löschung.
+
+**Article-Permissions sind organisationsgebunden** und ausdrücklich getrennt von
+den globalen Product-Permissions. Ein Artikel ist die SKU-, GTIN- beziehungsweise
+Verpackungsausprägung genau einer Organisation.
+
+**D-27 gilt unverändert:** Platform Permissions eröffnen keinen Zugriff auf
+Artikel einer Organisation. PLATFORM_ADMIN erhält deshalb bewusst **keine**
+Article-Permission — sie wäre auf organisationsgebundenen Routen wirkungslos und
+würde denselben Widerspruch erzeugen, der bei `organization.read` als Eigenart
+festgehalten werden musste.
+
+Rollenzuweisungen — zehn neue, D-20 steigt von 68 auf 78:
+
+```text
+ORGANIZATION_ADMIN   article.read
+PRODUCER             article.read   article.create   article.update
+PROCESSOR            article.read   article.create   article.update
+BOTTLER              article.read   article.create   article.update
+```
+
+Alle übrigen Rollen erhalten keine Article-Permission. Insbesondere RETAILER
+nicht: Eigenmarken des Handels werden für Pilot 1 nicht vorweggenommen und
+können später additiv ergänzt werden.
+
+**Begründung:** Artikelpflege soll keine Organisationsadministration
+voraussetzen — deshalb eigene Codes statt einer Erweiterung von
+`organization.manage`, das D-20 als privilegiert führt. Schreibrechte erhalten
+die erzeugenden Rollen, die bereits `product.read` tragen. ORGANIZATION_ADMIN
+erhält lesenden Zugriff auf die Stammdaten der eigenen Organisation, ohne sie
+pflegen zu müssen.
+
+---
+
 ## Nächste freie ID
 
-`D-31`
+`D-32`
