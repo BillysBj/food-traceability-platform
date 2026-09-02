@@ -4,6 +4,7 @@ using FoodTraceability.Api.HealthChecks;
 using FoodTraceability.Api.Middleware;
 using FoodTraceability.Api.OpenApi;
 using FoodTraceability.Api.Security;
+using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Platform.Persistence;
@@ -47,6 +48,7 @@ builder.Services.AddApiSecurity(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddApiJwtBearerAuthentication();
 builder.Services.AddOrganizations();
+builder.Services.AddCatalog();
 builder.Services.AddApiAuthorization();
 builder.Services
     .AddHealthChecks()
