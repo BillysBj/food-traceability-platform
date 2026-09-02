@@ -33,6 +33,10 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
             migration => Assert.EndsWith(
                 "_AddArticle",
                 migration,
+                StringComparison.Ordinal),
+            migration => Assert.EndsWith(
+                "_AddUnit",
+                migration,
                 StringComparison.Ordinal));
     }
 
@@ -53,8 +57,142 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
                 PersistenceConventions.MigrationsHistoryTableName,
                 "article",
                 "product",
+                "unit",
             ],
             tables);
+    }
+
+    [Fact]
+    public async Task UnitTableHasExactlyTheExpectedColumns()
+    {
+        const string sql = """
+            SELECT column_name,
+                   is_nullable,
+                   data_type,
+                   character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'catalog'
+              AND table_name = 'unit'
+            ORDER BY ordinal_position;
+            """;
+
+        var columns = await QueryAsync(
+            sql,
+            static reader => new DatabaseColumn(
+                reader.GetString(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [
+                new DatabaseColumn("unit_id", "NO", "uuid", null),
+                new DatabaseColumn(
+                    "code",
+                    "NO",
+                    "character varying",
+                    UnitCode.MaximumLength),
+                new DatabaseColumn(
+                    "symbol",
+                    "NO",
+                    "character varying",
+                    Unit.MaximumSymbolLength),
+                new DatabaseColumn(
+                    "dimension",
+                    "NO",
+                    "character varying",
+                    UnitDimensionCodes.MaximumLength),
+                new DatabaseColumn("created_at", "NO", "timestamp with time zone", null),
+            ],
+            columns);
+
+        Assert.DoesNotContain(columns, column => column.Name == "name");
+        Assert.DoesNotContain(columns, column => column.Name == "updated_at");
+        Assert.DoesNotContain(columns, column => column.Name == "organization_id");
+    }
+
+    [Fact]
+    public async Task ExactlyTheFiveStandardUnitsAreSeeded()
+    {
+        const string sql = """
+            SELECT unit_id, code, symbol, dimension
+            FROM catalog.unit
+            ORDER BY code;
+            """;
+
+        var units = await QueryAsync(
+            sql,
+            static reader => new SeededUnit(
+                reader.GetGuid(0),
+                reader.GetString(1),
+                reader.GetString(2),
+                reader.GetString(3)));
+
+        Assert.Equal(
+            [
+                new SeededUnit(
+                    Guid.Parse("5e726b86-c672-5ed0-9601-904328038341"),
+                    "G",
+                    "g",
+                    "MASS"),
+                new SeededUnit(
+                    Guid.Parse("4ba563a7-f314-57d8-b3d7-ee5c12ff1085"),
+                    "KG",
+                    "kg",
+                    "MASS"),
+                new SeededUnit(
+                    Guid.Parse("8d8ed466-8384-5e44-8430-eee76f15a180"),
+                    "L",
+                    "l",
+                    "VOLUME"),
+                new SeededUnit(
+                    Guid.Parse("dd541026-8821-53a3-97de-f0a974327970"),
+                    "ML",
+                    "ml",
+                    "VOLUME"),
+                new SeededUnit(
+                    Guid.Parse("d227d884-ef6c-5667-9587-1d9fdee6836e"),
+                    "PCS",
+                    "pcs",
+                    "COUNT"),
+            ],
+            units);
+    }
+
+    [Fact]
+    public async Task DuplicateUnitCodeIsRejected()
+    {
+        await using var context = database.CreateCatalogDbContext();
+        context.Units.Add(Unit.Create(
+            Guid.NewGuid(),
+            UnitCode.Create("kg"),
+            "duplicate",
+            UnitDimension.Mass,
+            CreatedAt));
+
+        await AssertDatabaseErrorAsync(
+            () => context.SaveChangesAsync(),
+            PostgresErrorCodes.UniqueViolation);
+    }
+
+    [Fact]
+    public async Task InvalidUnitDimensionIsRejectedByDatabase()
+    {
+        await AssertUnitInsertErrorAsync(
+            "LENGTH_UNIT",
+            "length",
+            "LENGTH",
+            PostgresErrorCodes.CheckViolation);
+    }
+
+    [Fact]
+    public async Task UnitCodeLongerThanMaximumIsRejectedByDatabase()
+    {
+        await AssertUnitInsertErrorAsync(
+            new string('A', UnitCode.MaximumLength + 1),
+            "oversized",
+            UnitDimensionCodes.Count,
+            PostgresErrorCodes.StringDataRightTruncation);
     }
 
     [Fact]
@@ -676,6 +814,33 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(expectedSqlState, exception.SqlState);
     }
 
+    private async Task AssertUnitInsertErrorAsync(
+        string code,
+        string symbol,
+        string dimension,
+        string expectedSqlState)
+    {
+        const string sql = """
+            INSERT INTO catalog.unit (unit_id, code, symbol, dimension, created_at)
+            VALUES (@unit_id, @code, @symbol, @dimension, @created_at);
+            """;
+
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var connection = new NpgsqlConnection(database.CatalogConnectionString);
+        await connection.OpenAsync(timeout.Token);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("unit_id", Guid.NewGuid());
+        command.Parameters.AddWithValue("code", code);
+        command.Parameters.AddWithValue("symbol", symbol);
+        command.Parameters.AddWithValue("dimension", dimension);
+        command.Parameters.AddWithValue("created_at", CreatedAt);
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(
+            () => command.ExecuteNonQueryAsync(timeout.Token));
+
+        Assert.Equal(expectedSqlState, exception.SqlState);
+    }
+
     private async Task DeleteProductByCodeAsync(string productCode)
     {
         const string sql = """
@@ -748,4 +913,10 @@ public sealed class CatalogMigrationTests(PostgreSqlContainerFixture database)
         string IsNullable,
         string DataType,
         int? MaximumLength);
+
+    private sealed record SeededUnit(
+        Guid Id,
+        string Code,
+        string Symbol,
+        string Dimension);
 }
