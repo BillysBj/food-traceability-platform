@@ -6,6 +6,7 @@ namespace FoodTraceability.Api.Security;
 public static class ApiAuthorizationConfiguration
 {
     private const string OrganizationReadPermission = "organization.read";
+    private const string OrganizationManagePermission = "organization.manage";
 
     public static IServiceCollection AddApiAuthorization(this IServiceCollection services)
     {
@@ -18,6 +19,12 @@ public static class ApiAuthorizationConfiguration
                 policy => policy
                     .RequireAuthenticatedUser()
                     .AddRequirements(new ActiveUserRequirement()));
+            options.AddPolicy(
+                AuthorizationPolicies.OrganizationManage,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(OrganizationManagePermission)));
             options.AddPolicy(
                 AuthorizationPolicies.OrganizationRead,
                 policy => policy

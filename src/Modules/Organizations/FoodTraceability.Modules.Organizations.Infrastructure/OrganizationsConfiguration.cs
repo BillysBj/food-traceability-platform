@@ -4,6 +4,7 @@ using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace FoodTraceability.Modules.Organizations.Infrastructure;
 
@@ -22,8 +23,11 @@ public static class OrganizationsConfiguration
 
             options.UseFoodTraceabilityPostgres(connectionString, OrganizationsDbContext.Schema);
         });
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IOrganizationReader, OrganizationReader>();
+        services.AddScoped<ILocationWriter, LocationWriter>();
         services.AddScoped<OrganizationQueryService>();
+        services.AddScoped<CreateLocationService>();
 
         return services;
     }
