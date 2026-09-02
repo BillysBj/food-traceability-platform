@@ -1,5 +1,6 @@
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Infrastructure;
+using FoodTraceability.Modules.Traceability.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -14,6 +15,7 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private PostgreSqlContainer? _container;
     private string? _identityConnectionString;
     private string? _organizationsConnectionString;
+    private string? _traceabilityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
 
@@ -22,6 +24,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     public string OrganizationsConnectionString => _organizationsConnectionString
         ?? throw new InvalidOperationException("The Organizations test database is not initialized.");
+
+    public string TraceabilityConnectionString => _traceabilityConnectionString
+        ?? throw new InvalidOperationException("The Traceability test database is not initialized.");
 
     public async Task InitializeAsync()
     {
@@ -42,6 +47,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
                 timeout.Token);
             _organizationsConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_organizations_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _traceabilityConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_traceability_tests_{Guid.NewGuid():N}",
                 timeout.Token);
         }
         catch (Exception exception)
@@ -73,6 +81,15 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             await using var organizationsContext = CreateOrganizationsDbContext();
             await organizationsContext.Database.MigrateAsync(timeout.Token);
+
+            // Traceability owns no Organizations entities. Its migration-level cross-schema FK
+            // requires the referenced org table to exist in the same database first.
+            await using var traceabilityOrganizationsContext =
+                CreateTraceabilityOrganizationsDbContext();
+            await traceabilityOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var traceabilityContext = CreateTraceabilityDbContext();
+            await traceabilityContext.Database.MigrateAsync(timeout.Token);
         }
         catch
         {
@@ -123,6 +140,26 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             IdentityConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public TraceabilityDbContext CreateTraceabilityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<TraceabilityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            TraceabilityConnectionString,
+            TraceabilityDbContext.Schema);
+
+        return new TraceabilityDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateTraceabilityOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            TraceabilityConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);
