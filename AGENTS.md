@@ -239,6 +239,7 @@ permission.read
 product.read
 product.create
 product.update
+article.read             article.create           article.update
 
 lot.read
 lot.create

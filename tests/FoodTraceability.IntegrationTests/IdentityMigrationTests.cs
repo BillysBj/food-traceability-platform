@@ -23,13 +23,14 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             .GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(6, migrations.Length);
+        Assert.Equal(7, migrations.Length);
         Assert.EndsWith("_InitialIdentity", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddRoles", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddPermissions", migrations[2], StringComparison.Ordinal);
         Assert.EndsWith("_AddRolePermissions", migrations[3], StringComparison.Ordinal);
         Assert.EndsWith("_AddOrganizationMemberships", migrations[4], StringComparison.Ordinal);
         Assert.EndsWith("_AddUserCredentialsAndRefreshTokens", migrations[5], StringComparison.Ordinal);
+        Assert.EndsWith("_AddArticlePermissions", migrations[6], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -343,7 +344,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
-    public async Task AllTwentySixPermissionsAreSeededWithExpectedCodes()
+    public async Task AllTwentyNinePermissionsAreSeededWithExpectedCodes()
     {
         const string sql = """
             SELECT code
@@ -355,6 +356,9 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
 
         Assert.Equal(
             [
+                "article.create",
+                "article.read",
+                "article.update",
                 "audit.read",
                 "delivery.create",
                 "delivery.read",
@@ -401,6 +405,9 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
 
         Assert.Equal(
             [
+                new SeededPermission("article.create", StandardPermissionIds.ArticleCreate),
+                new SeededPermission("article.read", StandardPermissionIds.ArticleRead),
+                new SeededPermission("article.update", StandardPermissionIds.ArticleUpdate),
                 new SeededPermission("audit.read", StandardPermissionIds.AuditRead),
                 new SeededPermission("delivery.create", StandardPermissionIds.DeliveryCreate),
                 new SeededPermission("delivery.read", StandardPermissionIds.DeliveryRead),
@@ -554,13 +561,13 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
-    public async Task SixtyEightAssignmentsAreSeeded()
+    public async Task SeventyEightAssignmentsAreSeeded()
     {
         const string sql = "SELECT COUNT(*) FROM identity.role_permission;";
 
         var counts = await QueryAsync(sql, static reader => reader.GetInt64(0));
 
-        Assert.Equal(68, Assert.Single(counts));
+        Assert.Equal(78, Assert.Single(counts));
     }
 
     [Fact]
@@ -601,6 +608,7 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             ],
             ["ORGANIZATION_ADMIN"] =
             [
+                "article.read",
                 "organization.manage",
                 "organization.read",
                 "role.read",
@@ -609,6 +617,9 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             ],
             ["PRODUCER"] =
             [
+                "article.create",
+                "article.read",
+                "article.update",
                 "document.read",
                 "document.upload",
                 "lot.create",
@@ -620,6 +631,9 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             ],
             ["PROCESSOR"] =
             [
+                "article.create",
+                "article.read",
+                "article.update",
                 "document.read",
                 "document.upload",
                 "lot.create",
@@ -631,6 +645,9 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
             ],
             ["BOTTLER"] =
             [
+                "article.create",
+                "article.read",
+                "article.update",
                 "document.read",
                 "document.upload",
                 "lot.create",
@@ -695,6 +712,40 @@ public sealed class IdentityMigrationTests(PostgreSqlContainerFixture database)
         {
             Assert.Equal(expectedPermissions, actual[roleCode]);
         }
+    }
+
+    [Fact]
+    public async Task ArticlePermissionsAreAssignedOnlyToApprovedRoles()
+    {
+        const string sql = """
+            SELECT role.code, permission.code
+            FROM identity.role_permission AS role_permission
+            JOIN identity.role AS role
+              ON role.role_id = role_permission.role_id
+            JOIN identity.permission AS permission
+              ON permission.permission_id = role_permission.permission_id
+            WHERE permission.code IN ('article.read', 'article.create', 'article.update')
+            ORDER BY role.code, permission.code;
+            """;
+
+        var assignments = await QueryAsync(
+            sql,
+            static reader => new SeededRolePermission(reader.GetString(0), reader.GetString(1)));
+
+        Assert.Equal(
+            [
+                new SeededRolePermission("BOTTLER", "article.create"),
+                new SeededRolePermission("BOTTLER", "article.read"),
+                new SeededRolePermission("BOTTLER", "article.update"),
+                new SeededRolePermission("ORGANIZATION_ADMIN", "article.read"),
+                new SeededRolePermission("PROCESSOR", "article.create"),
+                new SeededRolePermission("PROCESSOR", "article.read"),
+                new SeededRolePermission("PROCESSOR", "article.update"),
+                new SeededRolePermission("PRODUCER", "article.create"),
+                new SeededRolePermission("PRODUCER", "article.read"),
+                new SeededRolePermission("PRODUCER", "article.update"),
+            ],
+            assignments);
     }
 
     [Fact]

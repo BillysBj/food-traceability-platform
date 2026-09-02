@@ -86,7 +86,7 @@ public sealed partial class DecisionLogDocumentationTests
             ReadRepositoryFile(DecisionLogPath),
             decisionMarker);
 
-        Assert.Equal(26, decisionPermissions.Length);
+        Assert.Equal(29, decisionPermissions.Length);
         Assert.Equal(decisionPermissions.Length, decisionPermissions.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(decisionPermissions, agentsPermissions);
         Assert.Equal(decisionPermissions, architecturePermissions);
