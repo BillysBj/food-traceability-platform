@@ -52,6 +52,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-23 | Umfang der ASP.NET Core Identity-Nutzung | ENTSCHIEDEN |
 | D-24 | Token- und Login-Parameter | ENTSCHIEDEN |
 | D-25 | Startverhalten bei fehlender Datenbankkonfiguration | OFFEN |
+| D-26 | Organization Context in API Routes | ENTSCHIEDEN |
 
 ---
 
@@ -687,6 +688,42 @@ definierten Zustand.
 
 ---
 
+## D-26 – Organization Context in API Routes
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Betrifft:** ID-006 und alle folgenden tenantgebundenen Endpunkte
+**Setzt voraus:** D-04, D-05, D-06, D-20, D-22, D-24
+
+Tenant- beziehungsweise organisationsgebundene API-Ressourcen führen den
+Organisationskontext **explizit im Ressourcenpfad**:
+
+```text
+/api/v1/organizations/{organizationId}/...
+```
+
+- Der Organisationskontext wird **nicht** über einen Header wie
+  `X-Organization-Id` transportiert.
+- Bei tenantgebundenen Listen und Neuanlagen wird er **nicht ausschließlich aus
+  der Ressource abgeleitet**.
+- Plattformweite Endpunkte sind ausgenommen, insbesondere `/api/v1/auth/*` und
+  `/api/v1/me`.
+
+**Begründung:** D-20 verlangt, dass eine Permission allein niemals
+organisationsübergreifenden Zugriff ermöglicht, und D-05 begründet die
+Trennung damit, dass implizite Sicherheitsbedingungen eine häufige Quelle
+stiller Autorisierungsfehler sind. Ein Kontext im Pfad ist Pflichtbestandteil des
+Vertrags und kann nicht vergessen werden; ein Header oder eine Ableitung aus der
+geladenen Ressource kann stillschweigend fehlen und liefert dann bereits fremde
+Daten, bevor geprüft wird.
+
+**Auswirkung:** Die Pfadbeispiele in `AGENTS.md` §30 und in der Master
+Specification sind flach (`/api/v1/lots`, `/api/v1/organizations`) und
+widersprechen dieser Entscheidung für tenantgebundene Ressourcen. Sie werden in
+einem separaten Dokumentations-Task nachgezogen, nicht nebenbei in einem
+Implementierungstask.
+
+---
+
 ## Nächste freie ID
 
-`D-26`
+`D-27`
