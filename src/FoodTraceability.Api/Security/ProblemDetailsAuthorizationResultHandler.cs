@@ -1,20 +1,15 @@
-using System.Text.Json;
+using FoodTraceability.Api.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
-using Microsoft.AspNetCore.Mvc;
 
 namespace FoodTraceability.Api.Security;
 
-internal sealed class ProblemDetailsAuthorizationResultHandler
+internal sealed class ProblemDetailsAuthorizationResultHandler(
+    IProblemDetailsService problemDetailsService,
+    ApiProblemDetailsFactory problemDetailsFactory)
     : IAuthorizationMiddlewareResultHandler
 {
-    private static readonly JsonSerializerOptions SerializerOptions =
-        new(JsonSerializerDefaults.Web);
-
-    private const string AuthenticationRequiredErrorCode = "AUTHENTICATION_REQUIRED";
-    private const string AuthorizationDeniedErrorCode = "AUTHORIZATION_DENIED";
-
-    public Task HandleAsync(
+    public async Task HandleAsync(
         RequestDelegate next,
         HttpContext context,
         AuthorizationPolicy policy,
@@ -22,7 +17,8 @@ internal sealed class ProblemDetailsAuthorizationResultHandler
     {
         if (authorizeResult.Succeeded)
         {
-            return next(context);
+            await next(context);
+            return;
         }
 
         var invalidPrincipal = authorizeResult.AuthorizationFailure?.FailureReasons.Any(reason =>
@@ -31,46 +27,21 @@ internal sealed class ProblemDetailsAuthorizationResultHandler
                 DatabaseAuthorizationHandler.InvalidPrincipalFailureReason,
                 StringComparison.Ordinal)) == true;
 
-        return authorizeResult.Challenged || invalidPrincipal
-            ? WriteProblemDetailsAsync(
-                context,
-                StatusCodes.Status401Unauthorized,
-                "Authentication is required.",
-                AuthenticationRequiredErrorCode,
-                includeBearerChallenge: true)
-            : WriteProblemDetailsAsync(
-                context,
-                StatusCodes.Status403Forbidden,
-                "Access is forbidden.",
-                AuthorizationDeniedErrorCode,
-                includeBearerChallenge: false);
-    }
-
-    private static Task WriteProblemDetailsAsync(
-        HttpContext context,
-        int statusCode,
-        string title,
-        string errorCode,
-        bool includeBearerChallenge)
-    {
-        context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
-        if (includeBearerChallenge)
+        var authenticationRequired = authorizeResult.Challenged || invalidPrincipal;
+        if (authenticationRequired)
         {
             context.Response.Headers.WWWAuthenticate = "Bearer";
         }
 
-        var problemDetails = new ProblemDetails
+        var problemDetails = authenticationRequired
+            ? problemDetailsFactory.CreateAuthenticationRequired(context)
+            : problemDetailsFactory.CreateAuthorizationDenied(context);
+        context.Response.StatusCode = problemDetails.Status
+            ?? throw new InvalidOperationException("Problem details status is required.");
+        await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
-            Status = statusCode,
-            Title = title,
-        };
-        problemDetails.Extensions["errorCode"] = errorCode;
-
-        return JsonSerializer.SerializeAsync(
-            context.Response.Body,
-            problemDetails,
-            SerializerOptions,
-            context.RequestAborted);
+            HttpContext = context,
+            ProblemDetails = problemDetails
+        });
     }
 }

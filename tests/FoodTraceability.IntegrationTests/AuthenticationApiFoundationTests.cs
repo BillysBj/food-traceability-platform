@@ -2,6 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using FoodTraceability.Api.Middleware;
 using FoodTraceability.Modules.Identity.Application.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,6 +37,32 @@ public sealed class AuthenticationApiFoundationTests
         AssertResponses(paths, "/api/v1/auth/login", "200", "400", "401", "429");
         AssertResponses(paths, "/api/v1/auth/refresh", "200", "400", "401", "429");
         AssertResponses(paths, "/api/v1/auth/logout", "204", "400", "429");
+    }
+
+    [Fact]
+    public async Task AutomaticValidationProblemContainsCorrelationIdentifiers()
+    {
+        const string correlationId = "fix-004-validation-correlation";
+        await using var factory = new ApiWebApplicationFactory();
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        {
+            Content = JsonContent.Create(new { email = (string?)null, password = (string?)null })
+        };
+        request.Headers.Add(CorrelationIdMiddleware.HeaderName, correlationId);
+
+        using var response = await client.SendAsync(request, factory.RequestCancellationToken);
+        using var document = JsonDocument.Parse(
+            await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(
+            correlationId,
+            Assert.Single(response.Headers.GetValues(CorrelationIdMiddleware.HeaderName)));
+        Assert.Equal(correlationId, document.RootElement.GetProperty("correlationId").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("traceId").GetString()));
     }
 
     [Fact]
@@ -243,7 +271,9 @@ public sealed class AuthenticationApiFoundationTests
 
         Assert.Equal(HttpStatusCode.Unauthorized, invalidHashResponse.StatusCode);
         Assert.Equal(unknownAccountResponse.StatusCode, invalidHashResponse.StatusCode);
-        Assert.Equal(unknownAccountBody, invalidHashBody);
+        Assert.Equal(
+            RemoveCorrelationIdentifiers(unknownAccountBody),
+            RemoveCorrelationIdentifiers(invalidHashBody));
 
         var errorEvent = Assert.Single(
             invalidHashFactory.LogSink.Events,
@@ -294,6 +324,15 @@ public sealed class AuthenticationApiFoundationTests
                 responses.TryGetProperty(statusCode, out _),
                 $"Swagger operation {path} does not document HTTP {statusCode}.");
         }
+    }
+
+    private static string RemoveCorrelationIdentifiers(string responseBody)
+    {
+        var problemDetails = JsonNode.Parse(responseBody)?.AsObject()
+            ?? throw new InvalidOperationException("The problem details response body was empty.");
+        Assert.True(problemDetails.Remove("correlationId"));
+        Assert.True(problemDetails.Remove("traceId"));
+        return problemDetails.ToJsonString();
     }
 
     private sealed class MissingAccountSessionStore : IAuthenticationSessionStore

@@ -117,7 +117,13 @@ public sealed class ApiSecurityTests
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal(correlationId, GetSingleHeader(response, CorrelationIdMiddleware.HeaderName));
         Assert.Equal(correlationId, document.RootElement.GetProperty("correlationId").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("traceId").GetString()));
         Assert.Equal("RATE_LIMIT_EXCEEDED", document.RootElement.GetProperty("errorCode").GetString());
+        Assert.Single(document.RootElement.EnumerateObject(), property =>
+            property.NameEquals("correlationId"));
+        Assert.Single(document.RootElement.EnumerateObject(), property =>
+            property.NameEquals("traceId"));
     }
 
     [Fact]

@@ -1,21 +1,22 @@
 using FoodTraceability.Api.Contracts.Authentication;
+using FoodTraceability.Api.Errors;
 using FoodTraceability.Api.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using AuthenticationService = FoodTraceability.Modules.Identity.Application.Authentication.AuthenticationService;
 using ApplicationLoginRequest = FoodTraceability.Modules.Identity.Application.Authentication.LoginRequest;
 using ApplicationLogoutRequest = FoodTraceability.Modules.Identity.Application.Authentication.LogoutRequest;
 using ApplicationRefreshRequest = FoodTraceability.Modules.Identity.Application.Authentication.RefreshRequest;
+using AuthenticationService = FoodTraceability.Modules.Identity.Application.Authentication.AuthenticationService;
 
 namespace FoodTraceability.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
 [EnableRateLimiting(ApiSecurityConfiguration.AuthenticationRateLimitPolicyName)]
-public sealed class AuthController(AuthenticationService authenticationService) : ControllerBase
+public sealed class AuthController(
+    AuthenticationService authenticationService,
+    ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
-    private const string AuthenticationFailedErrorCode = "AUTHENTICATION_FAILED";
-
     /// <summary>Authenticates a local user and creates a refresh-token session.</summary>
     /// <param name="request">The submitted e-mail address and password.</param>
     /// <param name="cancellationToken">Cancels request processing.</param>
@@ -35,7 +36,8 @@ public sealed class AuthController(AuthenticationService authenticationService) 
 
         return result.IsSuccessful
             ? Ok(ToResponse(result.Tokens!))
-            : AuthenticationFailed();
+            : problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateAuthenticationFailed(HttpContext));
     }
 
     /// <summary>Rotates a valid refresh token and issues a new token pair.</summary>
@@ -57,7 +59,8 @@ public sealed class AuthController(AuthenticationService authenticationService) 
 
         return result.IsSuccessful
             ? Ok(ToResponse(result.Tokens!))
-            : AuthenticationFailed();
+            : problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateAuthenticationFailed(HttpContext));
     }
 
     /// <summary>Revokes the complete refresh-token session.</summary>
@@ -89,22 +92,5 @@ public sealed class AuthController(AuthenticationService authenticationService) 
             tokens.AccessToken,
             tokens.ExpiresIn,
             tokens.RefreshToken);
-    }
-
-    private static ObjectResult AuthenticationFailed()
-    {
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status401Unauthorized,
-            Title = "Authentication failed."
-        };
-        problemDetails.Extensions["errorCode"] = AuthenticationFailedErrorCode;
-
-        var result = new ObjectResult(problemDetails)
-        {
-            StatusCode = StatusCodes.Status401Unauthorized
-        };
-        result.ContentTypes.Add("application/problem+json");
-        return result;
     }
 }

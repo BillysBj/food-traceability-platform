@@ -8,6 +8,7 @@ using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 
@@ -30,17 +31,15 @@ builder.Services.AddDbContext<PlatformDbContext>((serviceProvider, options) =>
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers();
+builder.Services.AddSingleton<ApiProblemDetailsFactory>();
+builder.Services.AddSingleton<ProblemDetailsFactory>(serviceProvider =>
+    serviceProvider.GetRequiredService<ApiProblemDetailsFactory>());
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
-    {
-        context.ProblemDetails.Extensions.TryAdd(
-            "correlationId",
-            CorrelationIdMiddleware.GetCorrelationId(context.HttpContext));
-        context.ProblemDetails.Extensions.TryAdd(
-            "traceId",
-            CorrelationIdMiddleware.GetTraceId(context.HttpContext));
-    };
+        ApiProblemDetailsFactory.AddCorrelationIdentifiers(
+            context.ProblemDetails,
+            context.HttpContext);
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddApiSwagger();
