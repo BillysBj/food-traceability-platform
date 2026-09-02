@@ -473,7 +473,10 @@ public sealed class AuthorizationEndpointTests(PostgreSqlContainerFixture databa
         Assert.Equal(
             expectedErrorCode,
             document.RootElement.GetProperty("errorCode").GetString());
-        Assert.False(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("correlationId").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("traceId").GetString()));
     }
 
     private static string CreateAccessToken(Guid userId)

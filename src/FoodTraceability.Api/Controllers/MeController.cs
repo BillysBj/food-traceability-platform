@@ -1,4 +1,5 @@
 using FoodTraceability.Api.Contracts.Authorization;
+using FoodTraceability.Api.Errors;
 using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Identity.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,9 @@ namespace FoodTraceability.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/me")]
-public sealed class MeController(EffectiveAuthorizationService authorizationService) : ControllerBase
+public sealed class MeController(
+    EffectiveAuthorizationService authorizationService,
+    ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
     /// <summary>Returns the authenticated identity and effective permissions by assignment source.</summary>
     /// <param name="cancellationToken">Cancels request processing.</param>
@@ -25,7 +28,8 @@ public sealed class MeController(EffectiveAuthorizationService authorizationServ
             : null;
         if (authorization is not { IsActive: true })
         {
-            return Unauthorized(CreateUnauthorizedProblemDetails());
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateAuthenticationRequired(HttpContext));
         }
 
         return Ok(new MeResponse(
@@ -45,16 +49,5 @@ public sealed class MeController(EffectiveAuthorizationService authorizationServ
                     permissionSet.LocationId,
                     permissionSet.Permissions))
                 .ToArray()));
-    }
-
-    private static ProblemDetails CreateUnauthorizedProblemDetails()
-    {
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status401Unauthorized,
-            Title = "Authentication is required.",
-        };
-        problemDetails.Extensions["errorCode"] = "AUTHENTICATION_REQUIRED";
-        return problemDetails;
     }
 }

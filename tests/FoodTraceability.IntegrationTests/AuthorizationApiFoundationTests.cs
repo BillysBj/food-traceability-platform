@@ -31,7 +31,13 @@ public sealed class AuthorizationApiFoundationTests
         Assert.Equal(
             "AUTHENTICATION_REQUIRED",
             document.RootElement.GetProperty("errorCode").GetString());
-        Assert.False(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("correlationId").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("traceId").GetString()));
+        Assert.Equal(
+            "Bearer",
+            Assert.Single(response.Headers.WwwAuthenticate).Scheme);
     }
 
     [Fact]
@@ -76,7 +82,10 @@ public sealed class AuthorizationApiFoundationTests
         Assert.Equal(
             "AUTHORIZATION_DENIED",
             document.RootElement.GetProperty("errorCode").GetString());
-        Assert.False(document.RootElement.TryGetProperty("correlationId", out _));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("correlationId").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(
+            document.RootElement.GetProperty("traceId").GetString()));
     }
 
     [Fact]

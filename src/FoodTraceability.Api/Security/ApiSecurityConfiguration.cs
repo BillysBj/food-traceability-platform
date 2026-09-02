@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Threading.RateLimiting;
-using FoodTraceability.Api.Middleware;
-using Microsoft.AspNetCore.Mvc;
+using FoodTraceability.Api.Errors;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FoodTraceability.Api.Security;
@@ -19,7 +18,6 @@ public static class ApiSecurityConfiguration
     private const string AuthenticationWindowSecondsConfigurationKey =
         "RateLimiting:Authentication:WindowSeconds";
     private const string UnknownClientPartition = "unknown";
-    private const string RateLimitErrorCode = "RATE_LIMIT_EXCEEDED";
     private const int DefaultPermitLimit = 100;
     private const int DefaultWindowSeconds = 60;
 
@@ -118,14 +116,9 @@ public static class ApiSecurityConfiguration
                 .ToString(CultureInfo.InvariantCulture);
         }
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status429TooManyRequests,
-            Title = "Too many requests.",
-            Detail = "The request rate limit has been exceeded. Retry after the current window."
-        };
-        problemDetails.Extensions["errorCode"] = RateLimitErrorCode;
-
+        var problemDetailsFactory = httpContext.RequestServices
+            .GetRequiredService<ApiProblemDetailsFactory>();
+        var problemDetails = problemDetailsFactory.CreateRateLimitExceeded(httpContext);
         var problemDetailsService = httpContext.RequestServices
             .GetRequiredService<IProblemDetailsService>();
         await problemDetailsService.TryWriteAsync(new ProblemDetailsContext

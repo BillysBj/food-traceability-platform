@@ -1,4 +1,5 @@
 using FoodTraceability.Api.Contracts.Organizations;
+using FoodTraceability.Api.Errors;
 using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Organizations.Application.Organizations;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,9 @@ namespace FoodTraceability.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/organizations")]
-public sealed class OrganizationsController(OrganizationQueryService queryService) : ControllerBase
+public sealed class OrganizationsController(
+    OrganizationQueryService queryService,
+    ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
     /// <summary>Returns an organization visible in the caller's organization-wide scope.</summary>
     /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
@@ -26,9 +29,8 @@ public sealed class OrganizationsController(OrganizationQueryService queryServic
         var organization = await queryService.FindByIdAsync(organizationId, cancellationToken);
         if (organization is null)
         {
-            return StatusCode(
-                StatusCodes.Status403Forbidden,
-                CreateForbiddenProblemDetails());
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateAuthorizationDenied(HttpContext));
         }
 
         return Ok(new OrganizationResponse(
@@ -40,16 +42,5 @@ public sealed class OrganizationsController(OrganizationQueryService queryServic
             organization.Phone,
             organization.CreatedAt,
             organization.UpdatedAt));
-    }
-
-    private static ProblemDetails CreateForbiddenProblemDetails()
-    {
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status403Forbidden,
-            Title = "Access is forbidden.",
-        };
-        problemDetails.Extensions["errorCode"] = "AUTHORIZATION_DENIED";
-        return problemDetails;
     }
 }

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Nodes;
 using FoodTraceability.Modules.Identity.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +50,7 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
     }
 
     [Fact]
-    public async Task AllLoginCredentialFailuresReturnIdenticalStatusAndBody()
+    public async Task AllLoginCredentialFailuresDifferOnlyByCorrelationIdentifiers()
     {
         var activeAccount = await CreateUserAsync(isActive: true, hasCredential: true);
         var disabledAccount = await CreateUserAsync(isActive: false, hasCredential: true);
@@ -79,7 +80,8 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
                 factory.RequestCancellationToken);
             responses.Add(new LoginFailure(
                 response.StatusCode,
-                await response.Content.ReadAsStringAsync(factory.RequestCancellationToken)));
+                RemoveCorrelationIdentifiers(
+                    await response.Content.ReadAsStringAsync(factory.RequestCancellationToken))));
         }
 
         var expected = responses[0];
@@ -348,6 +350,15 @@ public sealed class AuthenticationEndpointTests(PostgreSqlContainerFixture datab
         return claimType.Contains("role", StringComparison.OrdinalIgnoreCase)
             || claimType.Contains("permission", StringComparison.OrdinalIgnoreCase)
             || claimType.Contains("organization", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string RemoveCorrelationIdentifiers(string responseBody)
+    {
+        var problemDetails = JsonNode.Parse(responseBody)?.AsObject()
+            ?? throw new InvalidOperationException("The problem details response body was empty.");
+        Assert.True(problemDetails.Remove("correlationId"));
+        Assert.True(problemDetails.Remove("traceId"));
+        return problemDetails.ToJsonString();
     }
 
     private static string CreatePlainTextToken()
