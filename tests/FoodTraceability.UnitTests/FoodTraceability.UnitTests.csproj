@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Domain\FoodTraceability.Modules.Identity.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organizations\FoodTraceability.Modules.Organizations.Application\FoodTraceability.Modules.Organizations.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organizations\FoodTraceability.Modules.Organizations.Domain\FoodTraceability.Modules.Organizations.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Traceability\FoodTraceability.Modules.Traceability.Domain\FoodTraceability.Modules.Traceability.Domain.csproj" />
   </ItemGroup>
 </Project>

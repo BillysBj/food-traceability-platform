@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\FoodTraceability.Modules.Traceability.Application\FoodTraceability.Modules.Traceability.Application.csproj" />
     <ProjectReference Include="..\FoodTraceability.Modules.Traceability.Domain\FoodTraceability.Modules.Traceability.Domain.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\FoodTraceability.BuildingBlocks\FoodTraceability.BuildingBlocks.csproj" />
+    <ProjectReference Include="..\..\..\Platform\FoodTraceability.Platform.Persistence\FoodTraceability.Platform.Persistence.csproj" />
   </ItemGroup>
 </Project>
