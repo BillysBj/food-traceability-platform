@@ -5,6 +5,7 @@ using FoodTraceability.Api.Middleware;
 using FoodTraceability.Api.OpenApi;
 using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
+using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
@@ -46,6 +47,8 @@ builder.Services.AddApiSwagger();
 builder.Services.AddApiSecurity(builder.Configuration);
 builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddApiJwtBearerAuthentication();
+builder.Services.AddOrganizations();
+builder.Services.AddApiAuthorization();
 builder.Services
     .AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>(
@@ -69,6 +72,7 @@ app.UseRouting();
 app.UseCors(ApiSecurityConfiguration.CorsPolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
