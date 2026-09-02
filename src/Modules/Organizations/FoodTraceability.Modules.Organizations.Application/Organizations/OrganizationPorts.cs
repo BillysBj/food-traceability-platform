@@ -6,3 +6,10 @@ public interface IOrganizationReader
         Guid organizationId,
         CancellationToken cancellationToken);
 }
+
+public interface ILocationWriter
+{
+    Task AddAsync(
+        FoodTraceability.Modules.Organizations.Domain.Location location,
+        CancellationToken cancellationToken);
+}
