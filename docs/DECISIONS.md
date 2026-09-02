@@ -27,9 +27,9 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 
 | ID | Titel | Status |
 |----|-------|--------|
-| D-01 | Lot-Eigentum bei Organisationswechsel | OFFEN |
-| D-02 | Sichtbarkeitsregel im Cross-Organisation-Trace | OFFEN |
-| D-03 | `traceable_object`-Supertyp in Pilot 1 | OFFEN |
+| D-01 | Lot-Eigentum bei Organisationswechsel | ENTSCHIEDEN |
+| D-02 | Sichtbarkeitsregel im Cross-Organisation-Trace | ENTSCHIEDEN |
+| D-03 | `traceable_object`-Supertyp in Pilot 1 | ENTSCHIEDEN |
 | D-04 | `organization_id` als durchgängige Tenant-Spalte | ENTSCHIEDEN |
 | D-05 | Modellierung plattformweiter Rechte | ENTSCHIEDEN |
 | D-06 | API-Pfadpräfix und Versionierung | ENTSCHIEDEN |
@@ -54,13 +54,18 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-25 | Startverhalten bei fehlender Datenbankkonfiguration | OFFEN |
 | D-26 | Organization Context in API Routes | ENTSCHIEDEN |
 | D-27 | Platform Permissions ohne Zugriff auf Organisationsressourcen | ENTSCHIEDEN |
+| D-28 | Kein physischer `traceable_object`-Supertyp in Pilot 1 | ENTSCHIEDEN |
+| D-29 | Lot-Eigentum beim Organisationsuebergang | ENTSCHIEDEN |
+| D-30 | Cross-Organization Visibility: Partner View und Public View | ENTSCHIEDEN |
 
 ---
 
 ## D-01 – Lot-Eigentum bei Organisationswechsel
 
-**Status:** OFFEN
-**Blockiert:** TRC-003, TRC-008, LOG-003, ORG-004
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet durch:** D-29 – Variante (a) wurde gewählt. Der folgende Text bleibt
+als Herleitung der Frage stehen.
+**Betraf:** TRC-003, TRC-008, LOG-003, ORG-004
 
 `trace.lot.organization_id` zusammen mit `UNIQUE (organization_id, lot_number)`
 impliziert Eigentum. Die Pilot-Kette Producer → Mill → Bottler → Retailer
@@ -79,8 +84,9 @@ definierten Event-Mechanismus und ist mit D-04 konfliktfrei.
 
 ## D-02 – Sichtbarkeitsregel im Cross-Organisation-Trace
 
-**Status:** OFFEN
-**Blockiert:** TRC-010, TRC-011, TRC-016, PUB-003, PUB-004
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet durch:** D-30. Der folgende Text bleibt als Herleitung der Frage stehen.
+**Betraf:** TRC-010, TRC-011, TRC-016, PUB-003, PUB-004
 
 Master Specification 5.4 verweist auf eine „relationship/trace disclosure
 rule", die in keinem Dokument existiert. Backward Trace liefert per Definition
@@ -96,8 +102,10 @@ eine spätere Lockerung additiv möglich ist.
 
 ## D-03 – `traceable_object`-Supertyp in Pilot 1
 
-**Status:** OFFEN
-**Blockiert:** TRC-002, TRC-007, LOG-002, LOG-004, PUB-001
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet durch:** D-28 – Variante (b) wurde gewählt. Der folgende Text bleibt
+als Herleitung der Frage stehen.
+**Betraf:** TRC-002, TRC-007, LOG-002, LOG-004, PUB-001
 
 Das ER-Diagramm führt `trace.traceable_object` als Supertyp; alle Referenzen
 laufen über `traceable_object_id`. Master Specification 6.2 und `AGENTS.md`
@@ -769,6 +777,104 @@ Verhalten der API als Fehler und würde vermutlich stillschweigend „repariert�
 
 ---
 
+## D-28 – Kein physischer `traceable_object`-Supertyp in Pilot 1
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet:** D-03
+**Betrifft:** TRC-002, TRC-007, LOG-002, LOG-004, PUB-001
+
+Pilot 1 besitzt physisch **nur `trace.lot`**. Eine Tabelle
+`trace.traceable_object` wird **nicht** angelegt.
+
+**Die Lot-Id ist zugleich die künftige Traceable-Object-Id.** Es gibt keine
+zweite GUID und keinen zweiten Schlüsselraum.
+
+Generische Trace- und Public-Verträge verwenden `traceableObjectId`.
+Lot-spezifische Persistenz darf weiterhin `lot_id` heißen.
+
+**Begründung:** Der Supertyp trägt für Pilot 1 nichts — die Olivenoelkette ist
+durchgehend lotbasiert. Sein Wert entsteht erst bei Domänen mit individueller
+Identität. Weil die Id identisch bleibt, ist die spätere Einführung additiv:
+Supertyp-Tabelle anlegen, eine Zeile je Lot unter derselben Id, Fremdschlüssel
+umhängen. Alle bestehenden Ids bleiben gültig, **einschließlich gedruckter
+QR-Codes**, die nicht zurückgerufen werden können.
+
+**Dokumentations-Finding:** Das ER-Diagramm führt `trace.traceable_object` und
+referenziert an sieben Stellen `traceable_object_id`. Das widerspricht dieser
+Entscheidung für die Persistenz. In `AGENTS.md` und `ARCHITECTURE.md` kommt der
+Begriff nicht vor; Master Specification 6.2 verwendet `lot_id`. Das Diagramm ist
+in einem eigenen Dokumentations-Task nachzuziehen.
+
+---
+
+## D-29 – Lot-Eigentum beim Organisationsuebergang
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet:** D-01
+**Setzt voraus:** D-04, D-26, D-27
+**Betrifft:** TRC-003, TRC-008, LOG-003, ORG-004
+
+Ein Lot gehört **dauerhaft genau einer Organisation**; seine `organization_id`
+ist **unveränderlich**.
+
+Bei einem organisationsuebergreifenden Übergang entsteht beim Empfänger ein
+**neues Lot**. Sender- und Empfänger-Lot werden explizit durch die
+Traceability-Lineage verbunden.
+
+Ausgeschlossen sind: das Verschieben eines bestehenden Lots in eine andere
+Organisation, und allgemeine Cross-Tenant-Lese-Grants.
+
+**Begründung:** D-04, D-26 und D-27 machen Mandantengrenzen hart und explizit;
+ID-006 setzt sie durch. Eine Zeile, die den Mandanten wechselt, würde dieses
+Modell an seiner empfindlichsten Stelle unterlaufen — die Historie eines Lots
+läge dann teilweise in einem Mandanten, dem sie nicht mehr gehört. Ein
+Lese-Grant würde neben Membership und Assignment einen zweiten Zugriffspfad
+schaffen und damit die Aussage von D-27 aufheben. Die gewählte Variante kommt
+zudem ohne neue Mechanik aus: sie nutzt ausschließlich die Lineage, die ohnehin
+existieren muss.
+
+**Dokumentations-Finding:** Kein bestehendes Dokument legt die Semantik des
+Empfangsvorgangs fest. Diese Entscheidung schließt die Lücke.
+
+---
+
+## D-30 – Cross-Organization Visibility: Partner View und Public View
+
+**Status:** ENTSCHIEDEN (2026-09-02)
+**Beantwortet:** D-02
+**Setzt voraus:** D-29
+**Betrifft:** TRC-010, TRC-011, TRC-016, PUB-003, PUB-004
+
+Sichtbarkeit wird in **zwei getrennte Sichten** aufgeteilt.
+
+**Partner View**
+- volle eigene Daten
+- Identität des **unmittelbaren** Geschäftspartners sichtbar
+- weiter entfernte Organisationen dürfen als Trace-Schritte erscheinen, werden
+  aber hinsichtlich Organisation und geschäftlich vertraulicher Informationen
+  **anonymisiert**
+
+**Public View**
+- ausschließlich **explizit freigegebene** Daten gemäß Public-Trace- und
+  Visibility-Konfiguration
+- **keine automatische Vererbung** der Partner-Sichtbarkeit
+
+**Traversal und Visibility bleiben technisch getrennt.** Intern darf der
+vollständige Graph traversiert werden; die API gibt ausschließlich eine für den
+jeweiligen Aufrufer **projizierte Sicht** zurück.
+
+**Begründung:** Ein Handelspartner und ein Verbraucher, der einen QR-Code
+scannt, brauchen unterschiedliche Regeln — für den Verbraucher ist die
+Lieferantenliste einer Mühle noch heikler als für den Partner. Die Trennung von
+Traversierung und Projektion hält die Sichtbarkeitsentscheidung an genau einer
+Stelle: Lockern ist damit später additiv möglich, Zurücknehmen wäre es nicht.
+
+**Dokumentations-Finding:** Master Specification 5.4 verweist auf eine
+„relationship/trace disclosure rule“, die in keinem Dokument existiert. Diese
+Entscheidung liefert sie.
+
+---
+
 ## Nächste freie ID
 
-`D-28`
+`D-31`
