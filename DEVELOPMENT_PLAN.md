@@ -285,6 +285,33 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 
 Diese Epics starten erst, wenn Pilot 1 stabil ist.
 
+# Backlog
+
+Kleine Findings aus Reviews, die keinem Epic zugeordnet sind und einzeln
+umgesetzt werden.
+
+## FIX-006 – `errorCode` in der automatischen Validierungsantwort
+
+**Status:** OFFEN
+**Herkunft:** Review zu FIX-004
+
+Jede Fehlerantwort der API trägt einen `errorCode` — `AUTHENTICATION_FAILED`,
+`AUTHORIZATION_DENIED`, `ARTICLE_CONFLICT`, `RATE_LIMIT_EXCEEDED`,
+`UNHANDLED_ERROR` und weitere. **Ausgenommen ist die automatische
+400-Antwort der Modellvalidierung aus `[ApiController]`**: sie enthält
+`correlationId` und `traceId`, aber keinen `errorCode`.
+
+Ein Client, der `errorCode` einheitlich auswertet, findet ihn dort nicht.
+
+**Ziel:** Ein eigener Code, etwa `VALIDATION_FAILED`, in der automatischen
+`ValidationProblemDetails`-Antwort. Die zentrale `ApiProblemDetailsFactory` aus
+FIX-004 ist die Stelle dafür; die Feldstruktur der Antwort bleibt sonst
+unverändert.
+
+**Warum nicht nebenbei erledigt:** Das ändert das Laufzeitverhalten der API und
+den Fehlervertrag gegenüber Clients. Das ist keine Dokumentationskorrektur und
+gehört in einen eigenen Task mit eigenen Tests.
+
 ## Branch-Konvention
 
 ```text

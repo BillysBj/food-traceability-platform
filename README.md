@@ -83,12 +83,18 @@ Migrations deliberately do not run automatically when the API starts. Apply them
 
 The solution contains three test projects:
 
-- Unit tests cover isolated behavior without external services; currently they verify the
-  unit-test project configuration.
-- Integration tests cover the ASP.NET Core API foundation and apply the real EF Core
-  platform migration to PostgreSQL.
-- Architecture tests cover project/package/Compose guards and compiled type dependencies
-  between layers and modules.
+- Unit tests cover domain behavior in isolation, without database or HTTP: entity
+  invariants and normalization, value objects, and the authentication and authorization
+  use cases against test doubles.
+- Integration tests run the API through `WebApplicationFactory` and the modules against a
+  real PostgreSQL instance provided by Testcontainers. They cover every EF Core migration
+  and the constraints it creates, the authentication flow including refresh-token rotation
+  and replay detection, permission and tenant-scope enforcement, and the write endpoints
+  with their negative cases.
+- Architecture tests cover project, package and Compose guards, compiled type dependencies
+  between layers and modules, and the decision log: they enforce that the permission lists
+  in `docs/DECISIONS.md`, `AGENTS.md` and `ARCHITECTURE.md` stay identical and that no
+  Domain or Application project reaches ASP.NET Core.
 
 Run the complete test suite from the repository root:
 
