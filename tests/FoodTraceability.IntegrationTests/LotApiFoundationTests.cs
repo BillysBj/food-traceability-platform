@@ -23,12 +23,23 @@ public sealed class LotApiFoundationTests
         var itemPath = root
             .GetProperty("paths")
             .GetProperty("/api/v1/organizations/{organizationId}/lots/{lotId}");
+        var listOperation = collectionPath.GetProperty("get");
         var createOperation = collectionPath.GetProperty("post");
         var readOperation = itemPath.GetProperty("get");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertOperation(listOperation, ["200", "400", "401", "403"]);
         AssertOperation(createOperation, ["201", "400", "401", "403", "409"]);
         AssertOperation(readOperation, ["200", "401", "403", "404"]);
+
+        var listQueryParameters = listOperation
+            .GetProperty("parameters")
+            .EnumerateArray()
+            .Where(parameter => parameter.GetProperty("in").GetString() == "query")
+            .Select(parameter => parameter.GetProperty("name").GetString()
+                ?? throw new InvalidOperationException("A query parameter name was null."))
+            .ToArray();
+        Assert.Equal(["page", "pageSize", "articleId", "lotNumber"], listQueryParameters);
 
         var requestSchemaName = GetSchemaName(createOperation
             .GetProperty("requestBody")
@@ -44,8 +55,12 @@ public sealed class LotApiFoundationTests
         Assert.False(requestProperties.TryGetProperty("organizationId", out _));
         Assert.False(requestProperties.TryGetProperty("unitId", out _));
 
+        AssertResponseSchema(listOperation, "200", "LotListResponse");
         AssertResponseSchema(createOperation, "201", "LotResponse");
         AssertResponseSchema(readOperation, "200", "LotResponse");
+        AssertProblemResponseSchema(listOperation, "400", "ValidationProblemDetails");
+        AssertProblemResponseSchema(listOperation, "401", "ProblemDetails");
+        AssertProblemResponseSchema(listOperation, "403", "ProblemDetails");
         AssertProblemResponseSchema(createOperation, "400", "ValidationProblemDetails");
         AssertProblemResponseSchema(createOperation, "401", "ProblemDetails");
         AssertProblemResponseSchema(createOperation, "403", "ProblemDetails");
@@ -57,6 +72,12 @@ public sealed class LotApiFoundationTests
         var responseProperties = GetSchemaProperties(root, "LotResponse");
         Assert.True(responseProperties.TryGetProperty("unitCode", out _));
         Assert.False(responseProperties.TryGetProperty("unitId", out _));
+
+        var listResponseProperties = GetSchemaProperties(root, "LotListResponse");
+        Assert.True(listResponseProperties.TryGetProperty("items", out _));
+        Assert.True(listResponseProperties.TryGetProperty("page", out _));
+        Assert.True(listResponseProperties.TryGetProperty("pageSize", out _));
+        Assert.True(listResponseProperties.TryGetProperty("totalCount", out _));
     }
 
     private static void AssertOperation(

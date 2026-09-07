@@ -24,4 +24,42 @@ internal sealed class LotReader(TraceabilityDbContext dbContext) : ILotReader
                 lot.CreatedAt))
             .SingleOrDefaultAsync(cancellationToken);
     }
+
+    public async Task<LotPage> ListAsync(
+        ListLotsQuery query,
+        CancellationToken cancellationToken)
+    {
+        var lots = dbContext.Lots
+            .AsNoTracking()
+            .Where(lot => lot.OrganizationId == query.OrganizationId);
+
+        if (query.ArticleId is Guid articleId)
+        {
+            lots = lots.Where(lot => lot.ArticleId == articleId);
+        }
+
+        if (query.LotNumber is not null)
+        {
+            var normalizedLotNumber = query.LotNumber.ToUpperInvariant();
+            lots = lots.Where(lot => lot.LotNumber.ToUpper() == normalizedLotNumber);
+        }
+
+        var totalCount = await lots.LongCountAsync(cancellationToken);
+        var items = await lots
+            .OrderByDescending(lot => lot.CreatedAt)
+            .ThenByDescending(lot => lot.Id)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .Select(lot => new LotDetails(
+                lot.Id,
+                lot.OrganizationId,
+                lot.ArticleId,
+                lot.LotNumber,
+                lot.Quantity,
+                lot.UnitId,
+                lot.CreatedAt))
+            .ToListAsync(cancellationToken);
+
+        return new LotPage(items, query.Page, query.PageSize, totalCount);
+    }
 }

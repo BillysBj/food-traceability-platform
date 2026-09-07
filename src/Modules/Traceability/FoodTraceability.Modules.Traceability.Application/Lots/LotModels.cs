@@ -15,3 +15,16 @@ public sealed record LotDetails(
     decimal Quantity,
     Guid UnitId,
     DateTimeOffset CreatedAt);
+
+public sealed record ListLotsQuery(
+    Guid OrganizationId,
+    int Page,
+    int PageSize,
+    Guid? ArticleId,
+    string? LotNumber);
+
+public sealed record LotPage(
+    IReadOnlyList<LotDetails> Items,
+    int Page,
+    int PageSize,
+    long TotalCount);

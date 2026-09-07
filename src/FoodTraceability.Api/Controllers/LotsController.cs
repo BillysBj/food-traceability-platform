@@ -19,6 +19,56 @@ public sealed class LotsController(
     UnitQueryService unitQueryService,
     ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
+    /// <summary>Returns a page of lots owned by the organization selected by the route.</summary>
+    /// <remarks>
+    /// Results always use the fixed order <c>createdAt DESC</c>, followed by
+    /// <c>lotId DESC</c>. The lot identifier is the mandatory tie-breaker that keeps offset
+    /// pages deterministic when multiple lots have the same creation timestamp.
+    /// </remarks>
+    /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
+    /// <param name="request">Pagination values and optional exact-match filters.</param>
+    /// <param name="cancellationToken">Cancels request processing.</param>
+    /// <returns>A page of lots and the total number of matching lots.</returns>
+    /// <response code="200">Returns the requested page, including an empty page when applicable.</response>
+    /// <response code="400">One or more query parameters are invalid.</response>
+    /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
+    /// <response code="403">The caller lacks organization-wide lot.read permission.</response>
+    [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.LotRead)]
+    [ProducesResponseType<LotListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<LotListResponse>> List(
+        Guid organizationId,
+        [FromQuery] LotListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var page = await queryService.ListAsync(
+            new ListLotsQuery(
+                organizationId,
+                request.Page,
+                request.PageSize,
+                request.ArticleId,
+                request.LotNumber),
+            cancellationToken);
+        var unitIds = page.Items
+            .Select(lot => lot.UnitId)
+            .Distinct()
+            .ToArray();
+        var unitCodes = await unitQueryService.FindCodesByIdsAsync(
+            unitIds,
+            cancellationToken);
+        var items = page.Items
+            .Select(lot => unitCodes.TryGetValue(lot.UnitId, out var unitCode)
+                ? MapResponse(lot, unitCode)
+                : throw new InvalidOperationException(
+                    $"The unit referenced by lot '{lot.Id}' does not exist."))
+            .ToArray();
+
+        return Ok(new LotListResponse(items, page.Page, page.PageSize, page.TotalCount));
+    }
+
     /// <summary>Creates a lot in the organization selected by the route.</summary>
     /// <remarks>
     /// The request body cannot select the organization. An <c>articleId</c> that does not

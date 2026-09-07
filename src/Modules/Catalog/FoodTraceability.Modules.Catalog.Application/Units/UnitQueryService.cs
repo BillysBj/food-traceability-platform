@@ -29,4 +29,14 @@ public sealed class UnitQueryService(IUnitReader reader)
             ? Task.FromResult<string?>(null)
             : reader.FindCodeByIdAsync(unitId, cancellationToken);
     }
+
+    public Task<IReadOnlyDictionary<Guid, string>> FindCodesByIdsAsync(
+        IReadOnlyCollection<Guid> unitIds,
+        CancellationToken cancellationToken)
+    {
+        return unitIds.Count == 0
+            ? Task.FromResult<IReadOnlyDictionary<Guid, string>>(
+                new Dictionary<Guid, string>())
+            : reader.FindCodesByIdsAsync(unitIds, cancellationToken);
+    }
 }
