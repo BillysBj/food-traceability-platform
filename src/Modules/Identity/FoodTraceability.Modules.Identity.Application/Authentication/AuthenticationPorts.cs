@@ -29,6 +29,11 @@ public interface IPasswordVerifier
     bool Verify(Guid? userId, string? storedPasswordHash, string providedPassword);
 }
 
+public interface IPasswordHasher
+{
+    string Hash(string password);
+}
+
 public interface IRefreshTokenProtector
 {
     GeneratedRefreshToken Generate();
