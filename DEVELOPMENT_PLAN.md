@@ -25,17 +25,73 @@ Claude erstellt kleine, prüfbare Tasks. Codex implementiert nur den aktuellen S
 
 `PLANNED`, `READY`, `IN_PROGRESS`, `REVIEW`, `CHANGES_REQUIRED`, `APPROVED`, `DONE`, `BLOCKED`
 
+Diese Werte beschreiben den Bearbeitungslebenszyklus eines Tasks während seiner
+Umsetzung und seines Reviews. Sie sind vom nachfolgenden Roadmap-Status zu
+unterscheiden, der den abgeglichenen Stand des Entwicklungsplans wiedergibt.
+
+## Roadmap-Statusvokabular
+
+- **DONE** — Umgesetzt, reviewt, nach `main` gemerged.
+- **IN_PROGRESS** — Teilweise umgesetzt. Der Plan-Task ist inhaltlich breiter als das, was gebaut wurde.
+- **NOT_STARTED** — Nicht begonnen.
+- **DEFERRED** — Bewusst zurückgestellt. Braucht immer einen Grund.
+- **SUPERSEDED** — Durch einen anders zugeschnittenen Task ersetzt. Braucht immer einen Verweis auf den ersetzenden Task.
+
+## Plan-Id und Repository-Id
+
+Die IDs in den Epic-Listen sind **Plan-IDs**. Die IDs in Branchnamen, Commits
+und Pull Requests sind **Repository-IDs**. Bei Foundation, Identity und Catalog
+weichen beide teilweise voneinander ab. Wer einen Task sucht, muss deshalb
+zuerst klären, ob eine Plan-ID oder eine Repository-ID vorliegt. Die jeweilige
+Repository-ID wird in den Epic-Listen überall dort genannt, wo sie von der
+Plan-ID abweicht oder dieselbe ID im Repository einen anderen Inhalt bezeichnet.
+
+Historische Branches, Commits und Pull Requests werden nicht umbenannt. Die
+Abweichungen werden dokumentiert und nicht rückwirkend bereinigt.
+
+## Eingeschobene Tasks
+
+Aufgeführt sind alle nach `main` gemergten Tasks, die im ursprünglichen
+Entwicklungsplan keinen eigenen Eintrag hatten. Reine Umnummerierungen sowie die
+Aufteilung eines geplanten Tasks auf mehrere Repository-Tasks – etwa ID-005 in
+ID-005a und ID-005b – gelten nicht als eingeschoben; sie sind in den Epic-Listen
+beim jeweiligen Plan-Task vermerkt.
+
+- **FND-005** (Repository-ID) API Security Baseline — **Roadmap-Status: DONE** — Zweck: Rate Limiting, CORS und Security Headers; Begründung und Einordnung siehe Abschnitt „Hinweis zur tatsächlichen Foundation-Tasknummerierung“.
+- **ID-002a** Identity Persistence Foundation — **Roadmap-Status: DONE** — Zweck: Identity-Domainmodell und -Persistenz etablieren; Begründung siehe Abschnitt „ID-002a – Identity Persistence Foundation“ in EPIC 1.
+- **ID-003a** Role-Permission-Zuordnung — **Roadmap-Status: DONE** — Zweck: Rollen und Permissions über `identity.role_permission` verbinden; Begründung siehe Abschnitt „ID-003a – Role-Permission-Zuordnung“ in EPIC 1.
+- **ORG-001a** Organization- und Location-Persistence Foundation — **Roadmap-Status: DONE** — Zweck: Domainmodell und Persistenz für Organisationen und Standorte etablieren; Begründung siehe Abschnitt „ORG-001a – Organization- und Location-Persistence Foundation“ in EPIC 2.
+- **CI-001** GitHub-Actions-Pipeline — **Roadmap-Status: DONE**
+- **DOCS-001** API-Pfade auf `/api/v1` angeglichen — **Roadmap-Status: DONE**
+- **DOCS-002** kanonischen Decision Log eingeführt und Dokumente angeglichen — **Roadmap-Status: DONE**
+- **DOCS-003** Identity-Scope und Token-Parameter festgehalten — **Roadmap-Status: DONE**
+- **DOCS-004** Organization Context in Routen festgehalten (D-26) — **Roadmap-Status: DONE**
+- **DOCS-005** D-27 Platform Scope und Routenbeispiele korrigiert — **Roadmap-Status: DONE**
+- **DOCS-006** D-28 bis D-30 Traceability-Kernentscheidungen festgehalten — **Roadmap-Status: DONE**
+- **DOCS-007** D-32 und D-33 Mengen- und Einheitenentscheidungen festgehalten — **Roadmap-Status: DONE**
+- **DOCS-008** ER-Diagramm und README mit dem Implementierungsstand synchronisiert — **Roadmap-Status: DONE**
+- **DOCS-009** Folgebefunde aus dem TRC-003-Review als FIX-007 und FIX-008 im Backlog erfasst — **Roadmap-Status: DONE**
+- **FIX-001** Readiness-Check meldet `unhealthy`, statt zu scheitern — **Roadmap-Status: DONE**
+- **FIX-002** Exception-Details erreichen das Log — **Roadmap-Status: DONE**
+- **FIX-003** ASP.NET-Core-Abhängigkeitsgrenze verengt — **Roadmap-Status: DONE**
+- **FIX-004** einheitliche Problem Details über alle Fehlerantworten — **Roadmap-Status: DONE**
+- **FIX-005** Rate-Limit-Verhalten statt Werte abgedeckt — **Roadmap-Status: DONE**
+
+FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
+ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
+hier nicht dupliziert.
+
 ## 3. Standard-Taskformat
 
 Jeder Task enthält: ID, Titel, Ziel, Scope, Out of Scope, Abhängigkeiten, technische Vorgaben, Acceptance Criteria, erforderliche Tests, erwartete Dateien/Module und offene Punkte.
 
 # EPIC 0 – Foundation
 
-- **FND-001** Solution & Repository-Struktur
-- **FND-002** PostgreSQL + Docker Compose
-- **FND-003** EF Core Foundation & Migrations
-- **FND-004** OpenAPI, Problem Details, Logging, Correlation ID, Health Checks
-- **FND-005** Unit/Integration/Architecture Test Foundation
+- **FND-001** Solution & Repository-Struktur — **Roadmap-Status: DONE**
+- **FND-002** PostgreSQL + Docker Compose — **Roadmap-Status: DONE**
+- **FND-003** EF Core Foundation & Migrations — **Roadmap-Status: DONE**
+- **FND-004** OpenAPI, Problem Details, Logging, Correlation ID, Health Checks — **Roadmap-Status: DONE**
+- **FND-005** (Plan-ID) Unit/Integration/Architecture Test Foundation — **Roadmap-Status: SUPERSEDED** — **Ersetzt durch:** Repository-Task **FND-006**.
 
 Milestone: `M0 – Foundation Ready`
 
@@ -43,27 +99,32 @@ Milestone: `M0 – Foundation Ready`
 
 Die tatsächliche Umsetzung weicht von der ursprünglichen EPIC-0-Liste ab:
 
-- **FND-001** Solution- und Repository-Struktur
-- **FND-002** PostgreSQL via Docker Compose
-- **FND-003** EF Core Foundation und erste Migration
-- **FND-004** OpenAPI, Problem Details, Logging, Correlation ID, Health Checks
-- **FND-005** API Security Baseline (Rate Limiting, CORS, Security Headers)
-- **FND-006** Test Foundation (Testcontainers, NetArchTest, Testisolation)
-- **CI-001** GitHub-Actions-Pipeline
+- **FND-001** Solution- und Repository-Struktur — **Roadmap-Status: DONE**
+- **FND-002** PostgreSQL via Docker Compose — **Roadmap-Status: DONE**
+- **FND-003** EF Core Foundation und erste Migration — **Roadmap-Status: DONE**
+- **FND-004** OpenAPI, Problem Details, Logging, Correlation ID, Health Checks — **Roadmap-Status: DONE**
+- **FND-005** (Repository-ID) API Security Baseline (Rate Limiting, CORS, Security Headers) — **Roadmap-Status: DONE**
+- **FND-006** (Repository-ID) Test Foundation (Testcontainers, NetArchTest, Testisolation) — **Roadmap-Status: DONE**
+- **CI-001** GitHub-Actions-Pipeline — **Roadmap-Status: DONE**
 
 Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CORS und Security Headers hatten dort überhaupt keinen eigenen Task, obwohl `AGENTS.md` §38 sie verbindlich fordert.
 
 # EPIC 1 – Identity
 
-- **ID-001** User Domain Model
-- **ID-002a** Identity Persistence Foundation
-- **ID-002** Roles
-- **ID-003** Permissions
-- **ID-003a** Role-Permission-Zuordnung
-- **ID-004** Organization Membership + optional Location Scope
-- **ID-005** Authentication
-- **ID-006** Permission-based Authorization
-- **ID-007** Security & Cross-Tenant Tests
+- **ID-001** User Domain Model — **Roadmap-Status: DONE**
+- **ID-002a** Identity Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE**
+- **ID-002** Roles — **Roadmap-Status: DONE**
+- **ID-003** Permissions — **Roadmap-Status: DONE**
+- **ID-003a** Role-Permission-Zuordnung (eingeschoben) — **Roadmap-Status: DONE**
+- **ID-004** Organization Membership + optional Location Scope — **Roadmap-Status: DONE**
+- **ID-005** (Plan-ID) Authentication — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **ID-005a** (Credential- und Refresh-Token-Persistenz) und **ID-005b** (Authentication-Endpunkte).
+- **ID-006** Permission-based Authorization — **Roadmap-Status: DONE**
+- **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: NOT_STARTED**
+
+Die Repository-ID **ID-007** ist mit dem anderen Inhalt „article permissions“
+belegt und DONE. Dieser Repository-Task deckt den Plan-Task ID-007 nicht ab.
+Cross-Tenant-Prüfungen existieren verstreut in den Endpunkttests, aber ohne
+eigenen Task und ohne eigene Abnahme.
 
 Milestone: `M1 – Identity Ready`
 
@@ -107,11 +168,11 @@ folgen mit ID-006.
 
 # EPIC 2 – Organizations
 
-- **ORG-001a** Organization- und Location-Persistence Foundation
-- **ORG-001** Organization CRUD
-- **ORG-002** Location CRUD
-- **ORG-003** Membership Management
-- **ORG-004** Tenant Isolation Integration Tests
+- **ORG-001a** Organization- und Location-Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE**
+- **ORG-001** Organization CRUD — **Roadmap-Status: NOT_STARTED** — vorhanden ist ausschließlich `GET /api/v1/organizations/{id}` aus ID-006 als Demonstrationsfläche für das Autorisierungsmodell; Anlegen, Ändern und Löschen über die API fehlen.
+- **ORG-002** Location CRUD — **Roadmap-Status: IN_PROGRESS** — Repository-Task ORG-002 lieferte ausschließlich `POST /api/v1/organizations/{id}/locations`; Lesen, Ändern und Löschen fehlen.
+- **ORG-003** Membership Management — **Roadmap-Status: NOT_STARTED** — das Datenmodell existiert seit ID-004 und D-22; die API darüber fehlt.
+- **ORG-004** Tenant Isolation Integration Tests — **Roadmap-Status: NOT_STARTED**
 
 ## ORG-001a – Organization- und Location-Persistence Foundation
 
@@ -138,33 +199,36 @@ Milestone: `M2 – Organizations Ready`
 
 # EPIC 3 – Catalog
 
-- **CAT-001** Product Category
-- **CAT-002** Unit
-- **CAT-003** Product
-- **CAT-004** Article/SKU
-- **CAT-005** minimale Product Profile Foundation
+Die CAT-Nummerierung weicht vollständig ab: Dieselbe ID bezeichnet im Plan und
+im Repository unterschiedliche Inhalte.
+
+- **CAT-001** (Plan-ID) Product Category — **Roadmap-Status: NOT_STARTED**. Die Repository-ID **CAT-001** bezeichnet stattdessen die Product Foundation für Plan-Task CAT-003.
+- **CAT-002** (Plan-ID) Unit — **Roadmap-Status: DONE** — ausgeliefert als Repository-Task **CAT-003** „unit catalog“.
+- **CAT-003** (Plan-ID) Product — **Roadmap-Status: IN_PROGRESS** — ausgeliefert als Repository-Task **CAT-001** „product foundation“; Domainmodell und Persistenz stehen, ein Produkt-Endpunkt fehlt.
+- **CAT-004** (Plan-ID) Article/SKU — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **CAT-002a** (article persistence) und **CAT-002b** (article API).
+- **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M3 – Catalog Ready`
 
 # EPIC 4 – Traceability Core
 
-- **TRC-001** Lot Domain Model
-- **TRC-002** Lot Persistence, Migration, Constraints, Indizes
-- **TRC-003** Create Lot API + Permission + Scope
-- **TRC-004** Lot Read/List + Pagination/Filter
-- **TRC-005** Event Types
-- **TRC-006** Traceability Event Domain Model
-- **TRC-007** Event Persistence
-- **TRC-008** Create Traceability Event, mehrere Inputs/Outputs
-- **TRC-009** Cycle Protection
-- **TRC-010** Backward Trace
-- **TRC-011** Forward Trace
-- **TRC-012** Graph Response Model
-- **TRC-013** End-to-End Traceability Tests
-- **TRC-014** Mixing Test
-- **TRC-015** Split Test
-- **TRC-016** Cross-Tenant Traceability Test
-- **TRC-017** Performance Baseline
+- **TRC-001** Lot Domain Model — **Roadmap-Status: DONE**
+- **TRC-002** Lot Persistence, Migration, Constraints, Indizes — **Roadmap-Status: DONE**
+- **TRC-003** Create Lot API + Permission + Scope — **Roadmap-Status: DONE**
+- **TRC-004** Lot Read/List + Pagination/Filter — **Roadmap-Status: DONE**
+- **TRC-005** Event Types — **Roadmap-Status: NOT_STARTED**
+- **TRC-006** Traceability Event Domain Model — **Roadmap-Status: NOT_STARTED**
+- **TRC-007** Event Persistence — **Roadmap-Status: NOT_STARTED**
+- **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: NOT_STARTED**
+- **TRC-009** Cycle Protection — **Roadmap-Status: NOT_STARTED**
+- **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
+- **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
+- **TRC-012** Graph Response Model — **Roadmap-Status: NOT_STARTED**
+- **TRC-013** End-to-End Traceability Tests — **Roadmap-Status: NOT_STARTED**
+- **TRC-014** Mixing Test — **Roadmap-Status: NOT_STARTED**
+- **TRC-015** Split Test — **Roadmap-Status: NOT_STARTED**
+- **TRC-016** Cross-Tenant Traceability Test — **Roadmap-Status: NOT_STARTED**
+- **TRC-017** Performance Baseline — **Roadmap-Status: NOT_STARTED**
 
 Pflichtconstraint:
 
@@ -184,98 +248,121 @@ Milestone: `M4 – Traceability Core Proven`
 
 # EPIC 5 – Quality
 
-- **QLT-001** Quality Parameter
-- **QLT-002** Sample
-- **QLT-003** Lab Result
-- **QLT-004** Specification
-- **QLT-005** Lot Block
-- **QLT-006** Lot Release
-- **QLT-007** Blocked Lot Logistics Guard
-- **QLT-008** Authorization Tests
+- **QLT-001** Quality Parameter — **Roadmap-Status: NOT_STARTED**
+- **QLT-002** Sample — **Roadmap-Status: NOT_STARTED**
+- **QLT-003** Lab Result — **Roadmap-Status: NOT_STARTED**
+- **QLT-004** Specification — **Roadmap-Status: NOT_STARTED**
+- **QLT-005** Lot Block — **Roadmap-Status: NOT_STARTED**
+- **QLT-006** Lot Release — **Roadmap-Status: NOT_STARTED**
+- **QLT-007** Blocked Lot Logistics Guard — **Roadmap-Status: NOT_STARTED**
+- **QLT-008** Authorization Tests — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M5 – Quality Ready`
 
 # EPIC 6 – Documents
 
-- **DOC-001** Document Metadata
-- **DOC-002** Object Storage Abstraction
-- **DOC-003** Upload API + Validation
-- **DOC-004** Links zu Lot/Sample/Organization/Delivery
+- **DOC-001** Document Metadata — **Roadmap-Status: NOT_STARTED**
+- **DOC-002** Object Storage Abstraction — **Roadmap-Status: NOT_STARTED**
+- **DOC-003** Upload API + Validation — **Roadmap-Status: NOT_STARTED**
+- **DOC-004** Links zu Lot/Sample/Organization/Delivery — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M6 – Documents Ready`
 
 # EPIC 7 – Logistics
 
-- **LOG-001** Transport
-- **LOG-002** Transport Item
-- **LOG-003** Delivery
-- **LOG-004** Delivery Item
-- **LOG-005** Blocked Lot Guard
-- **LOG-006** Forward Trace zeigt Lieferungen/Empfänger
+- **LOG-001** Transport — **Roadmap-Status: NOT_STARTED**
+- **LOG-002** Transport Item — **Roadmap-Status: NOT_STARTED**
+- **LOG-003** Delivery — **Roadmap-Status: NOT_STARTED**
+- **LOG-004** Delivery Item — **Roadmap-Status: NOT_STARTED**
+- **LOG-005** Blocked Lot Guard — **Roadmap-Status: NOT_STARTED**
+- **LOG-006** Forward Trace zeigt Lieferungen/Empfänger — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M7 – Logistics Ready`
 
 # EPIC 8 – Public Trace / QR
 
-- **PUB-001** Trace Code / Public Token
-- **PUB-002** Public Trace Profile
-- **PUB-003** Public Trace API
-- **PUB-004** Public Data Security Tests
-- **PUB-005** QR Generation
+- **PUB-001** Trace Code / Public Token — **Roadmap-Status: NOT_STARTED**
+- **PUB-002** Public Trace Profile — **Roadmap-Status: NOT_STARTED**
+- **PUB-003** Public Trace API — **Roadmap-Status: NOT_STARTED**
+- **PUB-004** Public Data Security Tests — **Roadmap-Status: NOT_STARTED**
+- **PUB-005** QR Generation — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M8 – Public Trace Ready`
 
 # EPIC 9 – Audit
 
-- **AUD-001** Audit Model
-- **AUD-002** Audit Coverage für kritische Entities
-- **AUD-003** Audit Read API
-- **AUD-004** Audit Integrity Tests
+- **AUD-001** Audit Model — **Roadmap-Status: NOT_STARTED**
+- **AUD-002** Audit Coverage für kritische Entities — **Roadmap-Status: NOT_STARTED**
+- **AUD-003** Audit Read API — **Roadmap-Status: NOT_STARTED**
+- **AUD-004** Audit Integrity Tests — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M9 – Audit Ready`
 
 # EPIC 10 – Olive Oil Pilot
 
-- **OLV-001** Olive Oil Product Profile
-- **OLV-002** Harvest Data
-- **OLV-003** Pressing Parameters
-- **OLV-004** Oil Yield
-- **OLV-005** Olive Oil Quality Configuration
-- **OLV-006** kompletter Pilot-End-to-End-Test
+- **OLV-001** Olive Oil Product Profile — **Roadmap-Status: NOT_STARTED**
+- **OLV-002** Harvest Data — **Roadmap-Status: NOT_STARTED**
+- **OLV-003** Pressing Parameters — **Roadmap-Status: NOT_STARTED**
+- **OLV-004** Oil Yield — **Roadmap-Status: NOT_STARTED**
+- **OLV-005** Olive Oil Quality Configuration — **Roadmap-Status: NOT_STARTED**
+- **OLV-006** kompletter Pilot-End-to-End-Test — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M10 – Pilot 1 Backend Complete`
 
 # EPIC 11 – Frontend
 
-- **UI-001** Auth
-- **UI-002** Dashboard
-- **UI-003** Organizations/Locations
-- **UI-004** Users/Roles
-- **UI-005** Products/Articles
-- **UI-006** Lots
-- **UI-007** Lot Detail
-- **UI-008** Traceability Event Create
-- **UI-009** Traceability Graph
-- **UI-010** Quality
-- **UI-011** Documents
-- **UI-012** Logistics
-- **UI-013** QR Management
-- **UI-014** Public Consumer Page
-- **UI-015** Audit Viewer
+- **UI-001** Auth — **Roadmap-Status: NOT_STARTED**
+- **UI-002** Dashboard — **Roadmap-Status: NOT_STARTED**
+- **UI-003** Organizations/Locations — **Roadmap-Status: NOT_STARTED**
+- **UI-004** Users/Roles — **Roadmap-Status: NOT_STARTED**
+- **UI-005** Products/Articles — **Roadmap-Status: NOT_STARTED**
+- **UI-006** Lots — **Roadmap-Status: NOT_STARTED**
+- **UI-007** Lot Detail — **Roadmap-Status: NOT_STARTED**
+- **UI-008** Traceability Event Create — **Roadmap-Status: NOT_STARTED**
+- **UI-009** Traceability Graph — **Roadmap-Status: NOT_STARTED**
+- **UI-010** Quality — **Roadmap-Status: NOT_STARTED**
+- **UI-011** Documents — **Roadmap-Status: NOT_STARTED**
+- **UI-012** Logistics — **Roadmap-Status: NOT_STARTED**
+- **UI-013** QR Management — **Roadmap-Status: NOT_STARTED**
+- **UI-014** Public Consumer Page — **Roadmap-Status: NOT_STARTED**
+- **UI-015** Audit Viewer — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M11 – Pilot UI Complete`
 
 # EPIC 12 – Hardening
 
-- **E2E-001** Full Pilot Scenario
-- **E2E-002** Authorization Matrix
-- **E2E-003** Tenant Isolation für alle Kernendpunkte
-- **E2E-004** Traceability Graph Load Test
-- **E2E-005** Backup/Restore Test
-- **E2E-006** Security Review
-- **E2E-007** Release Checklist
+- **E2E-001** Full Pilot Scenario — **Roadmap-Status: NOT_STARTED**
+- **E2E-002** Authorization Matrix — **Roadmap-Status: NOT_STARTED**
+- **E2E-003** Tenant Isolation für alle Kernendpunkte — **Roadmap-Status: NOT_STARTED**
+- **E2E-004** Traceability Graph Load Test — **Roadmap-Status: NOT_STARTED**
+- **E2E-005** Backup/Restore Test — **Roadmap-Status: NOT_STARTED**
+- **E2E-006** Security Review — **Roadmap-Status: NOT_STARTED**
+- **E2E-007** Release Checklist — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M12 – Pilot 1 Release Candidate`
+
+## Milestone-Status
+
+- **M0 – Foundation Ready** — **ERREICHT**.
+- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
+- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-001**, **ORG-002**, **ORG-003** und **ORG-004**.
+- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003** und **CAT-005**.
+- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
+- **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
+- **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
+- **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
+- **M8 – Public Trace Ready** — **NICHT ERREICHT**. Offen: **PUB-001**, **PUB-002**, **PUB-003**, **PUB-004** und **PUB-005**.
+- **M9 – Audit Ready** — **NICHT ERREICHT**. Offen: **AUD-001**, **AUD-002**, **AUD-003** und **AUD-004**.
+- **M10 – Pilot 1 Backend Complete** — **NICHT ERREICHT**. Offen: **OLV-001**, **OLV-002**, **OLV-003**, **OLV-004**, **OLV-005** und **OLV-006**.
+- **M11 – Pilot UI Complete** — **NICHT ERREICHT**. Offen: **UI-001**, **UI-002**, **UI-003**, **UI-004**, **UI-005**, **UI-006**, **UI-007**, **UI-008**, **UI-009**, **UI-010**, **UI-011**, **UI-012**, **UI-013**, **UI-014** und **UI-015**.
+- **M12 – Pilot 1 Release Candidate** — **NICHT ERREICHT**. Offen: **E2E-001**, **E2E-002**, **E2E-003**, **E2E-004**, **E2E-005**, **E2E-006** und **E2E-007**.
+
+Die Arbeit an EPIC 4 wurde begonnen, obwohl M1, M2 und M3 offen sind. Das war
+keine Entscheidung, sondern ist unbemerkt entstanden, weil der Plan bis dahin
+keinen Status je Task führte.
+
+Dieser Abgleich trifft keine Aussage darüber, wie es weitergeht. Die Reihenfolge
+der Nacharbeit ist Gegenstand einer eigenen Vorlage und nicht dieses Tasks.
 
 # Spätere Epics
 
