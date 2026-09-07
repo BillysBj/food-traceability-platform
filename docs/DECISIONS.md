@@ -60,6 +60,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-31 | Article-Permissions | ENTSCHIEDEN |
 | D-32 | Semantik und Modellierung von `trace.lot.quantity` | ENTSCHIEDEN |
 | D-33 | Einheitengleichheit und Unit-Katalog in Pilot 1 | ENTSCHIEDEN |
+| D-34 | Bootstrap des ersten Plattformadministrators | ENTSCHIEDEN |
 
 ---
 
@@ -997,6 +998,33 @@ technische Notation, kein Anzeigetext.
 
 ---
 
+## D-34 – Bootstrap des ersten Plattformadministrators
+
+**Status:** ENTSCHIEDEN (2026-09-07)
+**Betrifft:** OPS-001
+
+Für die Erstanlage des ersten `PlatformAdmin` gelten verbindlich:
+
+- Expliziter administrativer CLI-Bootstrap.
+- Kein automatischer Seed.
+- Keine Erstellung beim normalen Application-Startup.
+- Keine Erstellung durch EF-Migrationen.
+- Keine Default-Credentials.
+- Keine Secrets im Repository.
+- Erfordert eine ausdrückliche Operator-Aktion.
+- Benutzer, Credential und `PlatformRoleAssignment` entstehen über die
+  regulären Application- und Domain-Pfade, nicht per direktem SQL.
+- Ausschließlich für die initiale Plattformadministration gedacht.
+- Existiert bereits ein `PlatformAdmin`, lehnt der normale Bootstrap
+  standardmäßig ab.
+- Das normale Login läuft danach unverändert über die vorhandene Auth-API.
+
+Ausdrücklich abgelehnte Alternativen sind ein automatischer Seed, die
+Erstellung beim Application-Startup, die Erstellung durch EF-Migrationen und
+Default-Credentials.
+
+---
+
 ## Nächste freie ID
 
-`D-34`
+`D-35`
