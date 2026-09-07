@@ -118,11 +118,15 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var articleApiIdentityContext = CreateArticleApiIdentityDbContext();
             await articleApiIdentityContext.Database.MigrateAsync(timeout.Token);
 
-            // Traceability owns no Organizations entities. Its migration-level cross-schema FK
-            // requires the referenced org table to exist in the same database first.
+            // Traceability owns no Organizations or Catalog entities. Its migration-level
+            // cross-schema foreign keys require the referenced org and catalog tables to exist
+            // in the same database first.
             await using var traceabilityOrganizationsContext =
                 CreateTraceabilityOrganizationsDbContext();
             await traceabilityOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var traceabilityCatalogContext = CreateTraceabilityCatalogDbContext();
+            await traceabilityCatalogContext.Database.MigrateAsync(timeout.Token);
 
             await using var traceabilityContext = CreateTraceabilityDbContext();
             await traceabilityContext.Database.MigrateAsync(timeout.Token);
@@ -249,6 +253,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public CatalogDbContext CreateTraceabilityCatalogDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            TraceabilityConnectionString,
+            CatalogDbContext.Schema);
+
+        return new CatalogDbContext(optionsBuilder.Options);
     }
 
     private async Task<string> CreateDatabaseAsync(
