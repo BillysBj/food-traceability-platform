@@ -11,4 +11,20 @@ public sealed class LotQueryService(ILotReader reader)
             ? Task.FromResult<LotDetails?>(null)
             : reader.FindByIdAsync(organizationId, lotId, cancellationToken);
     }
+
+    public Task<LotPage> ListAsync(
+        ListLotsQuery query,
+        CancellationToken cancellationToken)
+    {
+        if (query.OrganizationId == Guid.Empty)
+        {
+            return Task.FromResult(new LotPage([], query.Page, query.PageSize, 0));
+        }
+
+        var lotNumber = string.IsNullOrWhiteSpace(query.LotNumber)
+            ? null
+            : query.LotNumber.Trim();
+
+        return reader.ListAsync(query with { LotNumber = lotNumber }, cancellationToken);
+    }
 }

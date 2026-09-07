@@ -29,4 +29,22 @@ internal sealed class UnitReader(CatalogDbContext dbContext) : IUnitReader
             .SingleOrDefaultAsync(cancellationToken);
         return unitCode?.Value;
     }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> FindCodesByIdsAsync(
+        IReadOnlyCollection<Guid> unitIds,
+        CancellationToken cancellationToken)
+    {
+        if (unitIds.Count == 0)
+        {
+            return new Dictionary<Guid, string>();
+        }
+
+        var units = await dbContext.Units
+            .AsNoTracking()
+            .Where(unit => unitIds.Contains(unit.Id))
+            .Select(unit => new { unit.Id, unit.Code })
+            .ToListAsync(cancellationToken);
+
+        return units.ToDictionary(unit => unit.Id, unit => unit.Code.Value);
+    }
 }

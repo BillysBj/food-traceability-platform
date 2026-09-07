@@ -47,8 +47,39 @@ public sealed class UnitQueryServiceTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task EmptyIdCollectionReturnsEmptyDictionaryWithoutCallingReader()
+    {
+        var reader = new StubUnitReader();
+        var service = new UnitQueryService(reader);
+
+        var result = await service.FindCodesByIdsAsync([], CancellationToken.None);
+
+        Assert.Empty(result);
+        Assert.Equal(0, reader.FindCodesByIdsCallCount);
+    }
+
+    [Fact]
+    public async Task BatchLookupReturnsOnlyExistingUnits()
+    {
+        var missingUnitId = Guid.NewGuid();
+        var reader = new StubUnitReader();
+        var service = new UnitQueryService(reader);
+
+        var result = await service.FindCodesByIdsAsync(
+            [KilogramId, missingUnitId],
+            CancellationToken.None);
+
+        var unit = Assert.Single(result);
+        Assert.Equal(KilogramId, unit.Key);
+        Assert.Equal("KG", unit.Value);
+        Assert.Equal(1, reader.FindCodesByIdsCallCount);
+    }
+
     private sealed class StubUnitReader : IUnitReader
     {
+        public int FindCodesByIdsCallCount { get; private set; }
+
         public Task<Guid?> FindIdByCodeAsync(
             string code,
             CancellationToken cancellationToken)
@@ -61,6 +92,17 @@ public sealed class UnitQueryServiceTests
             CancellationToken cancellationToken)
         {
             return Task.FromResult(unitId == KilogramId ? "KG" : null);
+        }
+
+        public Task<IReadOnlyDictionary<Guid, string>> FindCodesByIdsAsync(
+            IReadOnlyCollection<Guid> unitIds,
+            CancellationToken cancellationToken)
+        {
+            FindCodesByIdsCallCount++;
+            IReadOnlyDictionary<Guid, string> result = unitIds.Contains(KilogramId)
+                ? new Dictionary<Guid, string> { [KilogramId] = "KG" }
+                : new Dictionary<Guid, string>();
+            return Task.FromResult(result);
         }
     }
 }
