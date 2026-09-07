@@ -17,6 +17,7 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private string? _articleApiConnectionString;
     private string? _catalogConnectionString;
     private string? _identityConnectionString;
+    private string? _lotApiConnectionString;
     private string? _organizationsConnectionString;
     private string? _traceabilityConnectionString;
 
@@ -30,6 +31,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     public string IdentityConnectionString => _identityConnectionString
         ?? throw new InvalidOperationException("The Identity test database is not initialized.");
+
+    public string LotApiConnectionString => _lotApiConnectionString
+        ?? throw new InvalidOperationException("The Lot API test database is not initialized.");
 
     public string OrganizationsConnectionString => _organizationsConnectionString
         ?? throw new InvalidOperationException("The Organizations test database is not initialized.");
@@ -59,6 +63,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
                 timeout.Token);
             _identityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_identity_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _lotApiConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_lot_api_tests_{Guid.NewGuid():N}",
                 timeout.Token);
             _organizationsConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_organizations_tests_{Guid.NewGuid():N}",
@@ -118,6 +125,21 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var articleApiIdentityContext = CreateArticleApiIdentityDbContext();
             await articleApiIdentityContext.Database.MigrateAsync(timeout.Token);
 
+            // Lot API tests exercise the four owning modules together. Migration order is
+            // significant because Traceability's cross-schema foreign keys require both
+            // Organizations and Catalog, while Identity also references Organizations.
+            await using var lotApiOrganizationsContext = CreateLotApiOrganizationsDbContext();
+            await lotApiOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var lotApiCatalogContext = CreateLotApiCatalogDbContext();
+            await lotApiCatalogContext.Database.MigrateAsync(timeout.Token);
+
+            await using var lotApiIdentityContext = CreateLotApiIdentityDbContext();
+            await lotApiIdentityContext.Database.MigrateAsync(timeout.Token);
+
+            await using var lotApiTraceabilityContext = CreateLotApiTraceabilityDbContext();
+            await lotApiTraceabilityContext.Database.MigrateAsync(timeout.Token);
+
             // Traceability owns no Organizations or Catalog entities. Its migration-level
             // cross-schema foreign keys require the referenced org and catalog tables to exist
             // in the same database first.
@@ -175,6 +197,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         return new CatalogDbContext(optionsBuilder.Options);
     }
 
+    public CatalogDbContext CreateLotApiCatalogDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            LotApiConnectionString,
+            CatalogDbContext.Schema);
+
+        return new CatalogDbContext(optionsBuilder.Options);
+    }
+
     public IdentityDbContext CreateIdentityDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
@@ -195,6 +227,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         return new IdentityDbContext(optionsBuilder.Options);
     }
 
+    public IdentityDbContext CreateLotApiIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            LotApiConnectionString,
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
+    }
+
     public OrganizationsDbContext CreateOrganizationsDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
@@ -210,6 +252,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             ArticleApiConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateLotApiOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            LotApiConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);
@@ -240,6 +292,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<TraceabilityDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             TraceabilityConnectionString,
+            TraceabilityDbContext.Schema);
+
+        return new TraceabilityDbContext(optionsBuilder.Options);
+    }
+
+    public TraceabilityDbContext CreateLotApiTraceabilityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<TraceabilityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            LotApiConnectionString,
             TraceabilityDbContext.Schema);
 
         return new TraceabilityDbContext(optionsBuilder.Options);

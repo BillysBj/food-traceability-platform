@@ -1,5 +1,7 @@
 using FoodTraceability.Modules.Catalog.Application.Articles;
+using FoodTraceability.Modules.Catalog.Application.Units;
 using FoodTraceability.Modules.Catalog.Infrastructure.Articles;
+using FoodTraceability.Modules.Catalog.Infrastructure.Units;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,8 +28,10 @@ public static class CatalogConfiguration
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IArticleReader, ArticleReader>();
         services.AddScoped<IArticleWriter, ArticleWriter>();
+        services.AddScoped<IUnitReader, UnitReader>();
         services.AddScoped<ArticleQueryService>();
         services.AddScoped<CreateArticleService>();
+        services.AddScoped<UnitQueryService>();
 
         return services;
     }
