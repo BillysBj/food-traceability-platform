@@ -312,6 +312,48 @@ unverändert.
 den Fehlervertrag gegenüber Clients. Das ist keine Dokumentationskorrektur und
 gehört in einen eigenen Task mit eigenen Tests.
 
+## FIX-007 – Toter `decimal.MinValue`-Sonderfall in `CreateLotService`
+
+**Status:** OFFEN
+**Herkunft:** Review zu TRC-003, CR-01 [MINOR]
+
+Die Mengenprüfung in `CreateLotService` enthält den Sonderfall
+`command.Quantity == decimal.MinValue ||` vor der Bereichsprüfung. Er ist
+unerreichbar: `Math.Abs(decimal.MinValue)` wirft nicht, sondern liefert
+`79228162514264337593543950335`, weil `decimal` im Gegensatz zu `int`
+symmetrisch ist — Vorzeichen und Betrag sind getrennt gespeichert. Im Review
+nachgemessen.
+
+**Ziel:** Den Sonderfall entfernen, sodass nur noch
+`Math.Abs(quantity) > MaximumSupportedQuantity` steht. Verhalten und Tests
+bleiben unverändert.
+
+**Warum nicht nebenbei erledigt:** Der Code ist funktional korrekt, nur
+irreführend — er suggeriert eine Überlaufgefahr, die es nicht gibt. Eine
+Änderung an der Mengenvalidierung ohne eigenen Task und eigene Testabnahme wäre
+unverhältnismäßig.
+
+## FIX-008 – `UnitCode.Create` läuft dreifach pro Lot-Anlage
+
+**Status:** OFFEN
+**Herkunft:** Review zu TRC-003, CR-02 [MINOR]
+
+Beim Anlegen eines Lots wird `UnitCode.Create` dreimal ausgeführt: in
+`UnitQueryService.FindIdByCodeAsync`, erneut in
+`UnitReader.FindIdByCodeAsync` und ein drittes Mal im `LotsController`, um für
+die Antwort `normalizedUnitCode` zu bilden. Der dritte Aufruf verlässt sich
+stillschweigend darauf, dass eine nicht-null Unit-Id einen gültigen Code
+impliziert. Das stimmt, ist aber nirgends festgehalten und bricht still, sobald
+jemand die Reihenfolge ändert.
+
+**Ziel:** `FindIdByCodeAsync` liefert den normalisierten Code gemeinsam mit der
+Id zurück, sodass Controller und Reader ihn nicht erneut herleiten müssen. Die
+Normalisierung bleibt einmalig im `UnitQueryService`.
+
+**Warum nicht nebenbei erledigt:** Das ändert eine öffentliche
+Application-Signatur im Catalog-Modul und betrifft damit auch künftige
+Aufrufer. Gehört in einen eigenen Task.
+
 ## Branch-Konvention
 
 ```text
