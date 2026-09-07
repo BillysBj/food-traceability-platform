@@ -681,6 +681,23 @@ offene Findings prüfen, Task-, Epic- und Milestone-Status aktualisieren,
 frühesten offenen Milestone bestimmen und erst danach den nächsten Task
 vorschlagen.
 
+### Statusaktualisierung im Task-Branch
+
+Jeder Implementierungstask aktualisiert seine eigene Roadmap-Statuszeile in
+`DEVELOPMENT_PLAN.md` in demselben Branch, in dem er umgesetzt wird. Berührt
+der Task den Umfang eines Milestones, wird auch der Abschnitt
+„Milestone-Status“ in diesem Branch aktualisiert.
+
+Da `main` geschützt ist, benötigt jede Statusänderung einen Pull Request. Wird
+der Status erst nach dem Merge nachgezogen, bildet der Plan vorübergehend
+nachweislich einen falschen Stand ab und für jeden Task entsteht ein
+zusätzlicher Pull Request. Genau dies ist nach dem Merge von OPS-001
+eingetreten.
+
+Der Statuswechsel gehört deshalb zu den Acceptance Criteria des jeweiligen
+Tasks. Solange der Plan noch den vorherigen Status ausweist, ist der Task nicht
+abgeschlossen. Diese Regel gilt auch für reine Dokumentationstasks.
+
 ### Kontrollblock vor jeder Codex-Übergabe
 
 ```text
