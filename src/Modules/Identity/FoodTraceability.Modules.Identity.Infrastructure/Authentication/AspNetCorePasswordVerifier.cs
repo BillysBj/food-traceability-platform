@@ -67,6 +67,4 @@ internal sealed class AspNetCorePasswordVerifier : IPasswordVerifier
             "The stored password hash for user {UserId} is unusable; authentication was rejected.",
             userId);
     }
-
-    private sealed class PasswordHashSubject;
 }

@@ -19,6 +19,7 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private string? _identityConnectionString;
     private string? _lotApiConnectionString;
     private string? _organizationsConnectionString;
+    private string? _platformAdminBootstrapConnectionString;
     private string? _traceabilityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
@@ -37,6 +38,10 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     public string OrganizationsConnectionString => _organizationsConnectionString
         ?? throw new InvalidOperationException("The Organizations test database is not initialized.");
+
+    public string PlatformAdminBootstrapConnectionString => _platformAdminBootstrapConnectionString
+        ?? throw new InvalidOperationException(
+            "The platform administrator bootstrap test database is not initialized.");
 
     public string TraceabilityConnectionString => _traceabilityConnectionString
         ?? throw new InvalidOperationException("The Traceability test database is not initialized.");
@@ -69,6 +74,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
                 timeout.Token);
             _organizationsConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_organizations_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _platformAdminBootstrapConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_platform_admin_bootstrap_tests_{Guid.NewGuid():N}",
                 timeout.Token);
             _traceabilityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_traceability_tests_{Guid.NewGuid():N}",
@@ -112,6 +120,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             await using var organizationsContext = CreateOrganizationsDbContext();
             await organizationsContext.Database.MigrateAsync(timeout.Token);
+
+            // Bootstrap tests use a dedicated database because PlatformAdmin existence is a
+            // database-wide invariant and must not depend on test execution order.
+            await using var bootstrapOrganizationsContext =
+                CreatePlatformAdminBootstrapOrganizationsDbContext();
+            await bootstrapOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var bootstrapIdentityContext =
+                CreatePlatformAdminBootstrapIdentityDbContext();
+            await bootstrapIdentityContext.Database.MigrateAsync(timeout.Token);
 
             // Article API tests exercise Identity, Organizations, and Catalog together in the
             // same modular-monolith database while each module retains its own DbContext.
@@ -237,6 +255,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         return new IdentityDbContext(optionsBuilder.Options);
     }
 
+    public IdentityDbContext CreatePlatformAdminBootstrapIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            PlatformAdminBootstrapConnectionString,
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
+    }
+
     public OrganizationsDbContext CreateOrganizationsDbContext()
     {
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
@@ -262,6 +290,16 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
         var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
         optionsBuilder.UseFoodTraceabilityPostgres(
             LotApiConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreatePlatformAdminBootstrapOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            PlatformAdminBootstrapConnectionString,
             OrganizationsDbContext.Schema);
 
         return new OrganizationsDbContext(optionsBuilder.Options);

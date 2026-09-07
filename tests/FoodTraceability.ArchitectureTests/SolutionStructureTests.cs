@@ -14,6 +14,7 @@ public sealed class SolutionStructureTests
         var expectedProjects = new[]
         {
             "src/FoodTraceability.Api/FoodTraceability.Api.csproj",
+            "src/FoodTraceability.Cli/FoodTraceability.Cli.csproj",
             "src/BuildingBlocks/FoodTraceability.BuildingBlocks/FoodTraceability.BuildingBlocks.csproj",
             "src/Platform/FoodTraceability.Platform.Persistence/FoodTraceability.Platform.Persistence.csproj",
             "src/Modules/Identity/FoodTraceability.Modules.Identity.Domain/FoodTraceability.Modules.Identity.Domain.csproj",

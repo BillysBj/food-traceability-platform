@@ -1,7 +1,9 @@
 using System.Text;
 using FoodTraceability.Modules.Identity.Application.Authentication;
 using FoodTraceability.Modules.Identity.Application.Authorization;
+using FoodTraceability.Modules.Identity.Application.Bootstrap;
 using FoodTraceability.Modules.Identity.Infrastructure.Authorization;
+using FoodTraceability.Modules.Identity.Infrastructure.Bootstrap;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -65,6 +67,7 @@ public static class IdentityAuthenticationConfiguration
 
         services.AddMemoryCache();
         services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IPasswordHasher, AspNetCorePasswordHasher>();
         services.AddSingleton<IPasswordVerifier, AspNetCorePasswordVerifier>();
         services.AddSingleton<IRefreshTokenProtector, CryptographicRefreshTokenProtector>();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
@@ -73,6 +76,9 @@ public static class IdentityAuthenticationConfiguration
         services.AddScoped<AuthenticationService>();
         services.AddScoped<IEffectiveAuthorizationStore, EffectiveAuthorizationStore>();
         services.AddScoped<EffectiveAuthorizationService>();
+        services.AddScoped<IBootstrapReader, BootstrapReader>();
+        services.AddScoped<IBootstrapWriter, BootstrapWriter>();
+        services.AddScoped<BootstrapPlatformAdministratorService>();
         services.AddSingleton(serviceProvider =>
         {
             var jwtOptions = serviceProvider.GetRequiredService<IOptions<JwtOptions>>().Value;
