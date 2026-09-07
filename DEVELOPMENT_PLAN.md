@@ -119,6 +119,8 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 - **ID-004** Organization Membership + optional Location Scope — **Roadmap-Status: DONE**
 - **ID-005** (Plan-ID) Authentication — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **ID-005a** (Credential- und Refresh-Token-Persistenz) und **ID-005b** (Authentication-Endpunkte).
 - **ID-006** Permission-based Authorization — **Roadmap-Status: DONE**
+- **OPS-001** Initial Platform Administrator Bootstrap — **Roadmap-Status: NOT_STARTED**
+- **ID-008** User Management — **Roadmap-Status: NOT_STARTED**
 - **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: NOT_STARTED**
 
 Die Repository-ID **ID-007** ist mit dem anderen Inhalt „article permissions“
@@ -166,11 +168,51 @@ Sicherheitsentscheidung und keine technische Ableitung.
 Nicht enthalten: Authorization Middleware, Endpoint-Policies, Claims. Diese
 folgen mit ID-006.
 
+## OPS-001 – Initial Platform Administrator Bootstrap
+
+Zweck: Erstanlage des ersten `PlatformAdmin`. `organization.manage` ist laut
+D-20 sowohl `PlatformAdmin` als auch `OrganizationAdmin` zugewiesen. Für das
+Anlegen der ersten Organisation hilft jedoch keine der beiden Zuweisungen:
+`OrganizationAdmin` erhält die Permission über ein
+`OrganizationRoleAssignment` und kann sie deshalb nur innerhalb einer bereits
+zugewiesenen Organisation nutzen; bei der ersten Organisation existiert dieser
+Kontext noch nicht. Die Zuweisung an `PlatformAdmin` stammt dagegen aus einem
+`PlatformRoleAssignment`. Nach D-27 gelten Platform Permissions ausschließlich
+im Platform Scope und gewähren keinen Zugriff über organisationsgebundene
+Routen. Solange noch kein `PlatformAdmin` existiert, kann daher niemand über
+einen Platform-Endpunkt die erste Organisation anlegen.
+
+Verbindliche Anforderungen gemäß D-34:
+
+- Expliziter administrativer CLI-Bootstrap.
+- Kein automatischer Seed.
+- Keine Erstellung beim normalen Application-Startup.
+- Keine Erstellung durch EF-Migrationen.
+- Keine Default-Credentials.
+- Keine Secrets im Repository.
+- Erfordert eine ausdrückliche Operator-Aktion.
+- Benutzer, Credential und `PlatformRoleAssignment` entstehen über die
+  regulären Application- und Domain-Pfade, nicht per direktem SQL.
+- Ausschließlich für die initiale Plattformadministration gedacht.
+- Existiert bereits ein `PlatformAdmin`, lehnt der normale Bootstrap
+  standardmäßig ab.
+- Das normale Login läuft danach unverändert über die vorhandene Auth-API.
+
+## ID-008 – User Management
+
+Zweck: Benutzer über die API anlegen und verwalten. Die Permissions
+`user.read` und `user.manage` sind seit ID-003 geseedet und in D-20 Rollen
+zugeordnet, werden aber von keinem Endpunkt ausgewertet.
+
+Hinweis zur ID: ID-007 ist im Repository bereits mit einem anderen Inhalt
+belegt. ID-008 ist deshalb eine neue ID und keine Umbenennung.
+
 # EPIC 2 – Organizations
 
 - **ORG-001a** Organization- und Location-Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE**
 - **ORG-001** Organization CRUD — **Roadmap-Status: NOT_STARTED** — vorhanden ist ausschließlich `GET /api/v1/organizations/{id}` aus ID-006 als Demonstrationsfläche für das Autorisierungsmodell; Anlegen, Ändern und Löschen über die API fehlen.
 - **ORG-002** Location CRUD — **Roadmap-Status: IN_PROGRESS** — Repository-Task ORG-002 lieferte ausschließlich `POST /api/v1/organizations/{id}/locations`; Lesen, Ändern und Löschen fehlen.
+- **ORG-002b** Location Read/List — **Roadmap-Status: NOT_STARTED**
 - **ORG-003** Membership Management — **Roadmap-Status: NOT_STARTED** — das Datenmodell existiert seit ID-004 und D-22; die API darüber fehlt.
 - **ORG-004** Tenant Isolation Integration Tests — **Roadmap-Status: NOT_STARTED**
 
@@ -195,6 +237,14 @@ Schema `org` mit eigener Migration-History, erste Migration.
 Nicht enthalten: API, CRUD-Endpunkte, Application Services, Mitgliedschaften,
 Rollenzuweisungen.
 
+## ORG-002b – Location Read/List
+
+Zweck: Schließt ausschließlich den für den Pilot benötigten Rest von ORG-002.
+Der Repository-Task ORG-002 lieferte nur das Anlegen.
+
+Ausdrücklich nicht im Scope sind Update und Delete. Sie werden nicht
+automatisch mitgezogen.
+
 Milestone: `M2 – Organizations Ready`
 
 # EPIC 3 – Catalog
@@ -202,11 +252,22 @@ Milestone: `M2 – Organizations Ready`
 Die CAT-Nummerierung weicht vollständig ab: Dieselbe ID bezeichnet im Plan und
 im Repository unterschiedliche Inhalte.
 
-- **CAT-001** (Plan-ID) Product Category — **Roadmap-Status: NOT_STARTED**. Die Repository-ID **CAT-001** bezeichnet stattdessen die Product Foundation für Plan-Task CAT-003.
+- **CAT-001** (Plan-ID) Product Category — **Roadmap-Status: NOT_STARTED**. Die Repository-ID **CAT-001** bezeichnet stattdessen die Product Foundation für Plan-Task CAT-003. Nach Abschluss der Recovery-Kette wird CAT-001 gegen den Pilotbedarf bewertet. Falls der Task dann nicht erforderlich ist, wird er ausdrücklich auf **DEFERRED** gesetzt und nicht stillschweigend übergangen; diese Bewertung steht noch aus.
 - **CAT-002** (Plan-ID) Unit — **Roadmap-Status: DONE** — ausgeliefert als Repository-Task **CAT-003** „unit catalog“.
 - **CAT-003** (Plan-ID) Product — **Roadmap-Status: IN_PROGRESS** — ausgeliefert als Repository-Task **CAT-001** „product foundation“; Domainmodell und Persistenz stehen, ein Produkt-Endpunkt fehlt.
 - **CAT-004** (Plan-ID) Article/SKU — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **CAT-002a** (article persistence) und **CAT-002b** (article API).
-- **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: NOT_STARTED**
+- **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: NOT_STARTED** — Nach Abschluss der Recovery-Kette wird CAT-005 gegen den Pilotbedarf bewertet. Falls der Task dann nicht erforderlich ist, wird er ausdrücklich auf **DEFERRED** gesetzt und nicht stillschweigend übergangen; diese Bewertung steht noch aus.
+- **CAT-006** Product API — **Roadmap-Status: NOT_STARTED**
+
+## CAT-006 – Product API
+
+Zweck: Produkte über die API anlegen und lesen. Modell und Persistenz stehen
+seit dem Repository-Task CAT-001; die Permissions `product.read`,
+`product.create` und `product.update` sind geseedet, werden aber von keinem
+Endpunkt ausgewertet.
+
+Hinweis zur ID: Der Plan-Task CAT-003 „Product“ bleibt **IN_PROGRESS** und wird
+nicht umgewidmet.
 
 Milestone: `M3 – Catalog Ready`
 
@@ -344,9 +405,9 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 ## Milestone-Status
 
 - **M0 – Foundation Ready** — **ERREICHT**.
-- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
-- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-001**, **ORG-002**, **ORG-003** und **ORG-004**.
-- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003** und **CAT-005**.
+- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: **OPS-001**, **ID-008** und Plan-Task **ID-007**.
+- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-001**, **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
+- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
@@ -361,8 +422,25 @@ Die Arbeit an EPIC 4 wurde begonnen, obwohl M1, M2 und M3 offen sind. Das war
 keine Entscheidung, sondern ist unbemerkt entstanden, weil der Plan bis dahin
 keinen Status je Task führte.
 
-Dieser Abgleich trifft keine Aussage darüber, wie es weitergeht. Die Reihenfolge
-der Nacharbeit ist Gegenstand einer eigenen Vorlage und nicht dieses Tasks.
+## Recovery-Reihenfolge
+
+1. **OPS-001** Initial Platform Administrator Bootstrap
+2. **ORG-001** Organization Create
+3. **ID-008** User Management
+4. **ORG-003** Membership + Organization Role Assignment
+5. **CAT-006** Product API
+6. **ORG-002b** Location Read/List
+7. **ID-007** Security & Cross-Tenant Abnahme
+8. **M1, M2 und M3** erneut prüfen
+9. Erst danach **TRC-005** und folgende
+
+Diese Reihenfolge folgt dem Setup-Pfad und nicht der Tasknummerierung. Der
+Zielpfad lautet: Organisation → Standort → Benutzer → Membership und Rolle →
+Produkt/Artikel → Lot → Traceability Event → Transformation → vollständige
+Vorwärts- und Rückwärtsverfolgung.
+
+Der Pilot darf für diesen Ablauf dauerhaft weder auf Test-Fixtures noch auf
+manuelle SQL-Eingriffe angewiesen sein.
 
 # Spätere Epics
 

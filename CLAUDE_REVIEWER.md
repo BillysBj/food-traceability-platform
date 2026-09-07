@@ -620,3 +620,118 @@ Mensch:
 - entscheidet fachliche/architektonische Konflikte
 - kontrolliert kritische Änderungen
 - verantwortet finale Freigabe
+
+
+---
+
+
+## Projektsteuerung - verbindlich
+
+### Roadmap-, Repository- und Milestone-Check
+
+Kein Implementierungstask wird aus der Nummer oder Position des zuletzt
+abgeschlossenen Tasks abgeleitet. Vor jedem neuen Codex-Task werden Roadmap,
+Repository und Milestones mit diesen sieben Fragen geprüft:
+
+1. Welcher Milestone ist der früheste noch nicht erreichte?
+2. Welche Tasks dieses Milestones sind **DONE**, **IN_PROGRESS**,
+   **NOT_STARTED**, **DEFERRED** oder **SUPERSEDED**?
+3. Gibt es aus früheren Milestones offene Tasks, die Voraussetzung für einen
+   real benutzbaren Pilot-Flow oder für spätere Tasks sind?
+4. Stimmen Task-ID, Task-Bedeutung, Dokumentation und tatsächlicher
+   Repository-Stand überein?
+5. Gibt es offene Review-Findings, FIX-Tasks, Architekturentscheidungen oder
+   Blocker, die vorher erledigt werden müssen?
+6. Ist der vorgeschlagene Task wirklich der kleinste sinnvolle nächste Schritt
+   zum aktuellen Milestone?
+7. Gibt es Abhängigkeiten zu noch nicht implementierten Funktionen, die den
+   Task fachlich oder technisch unvollständig machen würden?
+
+### Milestone-Gate
+
+Ein späterer Epic wird nicht weitergeführt, solange ein früherer notwendiger
+Milestone offen ist. Ausnahmen sind möglich, müssen aber vorher ausdrücklich
+genannt, begründet und freigegeben werden.
+
+### Keine stillen Übersprünge
+
+Ein nicht benötigter Task wird als **DEFERRED** oder **SUPERSEDED** markiert,
+jeweils mit Grund. Ein Task gilt nicht als **DONE**, wenn nur ein Teil seiner
+Acceptance Criteria umgesetzt ist; dann ist er **IN_PROGRESS**, oder seine
+Bedeutung wird nachvollziehbar auf tatsächlich implementierte Tasks
+aufgeteilt.
+
+### Eindeutige Task-IDs
+
+Task-IDs bleiben eindeutig. Historische Branches, Commits und IDs werden nicht
+umbenannt. Weichen Plan-ID und Repository-ID ab, wird die Zuordnung im
+Entwicklungsplan dokumentiert. Eine bereits belegte ID wird nicht mit neuer
+Bedeutung wiederverwendet.
+
+### Ungeplante Arbeit
+
+Ungeplante Arbeit — FIX, DOCS, CI, CHORE, Refactorings, Security-Fixes und
+Review-Folgearbeiten — wird im Projektstatus sichtbar gemacht, darf aber nicht
+dazu führen, dass offene Milestones aus dem Blick geraten.
+
+### Ablauf nach jedem Merge
+
+Nach jedem Merge: Repository-Stand prüfen, abgeschlossenen Task erfassen,
+offene Findings prüfen, Task-, Epic- und Milestone-Status aktualisieren,
+frühesten offenen Milestone bestimmen und erst danach den nächsten Task
+vorschlagen.
+
+### Kontrollblock vor jeder Codex-Übergabe
+
+```text
+Current milestone:
+Milestone status:
+Open blocking tasks:
+Proposed next task:
+Why this task is next:
+Skipped/deferred tasks:
+Open decisions/blockers:
+```
+
+Ist etwas inkonsistent, wird gestoppt und die Abweichung gemeldet, statt
+eigenmächtig eine neue Reihenfolge festzulegen.
+
+### Fortschrittsübersicht nach jedem Merge
+
+Nach jedem Merge wird unaufgefordert eine Fortschrittsübersicht über alle
+Milestones geliefert. Die Balken werden aus dem dokumentierten Status
+abgeleitet und nicht geschätzt. **DEFERRED** und **SUPERSEDED** dürfen die
+Darstellung nicht beschönigen. Ein voller Balken bedeutet nicht, dass das
+Milestone-Gate erfüllt ist.
+
+Unter den Balken stehen:
+
+```text
+Current milestone:
+Next milestone gate:
+Blocking gaps:
+Last completed task:
+Recommended next task:
+```
+
+Arbeit in einem späteren Epic bei offenem früherem Milestone wird ausdrücklich
+markiert.
+
+### Task-Fortschritt und Capability-Fortschritt
+
+Task-Fortschritt und Capability-Fortschritt werden unterschieden. Für die
+Bewertung des Pilotstatus zählt, ob die Funktion Ende zu Ende benutzbar ist,
+nicht wie viele Tasks gemergt wurden.
+
+### Explizite Planänderungen
+
+Planänderungen sind erlaubt, unbemerkte Abweichungen nicht. Änderungen an
+Reihenfolge, Milestones, Scope, Task-Bedeutung, Architektur oder fachlichen
+Regeln werden explizit gemacht; wo eine Entscheidung des Auftraggebers nötig
+ist, wird vorher gefragt.
+
+### Security-Testregel
+
+Jeder neue geschützte Endpunkt erhält Tests für erlaubten Zugriff, fehlende
+Berechtigung und Tenant- beziehungsweise Organisationsisolation, soweit
+anwendbar.
