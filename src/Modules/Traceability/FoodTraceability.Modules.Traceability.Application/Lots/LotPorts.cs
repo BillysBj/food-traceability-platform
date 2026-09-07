@@ -8,6 +8,10 @@ public interface ILotReader
         Guid organizationId,
         Guid lotId,
         CancellationToken cancellationToken);
+
+    Task<LotPage> ListAsync(
+        ListLotsQuery query,
+        CancellationToken cancellationToken);
 }
 
 public interface ILotWriter
