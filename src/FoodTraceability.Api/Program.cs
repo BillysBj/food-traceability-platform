@@ -7,6 +7,7 @@ using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Modules.Organizations.Infrastructure;
+using FoodTraceability.Modules.Traceability.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -49,6 +50,7 @@ builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddApiJwtBearerAuthentication();
 builder.Services.AddOrganizations();
 builder.Services.AddCatalog();
+builder.Services.AddTraceability();
 builder.Services.AddApiAuthorization();
 builder.Services
     .AddHealthChecks()

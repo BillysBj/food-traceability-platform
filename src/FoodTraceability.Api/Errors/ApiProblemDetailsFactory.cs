@@ -25,6 +25,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string ArticleValidationErrorCode = "ARTICLE_VALIDATION_FAILED";
     private const string AuthorizationDeniedTitle = "Access is forbidden.";
     private const string AuthorizationDeniedErrorCode = "AUTHORIZATION_DENIED";
+    private const string LotConflictTitle = "The lot conflicts with existing data.";
+    private const string LotConflictErrorCode = "LOT_CONFLICT";
+    private const string LotNotFoundTitle = "Lot not found.";
+    private const string LotNotFoundErrorCode = "LOT_NOT_FOUND";
+    private const string LotValidationTitle = "The lot request is invalid.";
+    private const string LotValidationErrorCode = "LOT_VALIDATION_FAILED";
     private const string RateLimitExceededTitle = "Too many requests.";
     private const string RateLimitExceededDetail =
         "The request rate limit has been exceeded. Retry after the current window.";
@@ -86,6 +92,37 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             StatusCodes.Status403Forbidden,
             AuthorizationDeniedTitle,
             AuthorizationDeniedErrorCode);
+
+    public ProblemDetails CreateLotConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            LotConflictTitle,
+            LotConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateLotNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            LotNotFoundTitle,
+            LotNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateLotValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Lot", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            LotValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = LotValidationErrorCode;
+        return problemDetails;
+    }
 
     public ProblemDetails CreateRateLimitExceeded(HttpContext httpContext) =>
         CreateApiProblemDetails(
