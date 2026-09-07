@@ -119,7 +119,7 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 - **ID-004** Organization Membership + optional Location Scope — **Roadmap-Status: DONE**
 - **ID-005** (Plan-ID) Authentication — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **ID-005a** (Credential- und Refresh-Token-Persistenz) und **ID-005b** (Authentication-Endpunkte).
 - **ID-006** Permission-based Authorization — **Roadmap-Status: DONE**
-- **OPS-001** Initial Platform Administrator Bootstrap — **Roadmap-Status: NOT_STARTED**
+- **OPS-001** Initial Platform Administrator Bootstrap — **Roadmap-Status: DONE**
 - **ID-008** User Management — **Roadmap-Status: NOT_STARTED**
 - **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: NOT_STARTED**
 
@@ -405,7 +405,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 ## Milestone-Status
 
 - **M0 – Foundation Ready** — **ERREICHT**.
-- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: **OPS-001**, **ID-008** und Plan-Task **ID-007**.
+- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: **ID-008** und Plan-Task **ID-007**.
 - **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-001**, **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
 - **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
@@ -424,7 +424,7 @@ keinen Status je Task führte.
 
 ## Recovery-Reihenfolge
 
-1. **OPS-001** Initial Platform Administrator Bootstrap
+1. **OPS-001** Initial Platform Administrator Bootstrap — **ERLEDIGT**
 2. **ORG-001** Organization Create
 3. **ID-008** User Management
 4. **ORG-003** Membership + Organization Role Assignment
@@ -518,6 +518,31 @@ Normalisierung bleibt einmalig im `UnitQueryService`.
 **Warum nicht nebenbei erledigt:** Das ändert eine öffentliche
 Application-Signatur im Catalog-Modul und betrifft damit auch künftige
 Aufrufer. Gehört in einen eigenen Task.
+
+## FIX-009 - `LoginRequest` gibt das Passwort in `ToString()` preis
+
+**Status:** OFFEN
+**Herkunft:** Review zu OPS-001, Nachbarbefund
+
+`LoginRequest` in
+`src/Modules/Identity/FoodTraceability.Modules.Identity.Application/Authentication/AuthenticationModels.cs`
+ist ein positional Record mit dem Member `string? Password` und überschreibt
+`ToString()` nicht. C# erzeugt für Records automatisch eine `ToString()`-
+Implementierung, die alle Member ausgibt. Würde ein Log- oder Diagnoseaufruf
+dieses Objekt formatieren, gäbe er damit das Klartextpasswort aus.
+
+Heute wird das Objekt nirgends formatiert. Es handelt sich daher nicht um eine
+aktive Preisgabe, sondern um eine offene Flanke. Der Befund besteht seit
+ID-005b.
+
+**Ziel:** `ToString()` so überschreiben, dass ein fester Platzhalter das
+Passwort ersetzt und auch dessen Länge nicht erscheint. Ein Unit-Test weist
+dieses Verhalten nach. Als Vorlage dient die in OPS-001 korrigierte
+`BootstrapPlatformAdministratorCommand`.
+
+**Warum nicht nebenbei erledigt:** Der Befund liegt außerhalb des OPS-001-Scope
+und berührt den Login-Pfad. Eine Änderung dort gehört in einen eigenen Task mit
+eigener Abnahme.
 
 ## Branch-Konvention
 
