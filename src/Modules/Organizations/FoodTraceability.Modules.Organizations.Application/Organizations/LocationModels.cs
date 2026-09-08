@@ -19,3 +19,14 @@ public sealed record LocationDetails(
     decimal? Latitude,
     decimal? Longitude,
     DateTimeOffset CreatedAt);
+
+public sealed record ListLocationsQuery(
+    Guid OrganizationId,
+    int Page,
+    int PageSize);
+
+public sealed record LocationPage(
+    IReadOnlyList<LocationDetails> Items,
+    int Page,
+    int PageSize,
+    long TotalCount);
