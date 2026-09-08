@@ -661,6 +661,25 @@ Acceptance Criteria umgesetzt ist; dann ist er **IN_PROGRESS**, oder seine
 Bedeutung wird nachvollziehbar auf tatsächlich implementierte Tasks
 aufgeteilt.
 
+### Bedeutung von DEFERRED
+
+Ein Task mit Status **DEFERRED** blockiert seinen Milestone nicht automatisch.
+Er darf nur dann nicht blockieren, wenn alle vier Bedingungen erfüllt sind:
+
+1. Die Zurückstellung wurde ausdrücklich entschieden.
+2. Eine Begründung ist dokumentiert.
+3. Der Task ist für das aktuelle Milestone-Gate nicht erforderlich.
+4. Der Milestone erreicht seine definierte Capability auch ohne ihn
+   tatsächlich.
+
+**DEFERRED** darf niemals verwendet werden, um einen echten Milestone-Blocker
+lediglich aus der Berechnung zu entfernen.
+
+Milestone-Status und Fortschrittsdarstellung müssen zurückgestellte Tasks
+ausdrücklich nennen. Ein erreichter Milestone mit zurückgestellten Tasks ist
+nicht dasselbe wie ein erreichter Milestone ohne sie, und der Unterschied muss
+sichtbar bleiben.
+
 ### Eindeutige Task-IDs
 
 Task-IDs bleiben eindeutig. Historische Branches, Commits und IDs werden nicht
