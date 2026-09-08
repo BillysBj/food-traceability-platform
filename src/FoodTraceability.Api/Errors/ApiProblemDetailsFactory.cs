@@ -25,6 +25,8 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string ArticleValidationErrorCode = "ARTICLE_VALIDATION_FAILED";
     private const string AuthorizationDeniedTitle = "Access is forbidden.";
     private const string AuthorizationDeniedErrorCode = "AUTHORIZATION_DENIED";
+    private const string LocationNotFoundTitle = "Location not found.";
+    private const string LocationNotFoundErrorCode = "LOCATION_NOT_FOUND";
     private const string LotConflictTitle = "The lot conflicts with existing data.";
     private const string LotConflictErrorCode = "LOT_CONFLICT";
     private const string LotNotFoundTitle = "Lot not found.";
@@ -115,6 +117,13 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             StatusCodes.Status403Forbidden,
             AuthorizationDeniedTitle,
             AuthorizationDeniedErrorCode);
+
+    public ProblemDetails CreateLocationNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            LocationNotFoundTitle,
+            LocationNotFoundErrorCode);
 
     public ProblemDetails CreateLotConflict(HttpContext httpContext, string detail) =>
         CreateApiProblemDetails(
