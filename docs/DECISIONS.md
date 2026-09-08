@@ -63,6 +63,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-34 | Bootstrap des ersten Plattformadministrators | ENTSCHIEDEN |
 | D-35 | Eindeutigkeit von Organisationen | OFFEN |
 | D-36 | Präzision persistierter Zeitpunkte | ENTSCHIEDEN |
+| D-37 | Plattformweite Benutzerverwaltung und Initialpasswort | ENTSCHIEDEN |
 
 ---
 
@@ -1119,6 +1120,55 @@ Umgesetzt wird diese Entscheidung in FIX-010, nicht in ORG-001.
 
 ---
 
+## D-37 – Plattformweite Benutzerverwaltung und Initialpasswort
+
+**Status:** ENTSCHIEDEN (2026-09-08)
+**Entschieden durch:** Auftraggeber
+**Betrifft:** ID-008 und ORG-003
+**Setzt voraus:** D-20, D-22, D-27, D-34, D-36
+
+### Plattformweiter Benutzer
+
+- Benutzer sind globale Identity-Objekte. `identity.user` trägt keine
+  Organisationszugehörigkeit.
+- ID-008 ist plattformweite Benutzerverwaltung. Anlegen und Abrufen erfordern
+  einen plattformweiten Berechtigungskontext; eine nur organisationsbezogene
+  Zuweisung von `user.read` oder `user.manage` genügt **nicht**.
+- Die Zuordnung eines Benutzers zu einer Organisation entsteht ausschließlich
+  über ORG-003. ID-008 erzeugt **keine** `organization_membership`.
+- Ein organisationsbezogenes Anlegen von Benutzern wird im Pilot nicht
+  verwendet.
+
+### Begründung für den Verzicht auf organisationsbezogenes Anlegen
+
+Neben der Modulkopplung ist dies vor allem eine Sicherheitsentscheidung. Die
+E-Mail-Adresse ist plattformweit eindeutig. Ein organisationsbezogener
+Create-Endpunkt würde über sein Konfliktverhalten die Existenz eines Benutzers
+außerhalb des eigenen Mandanten offenlegen. Auf der Platform-Route entsteht
+dieses Problem nicht, weil der Aufrufer ohnehin plattformweit berechtigt ist.
+
+### Initialpasswort
+
+- Der PlatformAdmin übergibt beim Anlegen ein Initialpasswort im Request.
+- Es gilt dieselbe `PasswordPolicy` wie beim Bootstrap.
+- Das Passwort wird ausschließlich als Credential behandelt und nur gehasht
+  persistiert.
+- Es wird **niemals** geloggt, in Fehlerdetails ausgegeben, in Audit-Nutzdaten
+  geschrieben oder zurückgegeben.
+- Es gibt kein servergeneriertes Klartextpasswort.
+- Im normalen Create-Fluss wird kein Benutzer ohne Credential erzeugt.
+
+### Bekannte Einschränkung
+
+Der PlatformAdmin kennt das Initialpasswort, und es existiert noch kein Fluss
+zum Wechseln oder Zurücksetzen von Passwörtern. Passwortwechsel,
+Passwort-Reset sowie ein späterer Aktivierungs- oder Einladungsmechanismus sind
+nicht Scope von ID-008 und brauchen einen eigenen Security- und Identity-Task.
+Ein solcher Einladungsfluss müsste zusätzlich festlegen, wie bestehende globale
+Benutzer behandelt werden, ohne deren Existenz offenzulegen.
+
+---
+
 ## Nächste freie ID
 
-`D-37`
+`D-38`

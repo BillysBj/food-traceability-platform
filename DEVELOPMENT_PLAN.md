@@ -120,7 +120,7 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 - **ID-005** (Plan-ID) Authentication — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **ID-005a** (Credential- und Refresh-Token-Persistenz) und **ID-005b** (Authentication-Endpunkte).
 - **ID-006** Permission-based Authorization — **Roadmap-Status: DONE**
 - **OPS-001** Initial Platform Administrator Bootstrap — **Roadmap-Status: DONE**
-- **ID-008** User Management — **Roadmap-Status: NOT_STARTED**
+- **ID-008** User Management — **Roadmap-Status: DONE**
 - **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: NOT_STARTED**
 
 Die Repository-ID **ID-007** ist mit dem anderen Inhalt „article permissions“
@@ -405,7 +405,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 ## Milestone-Status
 
 - **M0 – Foundation Ready** — **ERREICHT**.
-- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: **ID-008** und Plan-Task **ID-007**.
+- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
 - **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
 - **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
@@ -426,7 +426,7 @@ keinen Status je Task führte.
 
 1. **OPS-001** Initial Platform Administrator Bootstrap — **ERLEDIGT**
 2. **ORG-001** Organization Create — **ERLEDIGT**
-3. **ID-008** User Management
+3. **ID-008** User Management — **ERLEDIGT**
 4. **ORG-003** Membership + Organization Role Assignment
 5. **CAT-006** Product API
 6. **ORG-002b** Location Read/List

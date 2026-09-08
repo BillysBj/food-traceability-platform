@@ -11,6 +11,8 @@ public static class ApiAuthorizationConfiguration
     private const string LotReadPermission = "lot.read";
     private const string OrganizationReadPermission = "organization.read";
     private const string OrganizationManagePermission = "organization.manage";
+    private const string UserManagePermission = "user.manage";
+    private const string UserReadPermission = "user.read";
 
     public static IServiceCollection AddApiAuthorization(this IServiceCollection services)
     {
@@ -65,6 +67,18 @@ public static class ApiAuthorizationConfiguration
                     .RequireAuthenticatedUser()
                     .AddRequirements(
                         new PlatformPermissionRequirement(OrganizationManagePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.PlatformUserManage,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new PlatformPermissionRequirement(UserManagePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.PlatformUserRead,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new PlatformPermissionRequirement(UserReadPermission)));
         });
         services.AddScoped<IAuthorizationHandler, DatabaseAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler,
