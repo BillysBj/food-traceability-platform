@@ -72,14 +72,7 @@ public sealed class PlatformOrganizationEndpointTests(PostgreSqlContainerFixture
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
-        // Persisted timestamps are excluded because PostgreSQL rounds to microseconds;
-        // D-36 and FIX-010 define the central correction outside ORG-001.
-        Assert.Equal(created.Id, read.Id);
-        Assert.Equal(created.Name, read.Name);
-        Assert.Equal(created.VatId, read.VatId);
-        Assert.Equal(created.TaxNumber, read.TaxNumber);
-        Assert.Equal(created.Email, read.Email);
-        Assert.Equal(created.Phone, read.Phone);
+        Assert.Equal(created, read);
     }
 
     [Fact]
@@ -295,14 +288,7 @@ public sealed class PlatformOrganizationEndpointTests(PostgreSqlContainerFixture
             factory.RequestCancellationToken);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, platformGetResponse.StatusCode);
-        // Persisted timestamps are excluded because PostgreSQL rounds to microseconds;
-        // D-36 and FIX-010 define the central correction outside ORG-001.
-        Assert.Equal(created.Id, platformRead.Id);
-        Assert.Equal(created.Name, platformRead.Name);
-        Assert.Equal(created.VatId, platformRead.VatId);
-        Assert.Equal(created.TaxNumber, platformRead.TaxNumber);
-        Assert.Equal(created.Email, platformRead.Email);
-        Assert.Equal(created.Phone, platformRead.Phone);
+        Assert.Equal(created, platformRead);
     }
 
     private ApiWebApplicationFactory CreateFactory() =>

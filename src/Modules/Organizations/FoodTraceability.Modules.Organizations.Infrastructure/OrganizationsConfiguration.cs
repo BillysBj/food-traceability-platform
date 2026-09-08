@@ -1,3 +1,4 @@
+using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Organizations.Application.Organizations;
 using FoodTraceability.Modules.Organizations.Infrastructure.Organizations;
 using FoodTraceability.Platform.Persistence;
@@ -23,7 +24,7 @@ public static class OrganizationsConfiguration
 
             options.UseFoodTraceabilityPostgres(connectionString, OrganizationsDbContext.Schema);
         });
-        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IOrganizationReader, OrganizationReader>();
         services.AddScoped<IOrganizationWriter, OrganizationWriter>();
         services.AddScoped<ILocationWriter, LocationWriter>();

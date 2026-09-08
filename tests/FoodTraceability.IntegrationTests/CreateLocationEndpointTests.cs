@@ -60,6 +60,34 @@ public sealed class CreateLocationEndpointTests(PostgreSqlContainerFixture datab
     }
 
     [Fact]
+    public async Task CreatedLocationTimestampMatchesPersistedTimestamp()
+    {
+        var account = await CreateAccountAsync();
+        var organization = await CreateOrganizationAsync();
+        await AddMembershipAndOrganizationRoleAsync(
+            account.UserId,
+            organization.OrganizationId,
+            StandardRoleIds.OrganizationAdmin,
+            locationId: null);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, account, factory.RequestCancellationToken);
+
+        using var response = await client.PostAsJsonAsync(
+            LocationCollectionPath(organization.OrganizationId),
+            ValidRequest,
+            factory.RequestCancellationToken);
+        var body = await ReadLocationAsync(response, factory.RequestCancellationToken);
+        await using var context = database.CreateIdentityOrganizationsDbContext();
+        var persisted = await context.Locations
+            .AsNoTracking()
+            .SingleAsync(location => location.Id == body.Id);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal(body.CreatedAt, persisted.CreatedAt);
+    }
+
+    [Fact]
     public async Task UnauthenticatedRequestReturns401()
     {
         var organization = await CreateOrganizationAsync();

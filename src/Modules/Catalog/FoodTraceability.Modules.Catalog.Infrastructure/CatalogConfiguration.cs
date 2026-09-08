@@ -1,3 +1,4 @@
+using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Catalog.Application.Articles;
 using FoodTraceability.Modules.Catalog.Application.Units;
 using FoodTraceability.Modules.Catalog.Infrastructure.Articles;
@@ -25,7 +26,7 @@ public static class CatalogConfiguration
 
             options.UseFoodTraceabilityPostgres(connectionString, CatalogDbContext.Schema);
         });
-        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IArticleReader, ArticleReader>();
         services.AddScoped<IArticleWriter, ArticleWriter>();
         services.AddScoped<IUnitReader, UnitReader>();

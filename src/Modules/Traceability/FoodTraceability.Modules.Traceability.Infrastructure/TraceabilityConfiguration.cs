@@ -1,3 +1,4 @@
+using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Traceability.Application.Lots;
 using FoodTraceability.Modules.Traceability.Infrastructure.Lots;
 using FoodTraceability.Platform.Persistence;
@@ -25,7 +26,7 @@ public static class TraceabilityConfiguration
                 connectionString,
                 TraceabilityDbContext.Schema);
         });
-        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<ILotReader, LotReader>();
         services.AddScoped<ILotWriter, LotWriter>();
         services.AddScoped<LotQueryService>();
