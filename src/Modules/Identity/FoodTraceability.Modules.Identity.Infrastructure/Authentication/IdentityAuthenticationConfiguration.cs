@@ -3,8 +3,10 @@ using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Identity.Application.Authentication;
 using FoodTraceability.Modules.Identity.Application.Authorization;
 using FoodTraceability.Modules.Identity.Application.Bootstrap;
+using FoodTraceability.Modules.Identity.Application.Users;
 using FoodTraceability.Modules.Identity.Infrastructure.Authorization;
 using FoodTraceability.Modules.Identity.Infrastructure.Bootstrap;
+using FoodTraceability.Modules.Identity.Infrastructure.Users;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -80,6 +82,10 @@ public static class IdentityAuthenticationConfiguration
         services.AddScoped<IBootstrapReader, BootstrapReader>();
         services.AddScoped<IBootstrapWriter, BootstrapWriter>();
         services.AddScoped<BootstrapPlatformAdministratorService>();
+        services.AddScoped<IUserReader, UserReader>();
+        services.AddScoped<IUserWriter, UserWriter>();
+        services.AddScoped<CreateUserService>();
+        services.AddScoped<UserQueryService>();
         services.AddSingleton(serviceProvider =>
         {
             var jwtOptions = serviceProvider.GetRequiredService<IOptions<JwtOptions>>().Value;

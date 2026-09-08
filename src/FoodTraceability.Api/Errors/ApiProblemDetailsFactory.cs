@@ -41,6 +41,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string RateLimitExceededErrorCode = "RATE_LIMIT_EXCEEDED";
     private const string UnhandledErrorTitle = "An unexpected error occurred.";
     private const string UnhandledErrorCode = "UNHANDLED_ERROR";
+    private const string UserConflictTitle = "The user conflicts with existing data.";
+    private const string UserConflictErrorCode = "USER_CONFLICT";
+    private const string UserNotFoundTitle = "User not found.";
+    private const string UserNotFoundErrorCode = "USER_NOT_FOUND";
+    private const string UserValidationTitle = "The user request is invalid.";
+    private const string UserValidationErrorCode = "USER_VALIDATION_FAILED";
 
     private readonly ApiBehaviorOptions _apiBehaviorOptions =
         apiBehaviorOptions?.Value ?? throw new ArgumentNullException(nameof(apiBehaviorOptions));
@@ -166,6 +172,37 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             UnhandledErrorTitle,
             UnhandledErrorCode,
             detail);
+
+    public ProblemDetails CreateUserConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            UserConflictTitle,
+            UserConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateUserNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            UserNotFoundTitle,
+            UserNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateUserValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("User", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            UserValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = UserValidationErrorCode;
+        return problemDetails;
+    }
 
     public ObjectResult CreateResult(ProblemDetails problemDetails)
     {
