@@ -274,7 +274,7 @@ im Repository unterschiedliche Inhalte.
 - **CAT-003** (Plan-ID) Product — **Roadmap-Status: IN_PROGRESS** — ausgeliefert als Repository-Task **CAT-001** „product foundation“; Domainmodell und Persistenz stehen, ein Produkt-Endpunkt fehlt.
 - **CAT-004** (Plan-ID) Article/SKU — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **CAT-002a** (article persistence) und **CAT-002b** (article API).
 - **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: NOT_STARTED** — Nach Abschluss der Recovery-Kette wird CAT-005 gegen den Pilotbedarf bewertet. Falls der Task dann nicht erforderlich ist, wird er ausdrücklich auf **DEFERRED** gesetzt und nicht stillschweigend übergangen; diese Bewertung steht noch aus.
-- **CAT-006** Product API — **Roadmap-Status: NOT_STARTED**
+- **CAT-006** Product API — **Roadmap-Status: DONE**
 
 ## CAT-006 – Product API
 
@@ -424,7 +424,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M0 – Foundation Ready** — **ERREICHT**.
 - **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
 - **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002**, **ORG-002b** und **ORG-004**.
-- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
+- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003** und **CAT-005**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
@@ -445,7 +445,7 @@ keinen Status je Task führte.
 2. **ORG-001** Organization Create — **ERLEDIGT**
 3. **ID-008** User Management — **ERLEDIGT**
 4. **ORG-003** Membership + Organization Role Assignment — **ERLEDIGT**
-5. **CAT-006** Product API
+5. **CAT-006** Product API — **erledigt**
 6. **ORG-002b** Location Read/List
 7. **ID-007** Security & Cross-Tenant Abnahme
 8. **M1, M2 und M3** erneut prüfen

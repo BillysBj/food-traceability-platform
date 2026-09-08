@@ -42,6 +42,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string OrganizationNotFoundErrorCode = "ORGANIZATION_NOT_FOUND";
     private const string OrganizationValidationTitle = "The organization request is invalid.";
     private const string OrganizationValidationErrorCode = "ORGANIZATION_VALIDATION_FAILED";
+    private const string ProductConflictTitle = "The product conflicts with existing data.";
+    private const string ProductConflictErrorCode = "PRODUCT_CONFLICT";
+    private const string ProductNotFoundTitle = "Product not found.";
+    private const string ProductNotFoundErrorCode = "PRODUCT_NOT_FOUND";
+    private const string ProductValidationTitle = "The product request is invalid.";
+    private const string ProductValidationErrorCode = "PRODUCT_VALIDATION_FAILED";
     private const string RateLimitExceededTitle = "Too many requests.";
     private const string RateLimitExceededDetail =
         "The request rate limit has been exceeded. Retry after the current window.";
@@ -195,6 +201,37 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             OrganizationValidationTitle,
             detail: detail);
         problemDetails.Extensions[ErrorCodeExtensionName] = OrganizationValidationErrorCode;
+        return problemDetails;
+    }
+
+    public ProblemDetails CreateProductConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            ProductConflictTitle,
+            ProductConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateProductNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            ProductNotFoundTitle,
+            ProductNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateProductValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Product", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            ProductValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = ProductValidationErrorCode;
         return problemDetails;
     }
 
