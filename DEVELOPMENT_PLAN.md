@@ -76,8 +76,15 @@ beim jeweiligen Plan-Task vermerkt.
 - **FIX-003** ASP.NET-Core-Abhängigkeitsgrenze verengt — **Roadmap-Status: DONE**
 - **FIX-004** einheitliche Problem Details über alle Fehlerantworten — **Roadmap-Status: DONE**
 - **FIX-005** Rate-Limit-Verhalten statt Werte abgedeckt — **Roadmap-Status: DONE**
+- **FIX-010** persistierte Zeitpunkte zentral auf Mikrosekunden normalisiert — **Roadmap-Status: DONE**
+- **DOCS-010** Plan gegen den tatsächlichen Repository-Stand abgeglichen, Roadmap-Status je Task und Milestone-Status eingeführt — **Roadmap-Status: DONE**
+- **DOCS-011** Recovery-Reihenfolge und Steuerungsregeln im Plan verankert — **Roadmap-Status: DONE**
+- **DOCS-012** OPS-001-Status nachgezogen, FIX-009 erfasst, Regel „Statusaktualisierung im Task-Branch“ ergänzt — **Roadmap-Status: DONE**
+- **DOCS-013** CAT-001 und CAT-005 bewertet, Bedeutung von DEFERRED festgelegt, Milestone-Guard ergänzt — **Roadmap-Status: DONE**
+- **DOCS-014** M2-Gate bewertet, ORG-004 und ORG-002 abgeschlossen, ORG-002c zurückgestellt — **Roadmap-Status: DONE**
+- **DOCS-015** ID-007-Hinweis berichtigt und diese Liste vervollständigt — **Roadmap-Status: DONE**
 
-FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
+FIX-006, FIX-007, FIX-008 und FIX-009 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
 hier nicht dupliziert.
 
@@ -125,8 +132,11 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 
 Die Repository-ID **ID-007** ist mit dem anderen Inhalt „article permissions“
 belegt und DONE. Dieser Repository-Task deckt den Plan-Task ID-007 nicht ab.
-Cross-Tenant-Prüfungen existieren verstreut in den Endpunkttests, aber ohne
-eigenen Task und ohne eigene Abnahme.
+Der Plan-Task ID-007 wurde stattdessen als eigener Repository-Task mit den drei
+zentralen Guards `EndpointAuthorizationGuardTests`, `AuthorizationPolicyGuardTests`
+und `AuthorizationScopeGuardTests` ausgeliefert. Die Abnahme der
+Cross-Tenant-Prüfungen ist im Abschnitt „ORG-004 – Tenant Isolation Integration
+Tests“ dokumentiert.
 
 Milestone: `M1 – Identity Ready`
 
@@ -576,28 +586,36 @@ Normalisierung bleibt einmalig im `UnitQueryService`.
 Application-Signatur im Catalog-Modul und betrifft damit auch künftige
 Aufrufer. Gehört in einen eigenen Task.
 
-## FIX-009 - `LoginRequest` gibt das Passwort in `ToString()` preis
+## FIX-009 - Klartextpasswörter erscheinen im generierten `ToString()`
 
 **Status:** OFFEN
 **Herkunft:** Review zu OPS-001, Nachbarbefund
 
-`LoginRequest` in
-`src/Modules/Identity/FoodTraceability.Modules.Identity.Application/Authentication/AuthenticationModels.cs`
-ist ein positional Record mit dem Member `string? Password` und überschreibt
-`ToString()` nicht. C# erzeugt für Records automatisch eine `ToString()`-
-Implementierung, die alle Member ausgibt. Würde ein Log- oder Diagnoseaufruf
-dieses Objekt formatieren, gäbe er damit das Klartextpasswort aus.
+Drei positional Records führen einen Member `string? Password` und
+überschreiben `ToString()` nicht:
 
-Heute wird das Objekt nirgends formatiert. Es handelt sich daher nicht um eine
-aktive Preisgabe, sondern um eine offene Flanke. Der Befund besteht seit
-ID-005b.
+- `src/FoodTraceability.Api/Contracts/Authentication/LoginRequest.cs`
+- `src/Modules/Identity/FoodTraceability.Modules.Identity.Application/Authentication/AuthenticationModels.cs`
+- `src/FoodTraceability.Api/Contracts/Users/CreateUserRequest.cs`
 
-**Ziel:** `ToString()` so überschreiben, dass ein fester Platzhalter das
-Passwort ersetzt und auch dessen Länge nicht erscheint. Ein Unit-Test weist
-dieses Verhalten nach. Als Vorlage dient die in OPS-001 korrigierte
-`BootstrapPlatformAdministratorCommand`.
+C# erzeugt für Records automatisch eine `ToString()`-Implementierung, die alle
+Member ausgibt. Würde ein Log- oder Diagnoseaufruf eines dieser Objekte
+formatieren, gäbe er damit das Klartextpasswort aus.
 
-**Warum nicht nebenbei erledigt:** Der Befund liegt außerhalb des OPS-001-Scope
+Heute wird keines der Objekte formatiert. Es handelt sich daher nicht um eine
+aktive Preisgabe, sondern um eine offene Flanke. Der Befund besteht für die
+beiden Login-Typen seit ID-005b und für `CreateUserRequest` seit ID-008. Der
+ursprüngliche Backlog-Eintrag nannte nur das Application-Modell; die beiden
+weiteren Fundstellen kamen bei der Prüfung vor der Umsetzung hinzu. In ID-008
+wurde der gleichartige Defekt im Application-Command bereits behoben, das
+zugehörige API-DTO blieb dabei stehen.
+
+**Ziel:** In allen drei Typen `ToString()` so überschreiben, dass ein fester
+Platzhalter das Passwort ersetzt und auch dessen Länge nicht erscheint. Je ein
+Unit-Test weist das Verhalten nach. Als Vorlage dienen die bereits korrigierten
+`BootstrapPlatformAdministratorCommand` und `CreateUserCommand`.
+
+**Warum nicht nebenbei erledigt:** Der Befund lag außerhalb des OPS-001-Scope
 und berührt den Login-Pfad. Eine Änderung dort gehört in einen eigenen Task mit
 eigener Abnahme.
 
