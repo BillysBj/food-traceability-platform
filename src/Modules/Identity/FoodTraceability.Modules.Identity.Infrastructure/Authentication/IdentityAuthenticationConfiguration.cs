@@ -1,4 +1,5 @@
 using System.Text;
+using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Identity.Application.Authentication;
 using FoodTraceability.Modules.Identity.Application.Authorization;
 using FoodTraceability.Modules.Identity.Application.Bootstrap;
@@ -66,7 +67,7 @@ public static class IdentityAuthenticationConfiguration
             .ValidateOnStart();
 
         services.AddMemoryCache();
-        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddSingleton<IPasswordHasher, AspNetCorePasswordHasher>();
         services.AddSingleton<IPasswordVerifier, AspNetCorePasswordVerifier>();
         services.AddSingleton<IRefreshTokenProtector, CryptographicRefreshTokenProtector>();

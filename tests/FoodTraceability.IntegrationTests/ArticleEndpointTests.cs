@@ -84,6 +84,32 @@ public sealed class ArticleEndpointTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
+    public async Task CreatedArticleTimestampMatchesSubsequentRead()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, setup.Account, factory.RequestCancellationToken);
+
+        using var createResponse = await client.PostAsJsonAsync(
+            ArticleCollectionPath(setup.Organization.OrganizationId),
+            ValidRequest(setup.Product.Id),
+            factory.RequestCancellationToken);
+        var created = await ReadArticleAsync(
+            createResponse,
+            factory.RequestCancellationToken);
+
+        using var getResponse = await client.GetAsync(
+            ArticlePath(setup.Organization.OrganizationId, created.Id),
+            factory.RequestCancellationToken);
+        var read = await ReadArticleAsync(getResponse, factory.RequestCancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        Assert.Equal(created.CreatedAt, read.CreatedAt);
+    }
+
+    [Fact]
     public async Task UnauthenticatedCreateReturns401()
     {
         var organization = await CreateOrganizationAsync();

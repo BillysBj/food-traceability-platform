@@ -546,8 +546,10 @@ eigener Abnahme.
 
 ## FIX-010 - Zentrale Normalisierung persistierter Zeitpunkte
 
-**Status:** OFFEN
+**Status:** ERLEDIGT
 **Herkunft:** Review zu ORG-001, D-36
+
+**Umsetzung:** Die zentrale Zeitstempelnormalisierung wurde in FIX-010 umgesetzt.
 
 **Inhalt:** Umsetzung von D-36 über alle betroffenen Module. Eine zentrale
 Zeitquelle liefert Werte bereits in Mikrosekundenauflösung, sodass Entität,

@@ -80,6 +80,30 @@ public sealed class LotEndpointTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
+    public async Task CreatedLotTimestampMatchesSubsequentRead()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, setup.Account, factory.RequestCancellationToken);
+
+        using var createResponse = await client.PostAsJsonAsync(
+            LotCollectionPath(setup.Organization.OrganizationId),
+            ValidRequest(setup.Article.Id),
+            factory.RequestCancellationToken);
+        var created = await ReadLotAsync(createResponse, factory.RequestCancellationToken);
+
+        using var getResponse = await client.GetAsync(
+            LotPath(setup.Organization.OrganizationId, created.Id),
+            factory.RequestCancellationToken);
+        var read = await ReadLotAsync(getResponse, factory.RequestCancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        Assert.Equal(created.CreatedAt, read.CreatedAt);
+    }
+
+    [Fact]
     public async Task UnauthenticatedCreateReturns401()
     {
         var setup = await CreateDataSetupAsync();
