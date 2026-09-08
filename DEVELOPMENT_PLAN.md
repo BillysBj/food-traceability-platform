@@ -211,10 +211,11 @@ belegt. ID-008 ist deshalb eine neue ID und keine Umbenennung.
 
 - **ORG-001a** Organization- und Location-Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE**
 - **ORG-001** Organization CRUD — **Roadmap-Status: DONE** — ein PlatformAdmin kann Organisationen über den Platform-Endpunkt anlegen und einzeln abrufen; Ändern, Löschen und Auflisten sind nicht Teil von ORG-001.
-- **ORG-002** Location CRUD — **Roadmap-Status: IN_PROGRESS** — Repository-Task ORG-002 lieferte ausschließlich das Anlegen; ORG-002b ergänzte den Lesezugriff, während Ändern und Löschen weiterhin fehlen, weshalb der Plan-Task IN_PROGRESS bleibt.
+- **ORG-002** Location CRUD — **Roadmap-Status: DONE** — Das Anlegen kam mit dem Repository-Task ORG-002, Lesen und Auflisten mit ORG-002b. Für das aktuelle M2-Gate ist der Task damit erfüllt.
 - **ORG-002b** Location Read/List — **Roadmap-Status: DONE**
+- **ORG-002c** Location Update/Delete — **Roadmap-Status: DEFERRED** — **Grund:** Ändern und Löschen von Standorten sind keine Voraussetzung für den aktuellen Pilot-End-to-End-Flow. Standorte werden in der Traceability-Kette bisher nicht referenziert; `trace.lot` trägt kein `location_id`. Erneut zu bewerten, sobald Standorte weitere fachliche Referenzen erhalten oder der Pilotbetrieb eine Änderung beziehungsweise Deaktivierung benötigt.
 - **ORG-003** Membership Management — **Roadmap-Status: DONE** — PlatformAdmins können Benutzer über die Platform-API als Organisationsmitglieder aufnehmen und ihnen organisationsweite Rollen zuweisen.
-- **ORG-004** Tenant Isolation Integration Tests — **Roadmap-Status: NOT_STARTED**
+- **ORG-004** Tenant Isolation Integration Tests — **Roadmap-Status: DONE**
 
 ## ORG-001a – Organization- und Location-Persistence Foundation
 
@@ -261,6 +262,45 @@ Der Repository-Task ORG-002 lieferte nur das Anlegen.
 
 Ausdrücklich nicht im Scope sind Update und Delete. Sie werden nicht
 automatisch mitgezogen.
+
+## ORG-002c – Location Update/Delete
+
+Ändern und Löschen von Standorten sind keine Voraussetzung für den aktuellen
+Pilot-End-to-End-Flow. Standorte werden in der Traceability-Kette bisher
+nicht referenziert; `trace.lot` trägt kein `location_id`. Erneut zu bewerten,
+sobald Standorte weitere fachliche Referenzen erhalten oder der
+Pilotbetrieb eine Änderung beziehungsweise Deaktivierung benötigt.
+
+Zusätzlich verweist `identity.organization_role_assignment` per
+zusammengesetztem Fremdschlüssel auf `org.location`. Ein Löschen hätte damit
+Folgen für bestehende Rollenzuweisungen, die eine eigene Entscheidung brauchen.
+
+## ORG-004 – Tenant Isolation Integration Tests
+
+Die Prüfung aller neun organisationsbezogenen Endpunkte weist folgende
+negative Cross-Tenant-Abdeckung nach:
+
+| Endpunkt | Abdeckende Tests |
+| --- | --- |
+| `GET /api/v1/organizations/{organizationId}` | `AuthorizationEndpointTests.PermissionInOrganizationADoesNotGrantAccessToOrganizationB`<br>`AuthorizationEndpointTests.UnknownOrganizationReturns403InsteadOf404` |
+| `POST /api/v1/organizations/{organizationId}/locations` | `CreateLocationEndpointTests.OrganizationManagerCannotCreateLocationInAnotherOrganization`<br>`CreateLocationEndpointTests.UnknownOrganizationReturns403InsteadOf404` |
+| `GET /api/v1/organizations/{organizationId}/locations` | `LocationReadEndpointTests.LocationsFromAnotherOrganizationDoNotAppear`<br>`LocationReadEndpointTests.TotalCountExcludesLocationsFromAnotherOrganization` |
+| `GET /api/v1/organizations/{organizationId}/locations/{locationId}` | `LocationReadEndpointTests.MemberInOrganizationACannotReadOrganizationB`<br>`LocationReadEndpointTests.ForeignAndMissingLocationIdsReturnIndistinguishable404Responses` |
+| `POST /api/v1/organizations/{organizationId}/articles` | `ArticleEndpointTests.MemberInOrganizationACannotCreateInOrganizationB`<br>`ArticleEndpointTests.CreateForUnknownOrganizationReturns403InsteadOf404` |
+| `GET /api/v1/organizations/{organizationId}/articles/{articleId}` | `ArticleEndpointTests.ForeignAndMissingArticleIdsReturnIndistinguishable404Responses`<br>`ArticleEndpointTests.ReadForUnknownOrganizationReturns403InsteadOf404` |
+| `POST /api/v1/organizations/{organizationId}/lots` | `LotEndpointTests.MemberInOrganizationACannotCreateInOrganizationB`<br>`LotEndpointTests.CreateForUnknownOrganizationReturns403InsteadOf404` |
+| `GET /api/v1/organizations/{organizationId}/lots` | `LotListEndpointTests.LotsFromAnotherOrganizationDoNotAppear`<br>`LotListEndpointTests.TotalCountExcludesLotsFromAnotherOrganization` |
+| `GET /api/v1/organizations/{organizationId}/lots/{lotId}` | `LotEndpointTests.ForeignAndMissingLotIdsReturnIndistinguishable404Responses`<br>`LotEndpointTests.ReadForUnknownOrganizationReturns403InsteadOf404` |
+
+ID-007 erzwingt die Scope-Trennung seit dem
+`AuthorizationScopeGuardTests`-Guard strukturell: Jeder künftige Endpunkt unter
+`/api/v1/organizations/` muss eine organisationsbezogene Policy tragen, sonst
+bricht der Guard. Die Abdeckung hängt damit nicht mehr daran, dass jemand an
+den passenden Test denkt.
+
+ORG-004 ist ohne eigenen Implementierungstask erfüllt, weil die
+Abnahmebedingung kumulativ durch die Tests aus ID-006, ORG-002, CAT-002b,
+TRC-003, TRC-004, ORG-002b und ID-007 nachgewiesen wird.
 
 Milestone: `M2 – Organizations Ready`
 
@@ -423,7 +463,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 
 - **M0 – Foundation Ready** — **ERREICHT**.
 - **M1 – Identity Ready** — **ERREICHT**.
-- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002** und **ORG-004**.
+- **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
