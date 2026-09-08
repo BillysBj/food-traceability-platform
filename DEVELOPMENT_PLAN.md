@@ -213,7 +213,7 @@ belegt. ID-008 ist deshalb eine neue ID und keine Umbenennung.
 - **ORG-001** Organization CRUD — **Roadmap-Status: DONE** — ein PlatformAdmin kann Organisationen über den Platform-Endpunkt anlegen und einzeln abrufen; Ändern, Löschen und Auflisten sind nicht Teil von ORG-001.
 - **ORG-002** Location CRUD — **Roadmap-Status: IN_PROGRESS** — Repository-Task ORG-002 lieferte ausschließlich `POST /api/v1/organizations/{id}/locations`; Lesen, Ändern und Löschen fehlen.
 - **ORG-002b** Location Read/List — **Roadmap-Status: NOT_STARTED**
-- **ORG-003** Membership Management — **Roadmap-Status: NOT_STARTED** — das Datenmodell existiert seit ID-004 und D-22; die API darüber fehlt.
+- **ORG-003** Membership Management — **Roadmap-Status: DONE** — PlatformAdmins können Benutzer über die Platform-API als Organisationsmitglieder aufnehmen und ihnen organisationsweite Rollen zuweisen.
 - **ORG-004** Tenant Isolation Integration Tests — **Roadmap-Status: NOT_STARTED**
 
 ## ORG-001a – Organization- und Location-Persistence Foundation
@@ -236,6 +236,23 @@ Schema `org` mit eigener Migration-History, erste Migration.
 
 Nicht enthalten: API, CRUD-Endpunkte, Application Services, Mitgliedschaften,
 Rollenzuweisungen.
+
+## ORG-003 – Membership Management
+
+Die Platform-API schließt den Setup-Pfad durch das Anlegen einer
+Organisationsmitgliedschaft und die Zuweisung organisationsweiter Rollen. Die
+Endpunkte verwenden die bestehenden Platform-Permissions `user.manage` und
+`user.read`; D-27 bleibt unverändert.
+
+Standortbezogene Rollenzuweisungen sind **DEFERRED**. Kein Pilot-Ablauf braucht
+sie bisher. Das Datenmodell und der zusammengesetzte Fremdschlüssel auf
+`org.location` bleiben erhalten und werden nicht zurückgebaut; die API exponiert
+`locationId` nicht.
+
+Die Selbstverwaltung durch OrganizationAdmins ist **DEFERRED**. Sie braucht
+zuerst den in D-37 als offen geführten sicheren Invite- beziehungsweise
+Lookup-Mechanismus. Ein späterer Endpunkt dafür liegt getrennt unter
+`/api/v1/organizations/{organizationId}/members`.
 
 ## ORG-002b – Location Read/List
 
@@ -406,7 +423,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 
 - **M0 – Foundation Ready** — **ERREICHT**.
 - **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
-- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
+- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002**, **ORG-002b** und **ORG-004**.
 - **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
@@ -427,7 +444,7 @@ keinen Status je Task führte.
 1. **OPS-001** Initial Platform Administrator Bootstrap — **ERLEDIGT**
 2. **ORG-001** Organization Create — **ERLEDIGT**
 3. **ID-008** User Management — **ERLEDIGT**
-4. **ORG-003** Membership + Organization Role Assignment
+4. **ORG-003** Membership + Organization Role Assignment — **ERLEDIGT**
 5. **CAT-006** Product API
 6. **ORG-002b** Location Read/List
 7. **ID-007** Security & Cross-Tenant Abnahme
