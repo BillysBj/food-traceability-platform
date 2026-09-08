@@ -11,6 +11,8 @@ public static class ApiAuthorizationConfiguration
     private const string LotReadPermission = "lot.read";
     private const string OrganizationReadPermission = "organization.read";
     private const string OrganizationManagePermission = "organization.manage";
+    private const string ProductCreatePermission = "product.create";
+    private const string ProductReadPermission = "product.read";
     private const string UserManagePermission = "user.manage";
     private const string UserReadPermission = "user.read";
 
@@ -67,6 +69,18 @@ public static class ApiAuthorizationConfiguration
                     .RequireAuthenticatedUser()
                     .AddRequirements(
                         new PlatformPermissionRequirement(OrganizationManagePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.PlatformProductCreate,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new PlatformPermissionRequirement(ProductCreatePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.PlatformProductRead,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new PlatformPermissionRequirement(ProductReadPermission)));
             options.AddPolicy(
                 AuthorizationPolicies.PlatformUserManage,
                 policy => policy

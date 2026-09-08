@@ -1,7 +1,9 @@
 using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Catalog.Application.Articles;
+using FoodTraceability.Modules.Catalog.Application.Products;
 using FoodTraceability.Modules.Catalog.Application.Units;
 using FoodTraceability.Modules.Catalog.Infrastructure.Articles;
+using FoodTraceability.Modules.Catalog.Infrastructure.Products;
 using FoodTraceability.Modules.Catalog.Infrastructure.Units;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -29,9 +31,13 @@ public static class CatalogConfiguration
         services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IArticleReader, ArticleReader>();
         services.AddScoped<IArticleWriter, ArticleWriter>();
+        services.AddScoped<IProductReader, ProductReader>();
+        services.AddScoped<IProductWriter, ProductWriter>();
         services.AddScoped<IUnitReader, UnitReader>();
         services.AddScoped<ArticleQueryService>();
         services.AddScoped<CreateArticleService>();
+        services.AddScoped<CreateProductService>();
+        services.AddScoped<ProductQueryService>();
         services.AddScoped<UnitQueryService>();
 
         return services;
