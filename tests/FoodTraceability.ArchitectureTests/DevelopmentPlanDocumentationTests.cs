@@ -96,14 +96,58 @@ public sealed partial class DevelopmentPlanDocumentationTests
     }
 
     [Fact]
-    public void MilestonesOneToFourAreMarkedNotReached()
+    public void MilestoneStateMatchesItsEpicTaskStatuses()
     {
-        var milestoneRows = GetMilestoneRows().ToDictionary(row => row.Id, row => row.State);
+        var developmentPlan = ReadRepositoryFile(DevelopmentPlanPath);
+        var epicLists = ExtractSection(
+            developmentPlan,
+            EpicListsStartMarker,
+            EpicListsEndMarker);
+        var milestoneStates = GetMilestoneRows().ToDictionary(row => row.Id, row => row.State);
+        var epicMilestoneIds = new List<string>();
 
-        foreach (var milestoneId in new[] { "M1", "M2", "M3", "M4" })
+        foreach (Match epicMatch in EpicBlockRegex().Matches(epicLists))
         {
-            Assert.Equal("NICHT ERREICHT", milestoneRows[milestoneId]);
+            var epicBody = epicMatch.Groups["body"].Value;
+            var milestoneMatch = Assert.Single(
+                EpicMilestoneRegex().Matches(epicBody).Cast<Match>());
+            var milestoneId = milestoneMatch.Groups["id"].Value;
+            var tasks = TaskLineRegex()
+                .Matches(epicBody)
+                .Cast<Match>()
+                .Select(match => (
+                    Id: match.Groups["id"].Value,
+                    Status: GetRoadmapStatus(match.Value)))
+                .ToArray();
+
+            Assert.NotEmpty(tasks);
+
+            var deferredTaskIds = tasks
+                .Where(task => task.Status == "DEFERRED")
+                .Select(task => task.Id)
+                .ToArray();
+
+            Assert.True(
+                deferredTaskIds.Length == 0,
+                $"Milestone state rule for DEFERRED tasks is not decided. " +
+                $"Milestone '{milestoneId}' contains DEFERRED task(s): {string.Join(", ", deferredTaskIds)}.");
+            Assert.All(
+                tasks,
+                task => Assert.Contains(
+                    task.Status,
+                    new[] { "DONE", "SUPERSEDED", "NOT_STARTED", "IN_PROGRESS" }));
+
+            var expectedState = tasks.All(task => task.Status is "DONE" or "SUPERSEDED")
+                ? "ERREICHT"
+                : "NICHT ERREICHT";
+
+            Assert.Equal(expectedState, milestoneStates[milestoneId]);
+            epicMilestoneIds.Add(milestoneId);
         }
+
+        Assert.Equal(
+            milestoneStates.Keys.Order(StringComparer.Ordinal),
+            epicMilestoneIds.Order(StringComparer.Ordinal));
     }
 
     private static string[] GetEpicTaskLines()
@@ -205,4 +249,10 @@ public sealed partial class DevelopmentPlanDocumentationTests
 
     [GeneratedRegex("(?m)^- \\*\\*(?<id>M(?:[0-9]|1[0-2])) – [^*\\r\\n]+\\*\\* — \\*\\*(?<state>ERREICHT|NICHT ERREICHT)\\*\\*\\.[^\\r\\n]*$")]
     private static partial Regex MilestoneRowRegex();
+
+    [GeneratedRegex("(?ms)^# EPIC \\d+ [^\\r\\n]*\\r?\\n(?<body>.*?)(?=^# EPIC \\d+ |\\z)")]
+    private static partial Regex EpicBlockRegex();
+
+    [GeneratedRegex("(?m)^Milestone:\\s+`(?<id>M(?:[0-9]|1[0-2]))\\s+[^`\\r\\n]+`\\s*$")]
+    private static partial Regex EpicMilestoneRegex();
 }
