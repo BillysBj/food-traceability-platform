@@ -121,7 +121,7 @@ Grund: FND-004 bündelte im ursprünglichen Plan fünf Themen; Rate Limiting, CO
 - **ID-006** Permission-based Authorization — **Roadmap-Status: DONE**
 - **OPS-001** Initial Platform Administrator Bootstrap — **Roadmap-Status: DONE**
 - **ID-008** User Management — **Roadmap-Status: DONE**
-- **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: NOT_STARTED**
+- **ID-007** (Plan-ID) Security & Cross-Tenant Tests — **Roadmap-Status: DONE**
 
 Die Repository-ID **ID-007** ist mit dem anderen Inhalt „article permissions“
 belegt und DONE. Dieser Repository-Task deckt den Plan-Task ID-007 nicht ab.
@@ -422,7 +422,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 ## Milestone-Status
 
 - **M0 – Foundation Ready** — **ERREICHT**.
-- **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: Plan-Task **ID-007**.
+- **M1 – Identity Ready** — **ERREICHT**.
 - **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002** und **ORG-004**.
 - **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003** und **CAT-005**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
@@ -447,7 +447,7 @@ keinen Status je Task führte.
 4. **ORG-003** Membership + Organization Role Assignment — **ERLEDIGT**
 5. **CAT-006** Product API — **erledigt**
 6. **ORG-002b** Location Read/List — **ERLEDIGT**
-7. **ID-007** Security & Cross-Tenant Abnahme
+7. **ID-007** Security & Cross-Tenant Abnahme — **ERLEDIGT**
 8. **M1, M2 und M3** erneut prüfen
 9. Erst danach **TRC-005** und folgende
 

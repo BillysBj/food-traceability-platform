@@ -118,6 +118,25 @@ public sealed class EffectiveAuthorizationTests
         Assert.False(authorization.HasPlatformPermission("ORGANIZATION.MANAGE"));
     }
 
+    [Fact]
+    public void HasOrganizationPermissionDoesNotUseAnotherOrganization()
+    {
+        var assignedOrganizationId = Guid.NewGuid();
+        var requestedOrganizationId = Guid.NewGuid();
+        var authorization = CreateAuthorization(
+            [],
+            [new OrganizationPermissionSet(
+                assignedOrganizationId,
+                ["organization.read"])]);
+
+        Assert.False(authorization.HasOrganizationPermission(
+            requestedOrganizationId,
+            "organization.read"));
+        Assert.True(authorization.HasOrganizationPermission(
+            assignedOrganizationId,
+            "organization.read"));
+    }
+
     private static EffectiveAuthorization CreateAuthorization(
         IReadOnlyList<string> platformPermissions,
         IReadOnlyList<OrganizationPermissionSet> organizationPermissions) =>
