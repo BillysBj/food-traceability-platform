@@ -269,11 +269,11 @@ Milestone: `M2 – Organizations Ready`
 Die CAT-Nummerierung weicht vollständig ab: Dieselbe ID bezeichnet im Plan und
 im Repository unterschiedliche Inhalte.
 
-- **CAT-001** (Plan-ID) Product Category — **Roadmap-Status: NOT_STARTED**. Die Repository-ID **CAT-001** bezeichnet stattdessen die Product Foundation für Plan-Task CAT-003. Nach Abschluss der Recovery-Kette wird CAT-001 gegen den Pilotbedarf bewertet. Falls der Task dann nicht erforderlich ist, wird er ausdrücklich auf **DEFERRED** gesetzt und nicht stillschweigend übergangen; diese Bewertung steht noch aus.
+- **CAT-001** (Plan-ID) Product Category — **Roadmap-Status: DEFERRED** — **Grund:** Für den aktuellen Pilot-Flow nicht erforderlich. `catalog.product` trägt kein `category_id`, und kein Ablauf von Organisation bis Lot benötigt eine Produktkategorie. Der Task wird **NICHT** gelöscht und gilt **NICHT** als erledigt; er bleibt mit dieser Begründung sichtbar. Die Repository-ID **CAT-001** bezeichnet stattdessen die Product Foundation für Plan-Task CAT-003.
 - **CAT-002** (Plan-ID) Unit — **Roadmap-Status: DONE** — ausgeliefert als Repository-Task **CAT-003** „unit catalog“.
-- **CAT-003** (Plan-ID) Product — **Roadmap-Status: IN_PROGRESS** — ausgeliefert als Repository-Task **CAT-001** „product foundation“; Domainmodell und Persistenz stehen, ein Produkt-Endpunkt fehlt.
+- **CAT-003** (Plan-ID) Product — **Roadmap-Status: DONE** — Domainmodell und Persistenz stammen aus dem Repository-Task **CAT-001** „product foundation“; die API kam mit Repository-Task **CAT-006** hinzu und ermöglicht Anlegen und Einzelabruf über `/api/v1/platform/products`. Damit ist die ursprüngliche Product-Anforderung vollständig erfüllt.
 - **CAT-004** (Plan-ID) Article/SKU — **Roadmap-Status: DONE** — ausgeliefert als Repository-Tasks **CAT-002a** (article persistence) und **CAT-002b** (article API).
-- **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: NOT_STARTED** — Nach Abschluss der Recovery-Kette wird CAT-005 gegen den Pilotbedarf bewertet. Falls der Task dann nicht erforderlich ist, wird er ausdrücklich auf **DEFERRED** gesetzt und nicht stillschweigend übergangen; diese Bewertung steht noch aus.
+- **CAT-005** minimale Product Profile Foundation — **Roadmap-Status: DEFERRED** — **Grund:** Für den Pilot Backend Core derzeit nicht erforderlich. Der Task ist Voraussetzung für die Olive-Oil-Funktionen **OLV-002** und **OLV-003** und muss **VOR** diesen erneut bewertet beziehungsweise aktiviert werden.
 - **CAT-006** Product API — **Roadmap-Status: DONE**
 
 ## CAT-006 – Product API
@@ -283,8 +283,8 @@ seit dem Repository-Task CAT-001; die Permissions `product.read`,
 `product.create` und `product.update` sind geseedet, werden aber von keinem
 Endpunkt ausgewertet.
 
-Hinweis zur ID: Der Plan-Task CAT-003 „Product“ bleibt **IN_PROGRESS** und wird
-nicht umgewidmet.
+Hinweis zur ID: Der Plan-Task CAT-003 „Product“ ist durch die Repository-Tasks
+CAT-001 und CAT-006 erfüllt. Keine historische Task-ID wird umgewidmet.
 
 Milestone: `M3 – Catalog Ready`
 
@@ -424,7 +424,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M0 – Foundation Ready** — **ERREICHT**.
 - **M1 – Identity Ready** — **ERREICHT**.
 - **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002** und **ORG-004**.
-- **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003** und **CAT-005**.
+- **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
@@ -435,7 +435,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M11 – Pilot UI Complete** — **NICHT ERREICHT**. Offen: **UI-001**, **UI-002**, **UI-003**, **UI-004**, **UI-005**, **UI-006**, **UI-007**, **UI-008**, **UI-009**, **UI-010**, **UI-011**, **UI-012**, **UI-013**, **UI-014** und **UI-015**.
 - **M12 – Pilot 1 Release Candidate** — **NICHT ERREICHT**. Offen: **E2E-001**, **E2E-002**, **E2E-003**, **E2E-004**, **E2E-005**, **E2E-006** und **E2E-007**.
 
-Die Arbeit an EPIC 4 wurde begonnen, obwohl M1, M2 und M3 offen sind. Das war
+Die Arbeit an EPIC 4 begann, obwohl M1, M2 und M3 damals offen waren. Das war
 keine Entscheidung, sondern ist unbemerkt entstanden, weil der Plan bis dahin
 keinen Status je Task führte.
 
@@ -448,7 +448,7 @@ keinen Status je Task führte.
 5. **CAT-006** Product API — **erledigt**
 6. **ORG-002b** Location Read/List — **ERLEDIGT**
 7. **ID-007** Security & Cross-Tenant Abnahme — **ERLEDIGT**
-8. **M1, M2 und M3** erneut prüfen
+8. **M1, M2 und M3** erneut prüfen — **ERLEDIGT**
 9. Erst danach **TRC-005** und folgende
 
 Diese Reihenfolge folgt dem Setup-Pfad und nicht der Tasknummerierung. Der

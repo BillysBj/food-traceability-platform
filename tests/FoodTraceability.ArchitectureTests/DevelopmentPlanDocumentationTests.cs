@@ -103,7 +103,18 @@ public sealed partial class DevelopmentPlanDocumentationTests
             developmentPlan,
             EpicListsStartMarker,
             EpicListsEndMarker);
-        var milestoneStates = GetMilestoneRows().ToDictionary(row => row.Id, row => row.State);
+        var milestoneSection = ExtractSection(
+            developmentPlan,
+            MilestoneStatusStartMarker,
+            EpicListsEndMarker);
+        var milestoneRows = MilestoneRowRegex()
+            .Matches(milestoneSection)
+            .Cast<Match>()
+            .ToDictionary(
+                match => match.Groups["id"].Value,
+                match => (
+                    State: match.Groups["state"].Value,
+                    Line: match.Value));
         var epicMilestoneIds = new List<string>();
 
         foreach (Match epicMatch in EpicBlockRegex().Matches(epicLists))
@@ -126,27 +137,39 @@ public sealed partial class DevelopmentPlanDocumentationTests
                 .Where(task => task.Status == "DEFERRED")
                 .Select(task => task.Id)
                 .ToArray();
+            var openTaskIds = tasks
+                .Where(task => task.Status is "NOT_STARTED" or "IN_PROGRESS")
+                .Select(task => task.Id)
+                .ToArray();
 
-            Assert.True(
-                deferredTaskIds.Length == 0,
-                $"Milestone state rule for DEFERRED tasks is not decided. " +
-                $"Milestone '{milestoneId}' contains DEFERRED task(s): {string.Join(", ", deferredTaskIds)}.");
             Assert.All(
                 tasks,
                 task => Assert.Contains(
                     task.Status,
-                    new[] { "DONE", "SUPERSEDED", "NOT_STARTED", "IN_PROGRESS" }));
+                    new[] { "DONE", "SUPERSEDED", "DEFERRED", "NOT_STARTED", "IN_PROGRESS" }));
 
-            var expectedState = tasks.All(task => task.Status is "DONE" or "SUPERSEDED")
+            var expectedState = openTaskIds.Length == 0
                 ? "ERREICHT"
                 : "NICHT ERREICHT";
+            var milestoneRow = milestoneRows[milestoneId];
 
-            Assert.Equal(expectedState, milestoneStates[milestoneId]);
+            Assert.Equal(expectedState, milestoneRow.State);
+
+            if (milestoneRow.State == "ERREICHT")
+            {
+                Assert.All(
+                    deferredTaskIds,
+                    deferredTaskId => Assert.True(
+                        milestoneRow.Line.Contains(deferredTaskId, StringComparison.Ordinal),
+                        $"Reached milestone '{milestoneId}' must explicitly name its DEFERRED task " +
+                        $"'{deferredTaskId}' in the milestone row."));
+            }
+
             epicMilestoneIds.Add(milestoneId);
         }
 
         Assert.Equal(
-            milestoneStates.Keys.Order(StringComparer.Ordinal),
+            milestoneRows.Keys.Order(StringComparer.Ordinal),
             epicMilestoneIds.Order(StringComparer.Ordinal));
     }
 
