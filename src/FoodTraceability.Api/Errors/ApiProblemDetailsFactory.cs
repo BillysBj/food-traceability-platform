@@ -31,6 +31,13 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LotNotFoundErrorCode = "LOT_NOT_FOUND";
     private const string LotValidationTitle = "The lot request is invalid.";
     private const string LotValidationErrorCode = "LOT_VALIDATION_FAILED";
+    private const string MembershipConflictTitle =
+        "The membership conflicts with existing data.";
+    private const string MembershipConflictErrorCode = "MEMBERSHIP_CONFLICT";
+    private const string MembershipNotFoundTitle = "Membership not found.";
+    private const string MembershipNotFoundErrorCode = "MEMBERSHIP_NOT_FOUND";
+    private const string MembershipValidationTitle = "The membership request is invalid.";
+    private const string MembershipValidationErrorCode = "MEMBERSHIP_VALIDATION_FAILED";
     private const string OrganizationNotFoundTitle = "Organization not found.";
     private const string OrganizationNotFoundErrorCode = "ORGANIZATION_NOT_FOUND";
     private const string OrganizationValidationTitle = "The organization request is invalid.";
@@ -131,6 +138,40 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             LotValidationTitle,
             detail: detail);
         problemDetails.Extensions[ErrorCodeExtensionName] = LotValidationErrorCode;
+        return problemDetails;
+    }
+
+    public ProblemDetails CreateMembershipConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            MembershipConflictTitle,
+            MembershipConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateMembershipNotFound(
+        HttpContext httpContext,
+        string? detail = null) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            MembershipNotFoundTitle,
+            MembershipNotFoundErrorCode,
+            detail);
+
+    public ValidationProblemDetails CreateMembershipValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Membership", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            MembershipValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = MembershipValidationErrorCode;
         return problemDetails;
     }
 
