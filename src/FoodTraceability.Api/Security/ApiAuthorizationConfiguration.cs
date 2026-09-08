@@ -59,6 +59,12 @@ public static class ApiAuthorizationConfiguration
                     .RequireAuthenticatedUser()
                     .AddRequirements(
                         new OrganizationPermissionRequirement(OrganizationReadPermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.PlatformOrganizationManage,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new PlatformPermissionRequirement(OrganizationManagePermission)));
         });
         services.AddScoped<IAuthorizationHandler, DatabaseAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler,

@@ -1,3 +1,5 @@
+using FoodTraceability.Modules.Organizations.Domain;
+
 namespace FoodTraceability.Modules.Organizations.Application.Organizations;
 
 public interface IOrganizationReader
@@ -7,9 +9,14 @@ public interface IOrganizationReader
         CancellationToken cancellationToken);
 }
 
+public interface IOrganizationWriter
+{
+    Task AddAsync(Organization organization, CancellationToken cancellationToken);
+}
+
 public interface ILocationWriter
 {
     Task AddAsync(
-        FoodTraceability.Modules.Organizations.Domain.Location location,
+        Location location,
         CancellationToken cancellationToken);
 }

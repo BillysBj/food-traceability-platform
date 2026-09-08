@@ -31,6 +31,10 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LotNotFoundErrorCode = "LOT_NOT_FOUND";
     private const string LotValidationTitle = "The lot request is invalid.";
     private const string LotValidationErrorCode = "LOT_VALIDATION_FAILED";
+    private const string OrganizationNotFoundTitle = "Organization not found.";
+    private const string OrganizationNotFoundErrorCode = "ORGANIZATION_NOT_FOUND";
+    private const string OrganizationValidationTitle = "The organization request is invalid.";
+    private const string OrganizationValidationErrorCode = "ORGANIZATION_VALIDATION_FAILED";
     private const string RateLimitExceededTitle = "Too many requests.";
     private const string RateLimitExceededDetail =
         "The request rate limit has been exceeded. Retry after the current window.";
@@ -121,6 +125,29 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             LotValidationTitle,
             detail: detail);
         problemDetails.Extensions[ErrorCodeExtensionName] = LotValidationErrorCode;
+        return problemDetails;
+    }
+
+    public ProblemDetails CreateOrganizationNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            OrganizationNotFoundTitle,
+            OrganizationNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateOrganizationValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Organization", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            OrganizationValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = OrganizationValidationErrorCode;
         return problemDetails;
     }
 

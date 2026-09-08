@@ -25,8 +25,10 @@ public static class OrganizationsConfiguration
         });
         services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IOrganizationReader, OrganizationReader>();
+        services.AddScoped<IOrganizationWriter, OrganizationWriter>();
         services.AddScoped<ILocationWriter, LocationWriter>();
         services.AddScoped<OrganizationQueryService>();
+        services.AddScoped<CreateOrganizationService>();
         services.AddScoped<CreateLocationService>();
 
         return services;
