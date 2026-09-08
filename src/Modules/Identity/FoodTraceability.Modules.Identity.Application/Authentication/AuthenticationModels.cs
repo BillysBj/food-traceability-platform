@@ -1,6 +1,10 @@
 namespace FoodTraceability.Modules.Identity.Application.Authentication;
 
-public sealed record LoginRequest(string? Email, string? Password);
+public sealed record LoginRequest(string? Email, string? Password)
+{
+    public override string ToString() =>
+        $"{nameof(LoginRequest)} {{ Email = {Email}, Password = *** }}";
+}
 
 public sealed record RefreshRequest(string? RefreshToken);
 

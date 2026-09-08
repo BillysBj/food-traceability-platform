@@ -7,4 +7,8 @@ public sealed record CreateUserRequest(
     [Required, StringLength(EmailAddress.MaximumLength)] string? Email,
     [Required, StringLength(User.MaximumNameLength)] string? FirstName,
     [Required, StringLength(User.MaximumNameLength)] string? LastName,
-    [Required] string? Password);
+    [Required] string? Password)
+{
+    public override string ToString() =>
+        $"{nameof(CreateUserRequest)} {{ Email = {Email}, FirstName = {FirstName}, LastName = {LastName}, Password = *** }}";
+}

@@ -84,7 +84,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-014** M2-Gate bewertet, ORG-004 und ORG-002 abgeschlossen, ORG-002c zurückgestellt — **Roadmap-Status: DONE**
 - **DOCS-015** ID-007-Hinweis berichtigt und diese Liste vervollständigt — **Roadmap-Status: DONE**
 
-FIX-006, FIX-007, FIX-008 und FIX-009 sind noch nicht umgesetzt; sie bleiben
+FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
 hier nicht dupliziert.
 
@@ -588,8 +588,11 @@ Aufrufer. Gehört in einen eigenen Task.
 
 ## FIX-009 - Klartextpasswörter erscheinen im generierten `ToString()`
 
-**Status:** OFFEN
+**Status:** ERLEDIGT
 **Herkunft:** Review zu OPS-001, Nachbarbefund
+
+**Umsetzung:** Drei `ToString()`-Overrides maskieren die Klartextpasswörter; ein
+reflektionsbasierter Guard sichert die Regel für API, Identity und BuildingBlocks ab.
 
 Drei positional Records führen einen Member `string? Password` und
 überschreiben `ToString()` nicht:

@@ -7,4 +7,8 @@ public sealed record LoginRequest(
     [StringLength(254)]
     string? Email,
     [Required]
-    string? Password);
+    string? Password)
+{
+    public override string ToString() =>
+        $"{nameof(LoginRequest)} {{ Email = {Email}, Password = *** }}";
+}
