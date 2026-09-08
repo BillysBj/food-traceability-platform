@@ -61,6 +61,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-32 | Semantik und Modellierung von `trace.lot.quantity` | ENTSCHIEDEN |
 | D-33 | Einheitengleichheit und Unit-Katalog in Pilot 1 | ENTSCHIEDEN |
 | D-34 | Bootstrap des ersten Plattformadministrators | ENTSCHIEDEN |
+| D-35 | Eindeutigkeit von Organisationen | OFFEN |
+| D-36 | Präzision persistierter Zeitpunkte | ENTSCHIEDEN |
 
 ---
 
@@ -1025,6 +1027,98 @@ Default-Credentials.
 
 ---
 
+## D-35 – Eindeutigkeit von Organisationen
+
+**Status:** OFFEN
+**Betrifft:** ORG-001 und künftige Anlage- und Abgleichprozesse für Organisationen
+
+### Sachstand
+
+- `org.organization` trägt außer `pk_organization` **keinen** Constraint. Es
+  existiert kein `UNIQUE` auf `name`, `vat_id` oder `tax_number`.
+- `vat_id` und `tax_number` sind beide nullable und als
+  `character varying(64)` modelliert.
+- Die Organisation besitzt kein Land- oder Jurisdiktionsfeld, weder in der
+  Implementierung noch im ER-Diagramm. Das Value Object `CountryCode` wird
+  ausschließlich an `org.location` verwendet und ist auch dort optional.
+- Weder `AGENTS.md` noch `ARCHITECTURE.md` noch dieser Decision Log treffen
+  eine Aussage zur Eindeutigkeit von Organisationen.
+
+### Zu entscheiden
+
+1. Soll die VAT-Id eindeutig sein, sofern sie gesetzt ist?
+2. Soll die Steuernummer eindeutig sein, sofern sie gesetzt ist?
+3. In welchem Bereich gilt die Eindeutigkeit — global oder je Land
+   beziehungsweise Jurisdiktion? Eine landbezogene Regel setzt voraus, dass
+   die Organisation überhaupt ein Land führt, was heute nicht der Fall ist.
+4. Wie wird vor Speicherung und Vergleich normalisiert — hinsichtlich
+   Leerzeichen, Groß-/Kleinschreibung und Trennzeichen?
+5. Wie verhält sich der POST bei einer Dublette? HTTP 409 Conflict liegt nahe,
+   ist aber **nicht** entschieden.
+
+### Bekanntes Risiko für den Pilotbetrieb
+
+Bis zur Entscheidung kann ein Plattformadministrator dieselbe Organisation
+mehrfach anlegen, ohne jede Rückmeldung. Doppelte Organisationen ziehen
+doppelte Standorte, Artikel und Lots nach sich und sind nachträglich nur mit
+einer Datenmigration zu bereinigen.
+
+### Sichere Zwischenentscheidung bis zur Klärung
+
+Es wird keine Eindeutigkeitsregel und keine HTTP-409-Antwort eingeführt. Damit
+wird keine der fünf offenen Fragen vorweggenommen.
+
+---
+
+## D-36 – Präzision persistierter Zeitpunkte
+
+**Status:** ENTSCHIEDEN (2026-09-08)
+**Entschieden durch:** Auftraggeber
+**Betrifft:** FIX-010 und persistierte Zeitpunkte aller Module
+
+### Zielinvariante
+
+Ein Zeitstempel, der bei einem Create-Vorgang erzeugt, gespeichert und in der
+API zurückgegeben wird, ist exakt derselbe Wert.
+
+### Entscheidung
+
+- Persistierte UTC-Zeitpunkte werden zentral auf die Präzision der
+  PostgreSQL-Persistenz, also Mikrosekunden, normalisiert.
+- Die Lösung ist zentral. Es gibt keine Rundungslogik in Controllern oder
+  einzelnen Modulen.
+- UTC bleibt verbindlich.
+- Es erfolgt keine zusätzliche Datenbankabfrage nach dem Create, nur um den
+  Zeitstempel zu korrigieren.
+- Toleranzbasierte Tests sind keine dauerhafte Lösung.
+- Dieselbe Regel gilt für persistierte Zeitpunkte aller Module.
+- Daraus berechnete persistierte Ablaufzeitpunkte, etwa für Refresh Tokens,
+  dürfen dieselbe normalisierte Zeitbasis verwenden.
+- Fachliche Laufzeiten oder TTLs werden nicht geändert.
+
+### Ausgangslage
+
+- PostgreSQL `timestamptz` hat Mikrosekundenauflösung und rundet:
+  `.1234567` wird zu `.123457`.
+- .NET `DateTimeOffset` hat eine Auflösung von 100 Nanosekunden.
+- Betroffen sind die Antwort-DTOs für Articles, Lots, Locations und
+  Organizations sowie elf Entitäten mit `CreatedAt` beziehungsweise
+  `UpdatedAt`.
+- Kein bestehender Test vergleicht eine Create-Antwort mit einem
+  anschließenden GET; deshalb ist die Abweichung bisher nicht aufgefallen.
+
+Diese Ausgangslage wurde vom Reviewer geprüft und wird unverändert übernommen.
+
+### Abgelehnte Alternativen
+
+- Erneutes Lesen nach dem Schreiben.
+- Lockern der Tests auf fachliche Felder als Dauerlösung.
+- Die Abweichung im API-Vertrag dokumentieren und belassen.
+
+Umgesetzt wird diese Entscheidung in FIX-010, nicht in ORG-001.
+
+---
+
 ## Nächste freie ID
 
-`D-35`
+`D-37`

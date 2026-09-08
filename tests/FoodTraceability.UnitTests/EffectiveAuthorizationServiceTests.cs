@@ -79,3 +79,55 @@ public sealed class EffectiveAuthorizationServiceTests
         }
     }
 }
+
+public sealed class EffectiveAuthorizationTests
+{
+    [Fact]
+    public void HasPlatformPermissionFindsPlatformPermission()
+    {
+        var authorization = CreateAuthorization(
+            ["organization.manage"],
+            []);
+
+        Assert.True(authorization.HasPlatformPermission("organization.manage"));
+    }
+
+    [Fact]
+    public void HasPlatformPermissionDoesNotUseOrganizationPermissions()
+    {
+        var organizationId = Guid.NewGuid();
+        var authorization = CreateAuthorization(
+            [],
+            [new OrganizationPermissionSet(
+                organizationId,
+                ["organization.manage"])]);
+
+        Assert.False(authorization.HasPlatformPermission("organization.manage"));
+        Assert.True(authorization.HasOrganizationPermission(
+            organizationId,
+            "organization.manage"));
+    }
+
+    [Fact]
+    public void HasPlatformPermissionUsesCaseSensitiveComparison()
+    {
+        var authorization = CreateAuthorization(
+            ["organization.manage"],
+            []);
+
+        Assert.False(authorization.HasPlatformPermission("ORGANIZATION.MANAGE"));
+    }
+
+    private static EffectiveAuthorization CreateAuthorization(
+        IReadOnlyList<string> platformPermissions,
+        IReadOnlyList<OrganizationPermissionSet> organizationPermissions) =>
+        new(
+            Guid.NewGuid(),
+            "platform-authorization@example.com",
+            "Platform",
+            "Authorization",
+            true,
+            platformPermissions,
+            organizationPermissions,
+            []);
+}

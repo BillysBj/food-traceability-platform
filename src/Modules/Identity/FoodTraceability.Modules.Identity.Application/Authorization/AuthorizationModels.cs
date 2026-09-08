@@ -10,6 +10,11 @@ public sealed record EffectiveAuthorization(
     IReadOnlyList<OrganizationPermissionSet> OrganizationPermissions,
     IReadOnlyList<LocationPermissionSet> LocationPermissions)
 {
+    public bool HasPlatformPermission(string permissionCode)
+    {
+        return PlatformPermissions.Contains(permissionCode, StringComparer.Ordinal);
+    }
+
     public bool HasOrganizationPermission(Guid organizationId, string permissionCode)
     {
         return OrganizationPermissions.Any(permissionSet =>

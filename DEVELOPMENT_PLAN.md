@@ -210,7 +210,7 @@ belegt. ID-008 ist deshalb eine neue ID und keine Umbenennung.
 # EPIC 2 – Organizations
 
 - **ORG-001a** Organization- und Location-Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE**
-- **ORG-001** Organization CRUD — **Roadmap-Status: NOT_STARTED** — vorhanden ist ausschließlich `GET /api/v1/organizations/{id}` aus ID-006 als Demonstrationsfläche für das Autorisierungsmodell; Anlegen, Ändern und Löschen über die API fehlen.
+- **ORG-001** Organization CRUD — **Roadmap-Status: DONE** — ein PlatformAdmin kann Organisationen über den Platform-Endpunkt anlegen und einzeln abrufen; Ändern, Löschen und Auflisten sind nicht Teil von ORG-001.
 - **ORG-002** Location CRUD — **Roadmap-Status: IN_PROGRESS** — Repository-Task ORG-002 lieferte ausschließlich `POST /api/v1/organizations/{id}/locations`; Lesen, Ändern und Löschen fehlen.
 - **ORG-002b** Location Read/List — **Roadmap-Status: NOT_STARTED**
 - **ORG-003** Membership Management — **Roadmap-Status: NOT_STARTED** — das Datenmodell existiert seit ID-004 und D-22; die API darüber fehlt.
@@ -406,7 +406,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 
 - **M0 – Foundation Ready** — **ERREICHT**.
 - **M1 – Identity Ready** — **NICHT ERREICHT**. Offen: **ID-008** und Plan-Task **ID-007**.
-- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-001**, **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
+- **M2 – Organizations Ready** — **NICHT ERREICHT**. Offen: **ORG-002**, **ORG-002b**, **ORG-003** und **ORG-004**.
 - **M3 – Catalog Ready** — **NICHT ERREICHT**. Offen: **CAT-001**, **CAT-003**, **CAT-005** und **CAT-006**.
 - **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
@@ -425,7 +425,7 @@ keinen Status je Task führte.
 ## Recovery-Reihenfolge
 
 1. **OPS-001** Initial Platform Administrator Bootstrap — **ERLEDIGT**
-2. **ORG-001** Organization Create
+2. **ORG-001** Organization Create — **ERLEDIGT**
 3. **ID-008** User Management
 4. **ORG-003** Membership + Organization Role Assignment
 5. **CAT-006** Product API
@@ -543,6 +543,27 @@ dieses Verhalten nach. Als Vorlage dient die in OPS-001 korrigierte
 **Warum nicht nebenbei erledigt:** Der Befund liegt außerhalb des OPS-001-Scope
 und berührt den Login-Pfad. Eine Änderung dort gehört in einen eigenen Task mit
 eigener Abnahme.
+
+## FIX-010 - Zentrale Normalisierung persistierter Zeitpunkte
+
+**Status:** OFFEN
+**Herkunft:** Review zu ORG-001, D-36
+
+**Inhalt:** Umsetzung von D-36 über alle betroffenen Module. Eine zentrale
+Zeitquelle liefert Werte bereits in Mikrosekundenauflösung, sodass Entität,
+Datenbank und API-Antwort denselben Wert tragen.
+
+**Acceptance Criterion:** Create-Response und ein anschließender GET liefern
+für persistierte Zeitstempel **exakt** denselben Wert, nicht nur innerhalb
+einer Toleranz. Zu prüfen für Articles, Lots, Locations und Organizations.
+
+Die Regressionstests müssen so gewählt sein, dass sie tatsächlich fehlschlagen,
+wenn die zentrale Normalisierung entfernt wird. Ein Test, der auch ohne die
+Normalisierung grün bleibt, erfüllt das Kriterium nicht.
+
+**Warum nicht in ORG-001 erledigt:** Die Änderung betrifft vier Module und die
+gemeinsame Zeitquelle. Das liegt außerhalb des ORG-001-Scope und braucht eine
+eigene Abnahme.
 
 ## Branch-Konvention
 

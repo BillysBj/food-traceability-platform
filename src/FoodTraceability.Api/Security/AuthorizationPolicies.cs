@@ -9,4 +9,5 @@ public static class AuthorizationPolicies
     public const string LotRead = "LotRead";
     public const string OrganizationManage = "OrganizationManage";
     public const string OrganizationRead = "OrganizationRead";
+    public const string PlatformOrganizationManage = "PlatformOrganizationManage";
 }

@@ -13,6 +13,7 @@ internal sealed class DatabaseAuthorizationHandler(
     {
         var requirements = context.PendingRequirements
             .Where(requirement => requirement is ActiveUserRequirement
+                or PlatformPermissionRequirement
                 or OrganizationPermissionRequirement)
             .ToArray();
         if (requirements.Length == 0)
@@ -42,6 +43,12 @@ internal sealed class DatabaseAuthorizationHandler(
             switch (requirement)
             {
                 case ActiveUserRequirement:
+                    context.Succeed(requirement);
+                    break;
+
+                case PlatformPermissionRequirement platformRequirement
+                    when authorization.HasPlatformPermission(
+                        platformRequirement.PermissionCode):
                     context.Succeed(requirement);
                     break;
 
