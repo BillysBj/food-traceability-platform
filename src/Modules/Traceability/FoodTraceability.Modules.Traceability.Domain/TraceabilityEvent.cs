@@ -5,6 +5,9 @@ public sealed class TraceabilityEvent
     public const int MaximumExternalReferenceLength = 128;
     public const int MaximumDescriptionLength = 2000;
 
+    private readonly List<EventInput> _inputs;
+    private readonly List<EventOutput> _outputs;
+
     private TraceabilityEvent(
         Guid id,
         Guid eventTypeId,
@@ -27,8 +30,34 @@ public sealed class TraceabilityEvent
         Description = description;
         CreatedBy = createdBy;
         CreatedAt = createdAt;
-        Inputs = inputs;
-        Outputs = outputs;
+        _inputs = [.. inputs];
+        _outputs = [.. outputs];
+    }
+
+    // Used exclusively by EF Core when loading an already persisted event. The invariants
+    // were enforced by Create when the event was originally created, as they are for Lot.
+    private TraceabilityEvent(
+        Guid id,
+        Guid eventTypeId,
+        Guid organizationId,
+        Guid locationId,
+        DateTimeOffset occurredAt,
+        string? externalReference,
+        string? description,
+        Guid createdBy,
+        DateTimeOffset createdAt)
+    {
+        Id = id;
+        EventTypeId = eventTypeId;
+        OrganizationId = organizationId;
+        LocationId = locationId;
+        OccurredAt = occurredAt;
+        ExternalReference = externalReference;
+        Description = description;
+        CreatedBy = createdBy;
+        CreatedAt = createdAt;
+        _inputs = [];
+        _outputs = [];
     }
 
     public Guid Id { get; }
@@ -49,9 +78,9 @@ public sealed class TraceabilityEvent
 
     public DateTimeOffset CreatedAt { get; }
 
-    public IReadOnlyList<EventInput> Inputs { get; }
+    public IReadOnlyList<EventInput> Inputs => _inputs.AsReadOnly();
 
-    public IReadOnlyList<EventOutput> Outputs { get; }
+    public IReadOnlyList<EventOutput> Outputs => _outputs.AsReadOnly();
 
     public static TraceabilityEvent Create(
         Guid id,

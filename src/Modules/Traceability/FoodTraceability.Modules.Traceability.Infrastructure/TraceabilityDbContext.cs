@@ -13,6 +13,8 @@ public sealed class TraceabilityDbContext(DbContextOptions<TraceabilityDbContext
 
     public DbSet<Lot> Lots => Set<Lot>();
 
+    public DbSet<TraceabilityEvent> TraceabilityEvents => Set<TraceabilityEvent>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
