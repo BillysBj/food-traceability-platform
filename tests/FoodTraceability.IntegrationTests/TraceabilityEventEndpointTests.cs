@@ -213,6 +213,45 @@ public sealed class TraceabilityEventEndpointTests(PostgreSqlContainerFixture da
             factory.RequestCancellationToken);
     }
 
+    [Theory]
+    [InlineData("BLOCK")]
+    [InlineData("TRANSFER")]
+    [InlineData("STORE")]
+    [InlineData("RECEIVE")]
+    public async Task DisallowedEventTypeCodeReturns400(string eventTypeCode)
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var output = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 1m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, setup.Account, factory.RequestCancellationToken);
+        var request = ValidRequest(
+            setup.Organization.LocationId,
+            [],
+            [new(output.Id, 1m)]) with
+        {
+            EventTypeCode = eventTypeCode
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            EventCollectionPath(setup.Organization.Id),
+            request,
+            factory.RequestCancellationToken);
+
+        using var problem = await AssertProblemAsync(
+            response,
+            HttpStatusCode.BadRequest,
+            "TRACEABILITY_EVENT_VALIDATION_FAILED",
+            factory.RequestCancellationToken);
+        var detail = problem.RootElement.GetProperty("detail").GetString();
+        Assert.Contains(eventTypeCode, detail, StringComparison.Ordinal);
+        Assert.Contains("not allowed for traceability events", detail, StringComparison.Ordinal);
+
+        await using var context = database.CreateLotApiTraceabilityDbContext();
+        Assert.False(await context.TraceabilityEvents.AnyAsync(
+            traceabilityEvent => traceabilityEvent.OrganizationId == setup.Organization.Id));
+    }
+
     [Fact]
     public async Task LocationFromAnotherOrganizationReturns400()
     {

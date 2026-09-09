@@ -2,10 +2,15 @@ namespace FoodTraceability.Modules.Traceability.Domain;
 
 public sealed class EventType
 {
-    private EventType(Guid id, EventTypeCode code, DateTimeOffset createdAt)
+    private EventType(
+        Guid id,
+        EventTypeCode code,
+        EventTypeClassification classification,
+        DateTimeOffset createdAt)
     {
         Id = id;
         Code = code;
+        Classification = classification;
         CreatedAt = createdAt;
     }
 
@@ -13,11 +18,14 @@ public sealed class EventType
 
     public EventTypeCode Code { get; }
 
+    public EventTypeClassification Classification { get; }
+
     public DateTimeOffset CreatedAt { get; }
 
     public static EventType Create(
         Guid id,
         EventTypeCode? code,
+        EventTypeClassification classification,
         DateTimeOffset createdAt)
     {
         if (id == Guid.Empty)
@@ -30,6 +38,15 @@ public sealed class EventType
             throw new TraceabilityDomainException("Event type code must be provided.");
         }
 
-        return new EventType(id, code, createdAt);
+        if (classification is not EventTypeClassification.Traceability
+            and not EventTypeClassification.TraceabilityAwaitingLogistics
+            and not EventTypeClassification.Logistics
+            and not EventTypeClassification.Quality
+            and not EventTypeClassification.Deferred)
+        {
+            throw new TraceabilityDomainException("Event type classification must be valid.");
+        }
+
+        return new EventType(id, code, classification, createdAt);
     }
 }

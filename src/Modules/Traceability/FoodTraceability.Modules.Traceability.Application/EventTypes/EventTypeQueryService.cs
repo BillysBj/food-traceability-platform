@@ -4,7 +4,7 @@ namespace FoodTraceability.Modules.Traceability.Application.EventTypes;
 
 public sealed class EventTypeQueryService(IEventTypeReader reader)
 {
-    public Task<Guid?> FindIdByCodeAsync(
+    public Task<EventTypeLookup?> FindByCodeAsync(
         string? code,
         CancellationToken cancellationToken)
     {
@@ -15,10 +15,10 @@ public sealed class EventTypeQueryService(IEventTypeReader reader)
         }
         catch (TraceabilityDomainException)
         {
-            return Task.FromResult<Guid?>(null);
+            return Task.FromResult<EventTypeLookup?>(null);
         }
 
-        return reader.FindIdByCodeAsync(eventTypeCode.Value, cancellationToken);
+        return reader.FindByCodeAsync(eventTypeCode.Value, cancellationToken);
     }
 
     public Task<string?> FindCodeByIdAsync(
