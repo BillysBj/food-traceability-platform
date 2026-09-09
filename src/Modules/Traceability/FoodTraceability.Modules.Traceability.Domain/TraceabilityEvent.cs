@@ -139,6 +139,16 @@ public sealed class TraceabilityEvent
         var copiedInputs = ValidateAndCopyInputs(inputs);
         var copiedOutputs = ValidateAndCopyOutputs(outputs);
 
+        var inputLotIds = copiedInputs.Select(input => input.LotId).ToHashSet();
+        foreach (var output in copiedOutputs)
+        {
+            if (inputLotIds.Contains(output.LotId))
+            {
+                throw new TraceabilityDomainException(
+                    $"Lot '{output.LotId}' must not be both an input and an output of the same event.");
+            }
+        }
+
         return new TraceabilityEvent(
             id,
             eventTypeId,

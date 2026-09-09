@@ -353,7 +353,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: DONE**
 - **TRC-008a** Zulaessige Eventtypen erzwingen (eingeschoben) — **Roadmap-Status: DONE** — setzt D-39 um: `trace.event_type` erhaelt eine Klassifizierung, und ein Event mit einem nicht zugelassenen Typ wird abgelehnt.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen des Pflichttests fehlen weiterhin, weil TRC-010 und TRC-011 offen sind; TRC-013 bleibt deshalb NOT_STARTED.
-- **TRC-009** Cycle Protection — **Roadmap-Status: NOT_STARTED**
+- **TRC-009** Cycle Protection — **Roadmap-Status: DONE**
 - **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
 - **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
 - **TRC-012** Graph Response Model — **Roadmap-Status: NOT_STARTED**
