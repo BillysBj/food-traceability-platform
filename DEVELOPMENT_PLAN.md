@@ -83,6 +83,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-013** CAT-001 und CAT-005 bewertet, Bedeutung von DEFERRED festgelegt, Milestone-Guard ergänzt — **Roadmap-Status: DONE**
 - **DOCS-014** M2-Gate bewertet, ORG-004 und ORG-002 abgeschlossen, ORG-002c zurückgestellt — **Roadmap-Status: DONE**
 - **DOCS-015** ID-007-Hinweis berichtigt und diese Liste vervollständigt — **Roadmap-Status: DONE**
+- **DOCS-016** D-10 über D-38 entschieden und `trace.object_relation` aus dem ER-Diagramm entfernt — **Roadmap-Status: DONE**
 
 FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
