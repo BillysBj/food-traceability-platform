@@ -9,6 +9,8 @@ public sealed class TraceabilityDbContext(DbContextOptions<TraceabilityDbContext
 {
     public const string Schema = "trace";
 
+    public DbSet<EventType> EventTypes => Set<EventType>();
+
     public DbSet<Lot> Lots => Set<Lot>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

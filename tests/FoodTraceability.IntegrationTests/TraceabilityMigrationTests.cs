@@ -28,9 +28,10 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(2, migrations.Length);
+        Assert.Equal(3, migrations.Length);
         Assert.EndsWith("_InitialTraceability", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddLotArticleAndQuantity", migrations[1], StringComparison.Ordinal);
+        Assert.EndsWith("_AddEventType", migrations[2], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -48,6 +49,7 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
         Assert.Equal(
             [
                 PersistenceConventions.MigrationsHistoryTableName,
+                "event_type",
                 "lot",
             ],
             tables);
