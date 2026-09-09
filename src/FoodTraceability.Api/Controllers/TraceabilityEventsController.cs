@@ -32,10 +32,10 @@ public sealed class TraceabilityEventsController(
     /// <param name="cancellationToken">Cancels request processing.</param>
     /// <returns>The newly created traceability event.</returns>
     /// <response code="201">Returns the newly created event.</response>
-    /// <response code="400">The request or a referenced resource is invalid, or the event type is not allowed for traceability events.</response>
+    /// <response code="400">The request or a referenced resource is invalid, a lot occurs on both sides of the event, or the event type is not allowed for traceability events.</response>
     /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
     /// <response code="403">The caller lacks organization-wide trace.event.create permission.</response>
-    /// <response code="409">An input exceeds its lot's available quantity.</response>
+    /// <response code="409">An input exceeds its lot's available quantity, or an output is an ancestor of an input and would create a cycle.</response>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.TraceabilityEventCreate)]
     [ProducesResponseType<TraceabilityEventResponse>(StatusCodes.Status201Created)]

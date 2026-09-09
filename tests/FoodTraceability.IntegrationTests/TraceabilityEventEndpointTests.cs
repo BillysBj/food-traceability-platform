@@ -644,6 +644,257 @@ public sealed class TraceabilityEventEndpointTests(PostgreSqlContainerFixture da
         Assert.Equal(10m, persistedLotQuantity);
     }
 
+    [Fact]
+    public Task DirectCycleReturns409() => AssertCycleRejectedAsync(2);
+
+    [Fact]
+    public Task LongerCycleReturns409() => AssertCycleRejectedAsync(3);
+
+    private async Task AssertCycleRejectedAsync(int lotCount)
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var lots = new List<Lot>();
+        for (var index = 0; index < lotCount; index++)
+        {
+            lots.Add(await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m));
+        }
+
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = factory.RequestCancellationToken;
+        await AuthenticateAsync(client, setup.Account, cancellationToken);
+        for (var index = 0; index < lots.Count - 1; index++)
+        {
+            using var response = await PostEdgeAsync(
+                client, setup, lots[index], lots[index + 1], cancellationToken);
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        }
+
+        using var rejected = await PostEdgeAsync(
+            client, setup, lots[^1], lots[0], cancellationToken);
+        using var problem = await AssertProblemAsync(
+            rejected, HttpStatusCode.Conflict, "TRACEABILITY_EVENT_CONFLICT", cancellationToken);
+        Assert.Contains("cycle", problem.RootElement.GetProperty("detail").GetString());
+
+        await AssertPersistedGraphIsAcyclicAsync(setup.Organization.Id, lotCount - 1);
+    }
+
+    [Fact]
+    public async Task SharedAncestryDiamondReturns201()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var a = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var b = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var c = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var d = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = factory.RequestCancellationToken;
+        await AuthenticateAsync(client, setup.Account, cancellationToken);
+
+        using var first = await PostEdgeAsync(client, setup, a, b, cancellationToken);
+        using var second = await PostEdgeAsync(client, setup, a, c, cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        using var merge = await client.PostAsJsonAsync(
+            EventCollectionPath(setup.Organization.Id),
+            ValidRequest(setup.Organization.LocationId,
+                [new(b.Id, 1m), new(c.Id, 1m)], [new(d.Id, 2m)]),
+            cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, merge.StatusCode);
+        await AssertPersistedGraphIsAcyclicAsync(setup.Organization.Id, 3);
+    }
+
+    [Fact]
+    public async Task LotCanBeUsedInMultipleIndependentEvents()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var a = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var b = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var c = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = factory.RequestCancellationToken;
+        await AuthenticateAsync(client, setup.Account, cancellationToken);
+
+        using var first = await PostEdgeAsync(client, setup, a, c, cancellationToken);
+        using var second = await PostEdgeAsync(client, setup, b, c, cancellationToken);
+        using var third = await PostEdgeAsync(client, setup, a, c, cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, third.StatusCode);
+        await AssertPersistedGraphIsAcyclicAsync(setup.Organization.Id, 3);
+    }
+
+    [Fact]
+    public async Task SameLotOnBothSidesReturns400()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var lot = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = factory.RequestCancellationToken;
+        await AuthenticateAsync(client, setup.Account, cancellationToken);
+
+        using var response = await PostEdgeAsync(client, setup, lot, lot, cancellationToken);
+        using var problem = await AssertProblemAsync(
+            response, HttpStatusCode.BadRequest, "TRACEABILITY_EVENT_VALIDATION_FAILED",
+            cancellationToken);
+        Assert.Contains(lot.Id.ToString(), problem.RootElement.GetProperty("detail").GetString());
+        await AssertPersistedGraphIsAcyclicAsync(setup.Organization.Id, 0);
+    }
+
+    [Fact]
+    public async Task ConcurrentDisjointEventsCreateExactlyOneEventWithoutCycle()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var x = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var y = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var p = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var q = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        Assert.Equal(4, new[] { x.Id, y.Id, p.Id, q.Id }.Distinct().Count());
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        var cancellationToken = factory.RequestCancellationToken;
+        await AuthenticateAsync(client, setup.Account, cancellationToken);
+        using var xy = await PostEdgeAsync(client, setup, x, y, cancellationToken);
+        using var pq = await PostEdgeAsync(client, setup, p, q, cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, xy.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, pq.StatusCode);
+
+        await using var lotBlocker = await OpenConnectionAsync();
+        await using var lotTransaction = await lotBlocker.BeginTransactionAsync(cancellationToken);
+        await ExecuteNonQueryAsync(lotBlocker, lotTransaction,
+            "LOCK TABLE trace.lot IN ACCESS EXCLUSIVE MODE");
+        await using var eventBlocker = await OpenConnectionAsync();
+        await using var eventTransaction = await eventBlocker.BeginTransactionAsync(cancellationToken);
+        // SHARE permits the ancestry reads but stops INSERT after the cycle check.
+        await ExecuteNonQueryAsync(eventBlocker, eventTransaction,
+            "LOCK TABLE trace.traceability_event IN SHARE MODE");
+
+        var firstRequest = PostEdgeAsync(client, setup, y, p, cancellationToken);
+        var secondRequest = PostEdgeAsync(client, setup, q, x, cancellationToken);
+        var lotLockReleased = false;
+        var eventLockReleased = false;
+        try
+        {
+            // Both requests must be demonstrably blocked, directly or through the writer
+            // holding the advisory lock. No elapsed delay is used as proof of readiness.
+            await WaitForBlockedWriterChainAsync(lotBlocker.ProcessID, cancellationToken);
+            await lotTransaction.CommitAsync(cancellationToken);
+            lotLockReleased = true;
+
+            // With the advisory lock: one INSERT waits here, the other writer waits on it.
+            // Without it: both disjoint writers finish their cycle checks and wait at INSERT.
+            // Releasing only after observing both makes the missing-lock mutation fail
+            // deterministically: neither check can see the other's uncommitted edge.
+            await WaitForBlockedWriterChainAsync(eventBlocker.ProcessID, cancellationToken);
+            await eventTransaction.CommitAsync(cancellationToken);
+            eventLockReleased = true;
+        }
+        finally
+        {
+            if (!lotLockReleased)
+            {
+                await lotTransaction.RollbackAsync(CancellationToken.None);
+            }
+
+            if (!eventLockReleased)
+            {
+                await eventTransaction.RollbackAsync(CancellationToken.None);
+            }
+        }
+
+        using var firstResponse = await firstRequest;
+        using var secondResponse = await secondRequest;
+        var statuses = new[] { firstResponse.StatusCode, secondResponse.StatusCode };
+        Assert.Equal(1, statuses.Count(status => status == HttpStatusCode.Created));
+        Assert.Equal(1, statuses.Count(status => status == HttpStatusCode.Conflict));
+        using var problem = await AssertProblemAsync(
+            firstResponse.StatusCode == HttpStatusCode.Conflict ? firstResponse : secondResponse,
+            HttpStatusCode.Conflict, "TRACEABILITY_EVENT_CONFLICT", cancellationToken);
+        Assert.Contains("cycle", problem.RootElement.GetProperty("detail").GetString());
+        await AssertPersistedGraphIsAcyclicAsync(setup.Organization.Id, 3);
+    }
+
+    private static Task<HttpResponseMessage> PostEdgeAsync(
+        HttpClient client, AuthorizedSetup setup, Lot input, Lot output,
+        CancellationToken cancellationToken) =>
+        client.PostAsJsonAsync(
+            EventCollectionPath(setup.Organization.Id),
+            ValidRequest(setup.Organization.LocationId,
+                [new(input.Id, 1m)], [new(output.Id, 1m)]),
+            cancellationToken);
+
+    private async Task WaitForBlockedWriterChainAsync(
+        int blockerPid, CancellationToken cancellationToken)
+    {
+        await using var monitor = await OpenConnectionAsync();
+        var startedAt = Stopwatch.GetTimestamp();
+        while (Stopwatch.GetElapsedTime(startedAt) < DatabaseStateTimeout)
+        {
+            await using var command = monitor.CreateCommand();
+            command.CommandText =
+                """
+                WITH RECURSIVE waiting(pid) AS (
+                    SELECT pid FROM pg_stat_activity
+                     WHERE datname = current_database()
+                       AND @blocker = ANY(pg_blocking_pids(pid))
+                    UNION
+                    SELECT a.pid FROM pg_stat_activity a
+                      JOIN waiting w ON w.pid = ANY(pg_blocking_pids(a.pid))
+                     WHERE a.datname = current_database()
+                )
+                SELECT count(*) FROM waiting
+                """;
+            command.Parameters.AddWithValue("blocker", blockerPid);
+            if ((long)(await command.ExecuteScalarAsync(cancellationToken))! == 2)
+            {
+                return;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(10), cancellationToken);
+        }
+
+        throw new TimeoutException(
+            "Both disjoint event writers did not reach the controlled database lock barrier.");
+    }
+
+    private async Task AssertPersistedGraphIsAcyclicAsync(Guid organizationId, int expectedEvents)
+    {
+        await using var context = database.CreateLotApiTraceabilityDbContext();
+        var events = await context.TraceabilityEvents
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(traceabilityEvent => traceabilityEvent.Inputs)
+            .Include(traceabilityEvent => traceabilityEvent.Outputs)
+            .Where(traceabilityEvent => traceabilityEvent.OrganizationId == organizationId)
+            .ToListAsync();
+        Assert.Equal(expectedEvents, events.Count);
+
+        // Independent in-memory check of all persisted input/output pairs, not a repeat
+        // of the writer's ancestor SQL. A path must never return to its starting lot.
+        var edges = events.SelectMany(traceabilityEvent => traceabilityEvent.Inputs
+            .SelectMany(input => traceabilityEvent.Outputs.Select(output =>
+                (Parent: input.LotId, Child: output.LotId)))).ToLookup(edge => edge.Parent);
+        foreach (var start in edges.Select(group => group.Key))
+        {
+            var visited = new HashSet<Guid>();
+            var pending = new Queue<Guid>(edges[start].Select(edge => edge.Child));
+            while (pending.TryDequeue(out var current))
+            {
+                Assert.NotEqual(start, current);
+                if (visited.Add(current))
+                {
+                    foreach (var edge in edges[current])
+                    {
+                        pending.Enqueue(edge.Child);
+                    }
+                }
+            }
+        }
+    }
+
     private ApiWebApplicationFactory CreateFactory() =>
         new(
             new Dictionary<string, string?>
@@ -831,7 +1082,8 @@ public sealed class TraceabilityEventEndpointTests(PostgreSqlContainerFixture da
                    AND state = 'active'
                    AND wait_event_type = 'Lock'
                    AND (query LIKE '%FROM trace.lot%'
-                        OR query LIKE '%event_input%')
+                        OR query LIKE '%event_input%'
+                        OR query LIKE '%pg_advisory_xact_lock%')
                 """;
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
             Assert.True(await reader.ReadAsync(cancellationToken));

@@ -150,15 +150,15 @@ public sealed class TraceabilityEventTests
     }
 
     [Fact]
-    public void SameLotOnBothSidesIsAccepted()
+    public void SameLotOnBothSidesIsRejected()
     {
         var input = CreateInput(lotId: InputLotId);
         var output = CreateOutput(lotId: InputLotId);
 
-        var traceabilityEvent = CreateEvent([input], [output]);
+        var exception = Assert.Throws<TraceabilityDomainException>(
+            () => CreateEvent([input], [output]));
 
-        Assert.Equal(InputLotId, Assert.Single(traceabilityEvent.Inputs).LotId);
-        Assert.Equal(InputLotId, Assert.Single(traceabilityEvent.Outputs).LotId);
+        Assert.Contains(InputLotId.ToString(), exception.Message);
     }
 
     [Fact]
