@@ -13,6 +13,8 @@ public static class ApiAuthorizationConfiguration
     private const string OrganizationManagePermission = "organization.manage";
     private const string ProductCreatePermission = "product.create";
     private const string ProductReadPermission = "product.read";
+    private const string TraceabilityEventCreatePermission = "trace.event.create";
+    private const string TraceabilityReadPermission = "trace.read";
     private const string UserManagePermission = "user.manage";
     private const string UserReadPermission = "user.read";
 
@@ -93,6 +95,19 @@ public static class ApiAuthorizationConfiguration
                     .RequireAuthenticatedUser()
                     .AddRequirements(
                         new PlatformPermissionRequirement(UserReadPermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.TraceabilityEventCreate,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(
+                            TraceabilityEventCreatePermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.TraceabilityRead,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(TraceabilityReadPermission)));
         });
         services.AddScoped<IAuthorizationHandler, DatabaseAuthorizationHandler>();
         services.AddSingleton<IAuthorizationMiddlewareResultHandler,

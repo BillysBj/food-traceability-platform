@@ -54,6 +54,17 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string RateLimitExceededDetail =
         "The request rate limit has been exceeded. Retry after the current window.";
     private const string RateLimitExceededErrorCode = "RATE_LIMIT_EXCEEDED";
+    private const string TraceabilityEventConflictTitle =
+        "The traceability event conflicts with existing data.";
+    private const string TraceabilityEventConflictErrorCode =
+        "TRACEABILITY_EVENT_CONFLICT";
+    private const string TraceabilityEventNotFoundTitle = "Traceability event not found.";
+    private const string TraceabilityEventNotFoundErrorCode =
+        "TRACEABILITY_EVENT_NOT_FOUND";
+    private const string TraceabilityEventValidationTitle =
+        "The traceability event request is invalid.";
+    private const string TraceabilityEventValidationErrorCode =
+        "TRACEABILITY_EVENT_VALIDATION_FAILED";
     private const string UnhandledErrorTitle = "An unexpected error occurred.";
     private const string UnhandledErrorCode = "UNHANDLED_ERROR";
     private const string UserConflictTitle = "The user conflicts with existing data.";
@@ -251,6 +262,40 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             RateLimitExceededTitle,
             RateLimitExceededErrorCode,
             RateLimitExceededDetail);
+
+    public ProblemDetails CreateTraceabilityEventConflict(
+        HttpContext httpContext,
+        string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            TraceabilityEventConflictTitle,
+            TraceabilityEventConflictErrorCode,
+            detail);
+
+    public ProblemDetails CreateTraceabilityEventNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            TraceabilityEventNotFoundTitle,
+            TraceabilityEventNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateTraceabilityEventValidationError(
+        HttpContext httpContext,
+        string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("TraceabilityEvent", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            TraceabilityEventValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] =
+            TraceabilityEventValidationErrorCode;
+        return problemDetails;
+    }
 
     public ProblemDetails CreateUnhandledError(HttpContext httpContext, string? detail) =>
         CreateApiProblemDetails(

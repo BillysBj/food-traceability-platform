@@ -55,6 +55,14 @@ public sealed class EndpointAuthorizationGuardTests
                 "LotRead"),
             new(
                 "POST",
+                "/api/v1/organizations/{organizationId}/traceability/events",
+                "TraceabilityEventCreate"),
+            new(
+                "GET",
+                "/api/v1/organizations/{organizationId}/traceability/events/{eventId}",
+                "TraceabilityRead"),
+            new(
+                "POST",
                 "/api/v1/platform/organizations",
                 "PlatformOrganizationManage"),
             new(

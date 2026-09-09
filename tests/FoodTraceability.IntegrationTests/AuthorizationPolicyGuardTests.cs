@@ -39,6 +39,14 @@ public sealed class AuthorizationPolicyGuardTests
                 "LotCreate",
                 "OrganizationPermissionRequirement",
                 "lot.create"),
+            ["TraceabilityEventCreate"] = new(
+                "TraceabilityEventCreate",
+                "OrganizationPermissionRequirement",
+                "trace.event.create"),
+            ["TraceabilityRead"] = new(
+                "TraceabilityRead",
+                "OrganizationPermissionRequirement",
+                "trace.read"),
             ["PlatformOrganizationManage"] = new(
                 "PlatformOrganizationManage",
                 "PlatformPermissionRequirement",
