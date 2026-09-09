@@ -89,9 +89,6 @@
         <mxCell id="29" value="&lt;b&gt;trace.event_output&lt;/b&gt;&lt;br&gt;event_output_id PK&lt;br&gt;event_id FK&lt;br&gt;traceable_object_id FK&lt;br&gt;quantity&lt;br&gt;unit_id FK" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#f8cecc;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="2270" y="790" width="250" height="150" as="geometry"/>
         </mxCell>
-        <mxCell id="30" value="&lt;b&gt;trace.object_relation&lt;/b&gt;&lt;br&gt;relation_id PK&lt;br&gt;parent_object_id FK&lt;br&gt;child_object_id FK&lt;br&gt;relation_type" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#f8cecc;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="2000" y="1020" width="250" height="150" as="geometry"/>
-        </mxCell>
         <mxCell id="31" value="Production" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;fontSize=18;fillColor=#e1d5e7;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="2850" y="45" width="520" height="40" as="geometry"/>
         </mxCell>

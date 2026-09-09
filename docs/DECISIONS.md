@@ -36,7 +36,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-07 | Verbindlichkeit und Umfang von i18n | OFFEN |
 | D-08 | Semantik von `trace.lot.quantity` | ENTSCHIEDEN |
 | D-09 | Einheitenkonvertierung (BR-003) | ENTSCHIEDEN |
-| D-10 | Zukunft von `trace.object_relation` | OFFEN |
+| D-10 | Zukunft von `trace.object_relation` | ENTSCHIEDEN |
 | D-11 | Regel für Cross-Schema-Fremdschlüssel | ENTSCHIEDEN |
 | D-12 | Ablageort des Frontends | OFFEN |
 | D-13 | Authentifizierungs- und Token-Modell | ENTSCHIEDEN |
@@ -64,6 +64,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-35 | Eindeutigkeit von Organisationen | OFFEN |
 | D-36 | Präzision persistierter Zeitpunkte | ENTSCHIEDEN |
 | D-37 | Plattformweite Benutzerverwaltung und Initialpasswort | ENTSCHIEDEN |
+| D-38 | `trace.object_relation` entfaellt in Pilot 1 | ENTSCHIEDEN |
 
 ---
 
@@ -236,7 +237,10 @@ bereits erfasste Daten falsch werden zu lassen.
 
 ## D-10 – Zukunft von `trace.object_relation`
 
-**Status:** OFFEN
+**Status:** ENTSCHIEDEN (2026-09-09)
+**Beantwortet durch:** D-38 – die Tabelle entfällt in Pilot 1. Der folgende Text
+bleibt als Herleitung der Frage stehen.
+**Betraf:** TRC-006, TRC-007
 
 `trace.object_relation` (parent/child/relation_type) existiert ausschließlich
 im ER-Diagramm. Die Abstammung ist bereits vollständig über
@@ -1169,6 +1173,42 @@ Benutzer behandelt werden, ohne deren Existenz offenzulegen.
 
 ---
 
+## D-38 – `trace.object_relation` entfaellt in Pilot 1
+
+**Status:** ENTSCHIEDEN (2026-09-09)
+**Beantwortet:** D-10
+**Betrifft:** TRC-006, TRC-007, DOCS-016
+
+`trace.object_relation` wird in Pilot 1 **nicht angelegt**. Die Tabelle
+verschwindet aus dem ER-Diagramm.
+
+**Abstammung** wird ausschließlich über `trace.event_input` und
+`trace.event_output` abgebildet. Es gibt keine zweite Lineage-Quelle.
+
+**Behälterschachtelung** ist damit nicht verloren: `trace.logistic_unit` trägt
+im ER-Diagramm bereits ein selbstbezügliches `parent_unit_id`. Die in D-10 als
+Rückfalloption genannte Verwendung von `object_relation` für Schachtelung
+würde nur duplizieren, was dort schon modelliert ist.
+
+**Begründung:** Drei Punkte, jeder für sich ausreichend.
+
+1. Die Tabelle ist in Pilot 1 gar nicht implementierbar. Ihre beiden
+   Fremdschlüssel `parent_object_id` und `child_object_id` verweisen auf einen
+   `traceable_object`-Supertyp, den **D-28** für Pilot 1 ausdrücklich
+   gestrichen hat: physisch existiert nur `trace.lot`. Wer die Tabelle bauen
+   wollte, müsste zuerst neu festlegen, worauf diese Spalten zeigen — und
+   damit eine bereits beantwortete Frage wieder aufmachen.
+2. Zwei parallele Lineage-Quellen neben `event_input`/`event_output` sind ein
+   Datenintegritätsrisiko, wie schon D-10 festhält.
+3. Für die verbleibende Rückfallverwendung existiert bereits eine andere,
+   passendere Modellierung.
+
+**Nicht entschieden ist**, ob eine allgemeine Objektbeziehung nach Pilot 1
+wieder sinnvoll wird. Diese Entscheidung bleibt offen und braucht dann einen
+eigenen Eintrag; sie wird durch D-38 weder vorbereitet noch ausgeschlossen.
+
+---
+
 ## Nächste freie ID
 
-`D-38`
+`D-39`
