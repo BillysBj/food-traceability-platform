@@ -50,6 +50,15 @@ internal sealed class LotConfiguration : IEntityTypeConfiguration<Lot>
         builder.Property(lot => lot.CreatedAt)
             .IsRequired();
 
+        // This alternate key is intentionally redundant with the primary key. It is the
+        // target of composite FKs that structurally enforce tenant and exact unit equality.
+        builder.HasAlternateKey(lot => new
+        {
+            lot.Id,
+            lot.OrganizationId,
+            lot.UnitId,
+        }).HasName("ak_lot_lot_id_organization_id_unit_id");
+
         // The foreign keys to catalog.article and catalog.unit are added explicitly in the
         // migration. Configuring them here would require a project reference to the Catalog
         // module and would break module isolation (D-11).

@@ -307,6 +307,24 @@ public sealed class TraceabilityEventTests
         Assert.Equal((1, 1), (traceabilityEvent.Inputs.Count, traceabilityEvent.Outputs.Count));
     }
 
+    [Fact]
+    public void InputAndOutputListsCannotBeModifiedByCallers()
+    {
+        var traceabilityEvent = CreateEvent([CreateInput()], [CreateOutput()]);
+
+        Assert.Null(traceabilityEvent.Inputs as List<EventInput>);
+        var inputs = Assert.IsAssignableFrom<ICollection<EventInput>>(traceabilityEvent.Inputs);
+        Assert.Throws<NotSupportedException>(() => inputs.Add(CreateInput(
+            id: Guid.Parse("ed9ce71f-ce5d-421d-8644-4c7bd75c7874"),
+            lotId: Guid.Parse("f037dc54-c3c8-432e-8b1b-c39579d58833"))));
+
+        Assert.Null(traceabilityEvent.Outputs as List<EventOutput>);
+        var outputs = Assert.IsAssignableFrom<ICollection<EventOutput>>(traceabilityEvent.Outputs);
+        Assert.Throws<NotSupportedException>(() => outputs.Add(CreateOutput(
+            id: Guid.Parse("8adb73c7-85c8-4f2d-a35f-0f8d1e0d2a39"),
+            lotId: Guid.Parse("7754d4f6-f507-458d-a12f-7777cc27bd10"))));
+    }
+
     private static TraceabilityEvent CreateEvent(
         IReadOnlyList<EventInput>? inputs,
         IReadOnlyList<EventOutput>? outputs,
