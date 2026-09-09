@@ -59,6 +59,7 @@ public sealed class EventTypeTests
         Assert.Throws<TraceabilityDomainException>(() => EventType.Create(
             Guid.Empty,
             EventTypeCode.Create("PRESS"),
+            EventTypeClassification.Traceability,
             CreatedAt));
     }
 
@@ -68,6 +69,7 @@ public sealed class EventTypeTests
         Assert.Throws<TraceabilityDomainException>(() => EventType.Create(
             EventTypeId,
             null,
+            EventTypeClassification.Traceability,
             CreatedAt));
     }
 
@@ -76,10 +78,11 @@ public sealed class EventTypeTests
     {
         var code = EventTypeCode.Create("PRESS");
 
-        var eventType = EventType.Create(EventTypeId, code, CreatedAt);
+        var eventType = EventType.Create(EventTypeId, code, EventTypeClassification.Traceability, CreatedAt);
 
         Assert.Equal(EventTypeId, eventType.Id);
         Assert.Same(code, eventType.Code);
+        Assert.Equal(EventTypeClassification.Traceability, eventType.Classification);
         Assert.Equal(CreatedAt, eventType.CreatedAt);
     }
 }

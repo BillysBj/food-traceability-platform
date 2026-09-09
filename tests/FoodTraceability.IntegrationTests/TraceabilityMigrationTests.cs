@@ -28,11 +28,12 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(4, migrations.Length);
+        Assert.Equal(5, migrations.Length);
         Assert.EndsWith("_InitialTraceability", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddLotArticleAndQuantity", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddEventType", migrations[2], StringComparison.Ordinal);
         Assert.EndsWith("_AddTraceabilityEvent", migrations[3], StringComparison.Ordinal);
+        Assert.EndsWith("_AddEventTypeClassification", migrations[4], StringComparison.Ordinal);
     }
 
     [Fact]

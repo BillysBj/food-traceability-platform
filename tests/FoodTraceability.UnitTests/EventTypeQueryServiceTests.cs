@@ -1,4 +1,5 @@
 using FoodTraceability.Modules.Traceability.Application.EventTypes;
+using FoodTraceability.Modules.Traceability.Domain;
 
 namespace FoodTraceability.UnitTests;
 
@@ -12,9 +13,9 @@ public sealed class EventTypeQueryServiceTests
     {
         var service = new EventTypeQueryService(new StubEventTypeReader());
 
-        var result = await service.FindIdByCodeAsync("press", CancellationToken.None);
+        var result = await service.FindByCodeAsync("press", CancellationToken.None);
 
-        Assert.Equal(PressId, result);
+        Assert.Equal(PressId, result?.Id);
     }
 
     [Theory]
@@ -26,7 +27,7 @@ public sealed class EventTypeQueryServiceTests
     {
         var service = new EventTypeQueryService(new StubEventTypeReader());
 
-        var result = await service.FindIdByCodeAsync(code, CancellationToken.None);
+        var result = await service.FindByCodeAsync(code, CancellationToken.None);
 
         Assert.Null(result);
     }
@@ -57,10 +58,12 @@ public sealed class EventTypeQueryServiceTests
     {
         public int FindCodeByIdCallCount { get; private set; }
 
-        public Task<Guid?> FindIdByCodeAsync(
+        public Task<EventTypeLookup?> FindByCodeAsync(
             string code,
             CancellationToken cancellationToken) =>
-            Task.FromResult<Guid?>(code == "PRESS" ? PressId : null);
+            Task.FromResult<EventTypeLookup?>(code == "PRESS"
+                ? new EventTypeLookup(PressId, EventTypeClassification.Traceability)
+                : null);
 
         public Task<string?> FindCodeByIdAsync(
             Guid eventTypeId,

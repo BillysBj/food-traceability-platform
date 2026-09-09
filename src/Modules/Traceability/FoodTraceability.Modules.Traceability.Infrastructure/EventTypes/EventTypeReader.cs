@@ -6,7 +6,7 @@ namespace FoodTraceability.Modules.Traceability.Infrastructure.EventTypes;
 
 internal sealed class EventTypeReader(TraceabilityDbContext dbContext) : IEventTypeReader
 {
-    public Task<Guid?> FindIdByCodeAsync(
+    public Task<EventTypeLookup?> FindByCodeAsync(
         string code,
         CancellationToken cancellationToken)
     {
@@ -14,7 +14,7 @@ internal sealed class EventTypeReader(TraceabilityDbContext dbContext) : IEventT
         return dbContext.EventTypes
             .AsNoTracking()
             .Where(eventType => eventType.Code == eventTypeCode)
-            .Select(eventType => (Guid?)eventType.Id)
+            .Select(eventType => new EventTypeLookup(eventType.Id, eventType.Classification))
             .SingleOrDefaultAsync(cancellationToken);
     }
 

@@ -4,6 +4,7 @@ using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Organizations.Application.Organizations;
 using FoodTraceability.Modules.Traceability.Application.EventTypes;
 using FoodTraceability.Modules.Traceability.Application.Events;
+using FoodTraceability.Modules.Traceability.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,13 +25,14 @@ public sealed class TraceabilityEventsController(
     /// <remarks>
     /// Input and output lines contain only a lot identifier and quantity. Each line's unit
     /// is read from its referenced lot and cannot be selected by the caller.
+    /// Only event types classified as TRACEABILITY are allowed.
     /// </remarks>
     /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
     /// <param name="request">The event metadata and its input and output lot lines.</param>
     /// <param name="cancellationToken">Cancels request processing.</param>
     /// <returns>The newly created traceability event.</returns>
     /// <response code="201">Returns the newly created event.</response>
-    /// <response code="400">The request or one of its referenced resources is invalid.</response>
+    /// <response code="400">The request or a referenced resource is invalid, or the event type is not allowed for traceability events.</response>
     /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
     /// <response code="403">The caller lacks organization-wide trace.event.create permission.</response>
     /// <response code="409">An input exceeds its lot's available quantity.</response>
@@ -46,12 +48,18 @@ public sealed class TraceabilityEventsController(
         CreateTraceabilityEventRequest request,
         CancellationToken cancellationToken)
     {
-        var eventTypeId = await eventTypeQueryService.FindIdByCodeAsync(
+        var eventType = await eventTypeQueryService.FindByCodeAsync(
             request.EventTypeCode,
             cancellationToken);
-        if (eventTypeId is null)
+        if (eventType is null)
         {
             return ValidationError("The referenced event type does not exist.");
+        }
+
+        if (eventType.Classification != EventTypeClassification.Traceability)
+        {
+            return ValidationError(
+                $"Event type '{request.EventTypeCode}' is not allowed for traceability events.");
         }
 
         if (request.LocationId is not Guid locationId)
@@ -87,7 +95,7 @@ public sealed class TraceabilityEventsController(
             traceabilityEvent = await createService.CreateAsync(
                 new CreateTraceabilityEventCommand(
                     organizationId,
-                    eventTypeId.Value,
+                    eventType.Id,
                     locationId,
                     occurredAt,
                     request.ExternalReference,

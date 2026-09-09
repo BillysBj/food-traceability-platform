@@ -44,6 +44,11 @@ public sealed class EventTypeMigrationTests(PostgreSqlContainerFixture database)
                     "character varying",
                     EventTypeCode.MaximumLength),
                 new DatabaseColumn("created_at", "NO", "timestamp with time zone", null),
+                new DatabaseColumn(
+                    "classification",
+                    "NO",
+                    "character varying",
+                    EventTypeClassificationCodes.MaximumLength),
             ],
             columns);
     }
@@ -149,6 +154,7 @@ public sealed class EventTypeMigrationTests(PostgreSqlContainerFixture database)
         context.EventTypes.Add(EventType.Create(
             Guid.NewGuid(),
             EventTypeCode.Create("harvest"),
+            EventTypeClassification.Traceability,
             CreatedAt));
 
         var exception = await Assert.ThrowsAsync<DbUpdateException>(
@@ -157,6 +163,101 @@ public sealed class EventTypeMigrationTests(PostgreSqlContainerFixture database)
 
         Assert.Equal(PostgresErrorCodes.UniqueViolation, postgresException.SqlState);
         Assert.Equal("ix_event_type_code", postgresException.ConstraintName);
+    }
+
+    [Fact]
+    public async Task ClassificationColumnIsRequiredVarchar32()
+    {
+        const string sql = """
+            SELECT column_name, is_nullable, data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'trace'
+              AND table_name = 'event_type'
+              AND column_name = 'classification';
+            """;
+
+        var columns = await QueryAsync(sql, static reader => new DatabaseColumn(
+            reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetInt32(3)));
+
+        Assert.Equal(
+            new DatabaseColumn("classification", "NO", "character varying", 32),
+            Assert.Single(columns));
+    }
+
+    [Fact]
+    public async Task ClassificationCheckConstraintExists()
+    {
+        const string sql = """
+            SELECT conname
+            FROM pg_constraint
+            WHERE conrelid = 'trace.event_type'::regclass
+              AND contype = 'c'
+              AND conname = 'ck_event_type_classification';
+            """;
+
+        var constraints = await QueryAsync(sql, static reader => reader.GetString(0));
+
+        Assert.Equal("ck_event_type_classification", Assert.Single(constraints));
+    }
+
+    [Fact]
+    public async Task InvalidClassificationIsRejectedByTheExpectedCheckConstraint()
+    {
+        const string sql = """
+            INSERT INTO trace.event_type (event_type_id, code, created_at, classification)
+            VALUES (@id, 'INVALID_CLASSIFICATION_TEST', @created_at, 'UNKNOWN');
+            """;
+
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var connection = new NpgsqlConnection(database.TraceabilityConnectionString);
+        await connection.OpenAsync(timeout.Token);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("id", Guid.NewGuid());
+        command.Parameters.AddWithValue("created_at", CreatedAt);
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(
+            () => command.ExecuteNonQueryAsync(timeout.Token));
+
+        Assert.Equal("23514", exception.SqlState);
+        Assert.Equal("ck_event_type_classification", exception.ConstraintName);
+    }
+
+    [Fact]
+    public async Task AllNineteenEventTypesHaveExactlyTheDecidedClassification()
+    {
+        const string sql = """
+            SELECT code, classification
+            FROM trace.event_type
+            ORDER BY code;
+            """;
+
+        var eventTypes = await QueryAsync(
+            sql, static reader => (Code: reader.GetString(0), Classification: reader.GetString(1)));
+
+        Assert.Equal(19, eventTypes.Count);
+        Assert.Equal(
+            [
+                ("BLOCK", "QUALITY"),
+                ("BOTTLE", "TRACEABILITY"),
+                ("DELIVER", "LOGISTICS"),
+                ("DISPOSE", "TRACEABILITY"),
+                ("HARVEST", "TRACEABILITY"),
+                ("MIX", "TRACEABILITY"),
+                ("PACK", "DEFERRED"),
+                ("PRESS", "TRACEABILITY"),
+                ("PROCESS", "TRACEABILITY"),
+                ("QUALITY_RELEASE", "QUALITY"),
+                ("RECEIVE", "TRACEABILITY_AWAITING_LOGISTICS"),
+                ("RETURN", "TRACEABILITY_AWAITING_LOGISTICS"),
+                ("SAMPLE", "TRACEABILITY"),
+                ("SELL", "TRACEABILITY_AWAITING_LOGISTICS"),
+                ("SHIP", "LOGISTICS"),
+                ("SPLIT", "TRACEABILITY"),
+                ("STORE", "DEFERRED"),
+                ("TRANSFER", "LOGISTICS"),
+                ("UNBLOCK", "QUALITY"),
+            ],
+            eventTypes);
     }
 
     private async Task<IReadOnlyList<T>> QueryAsync<T>(
