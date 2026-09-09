@@ -85,6 +85,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-015** ID-007-Hinweis berichtigt und diese Liste vervollständigt — **Roadmap-Status: DONE**
 - **DOCS-016** D-10 über D-38 entschieden und `trace.object_relation` aus dem ER-Diagramm entfernt — **Roadmap-Status: DONE**
 - **DOCS-017** alle neunzehn Eventtypen klassifiziert und D-39 bis D-41 festgehalten — **Roadmap-Status: DONE**
+- **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen des Pflichttests fehlen weiterhin, weil TRC-010 und TRC-011 offen sind; TRC-013 bleibt deshalb NOT_STARTED.
 
 FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
@@ -351,6 +352,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-007** Event Persistence — **Roadmap-Status: DONE**
 - **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: DONE**
 - **TRC-008a** Zulaessige Eventtypen erzwingen (eingeschoben) — **Roadmap-Status: NOT_STARTED** — setzt D-39 um: `trace.event_type` erhaelt eine Klassifizierung, und ein Event mit einem nicht zugelassenen Typ wird abgelehnt.
+- **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen des Pflichttests fehlen weiterhin, weil TRC-010 und TRC-011 offen sind; TRC-013 bleibt deshalb NOT_STARTED.
 - **TRC-009** Cycle Protection — **Roadmap-Status: NOT_STARTED**
 - **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
 - **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
@@ -505,7 +507,7 @@ keinen Status je Task führte.
 9. Erst danach **TRC-005** und folgende
 
 Diese Reihenfolge folgt dem Setup-Pfad und nicht der Tasknummerierung. Der
-Zielpfad lautet: Organisation → Standort → Benutzer → Membership und Rolle →
+Zielpfad lautet: Organisation → Benutzer → Membership und Rolle → Standort →
 Produkt/Artikel → Lot → Traceability Event → Transformation → vollständige
 Vorwärts- und Rückwärtsverfolgung.
 
