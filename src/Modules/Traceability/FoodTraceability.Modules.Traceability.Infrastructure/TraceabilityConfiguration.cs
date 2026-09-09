@@ -1,5 +1,9 @@
 using FoodTraceability.BuildingBlocks;
+using FoodTraceability.Modules.Traceability.Application.EventTypes;
+using FoodTraceability.Modules.Traceability.Application.Events;
 using FoodTraceability.Modules.Traceability.Application.Lots;
+using FoodTraceability.Modules.Traceability.Infrastructure.EventTypes;
+using FoodTraceability.Modules.Traceability.Infrastructure.Events;
 using FoodTraceability.Modules.Traceability.Infrastructure.Lots;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +31,12 @@ public static class TraceabilityConfiguration
                 TraceabilityDbContext.Schema);
         });
         services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
+        services.AddScoped<IEventTypeReader, EventTypeReader>();
+        services.AddScoped<EventTypeQueryService>();
+        services.AddScoped<ITraceabilityEventReader, TraceabilityEventReader>();
+        services.AddScoped<ITraceabilityEventWriter, TraceabilityEventWriter>();
+        services.AddScoped<TraceabilityEventQueryService>();
+        services.AddScoped<CreateTraceabilityEventService>();
         services.AddScoped<ILotReader, LotReader>();
         services.AddScoped<ILotWriter, LotWriter>();
         services.AddScoped<LotQueryService>();

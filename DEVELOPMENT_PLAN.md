@@ -348,7 +348,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-005** Event Types — **Roadmap-Status: DONE**
 - **TRC-006** Traceability Event Domain Model — **Roadmap-Status: DONE**
 - **TRC-007** Event Persistence — **Roadmap-Status: DONE**
-- **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: NOT_STARTED**
+- **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: DONE**
 - **TRC-009** Cycle Protection — **Roadmap-Status: NOT_STARTED**
 - **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
 - **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
