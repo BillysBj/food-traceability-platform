@@ -8,6 +8,7 @@ using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Modules.Traceability.Infrastructure;
+using FoodTraceability.Modules.Traceability.Infrastructure.Traces;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -51,6 +52,11 @@ builder.Services.AddApiJwtBearerAuthentication();
 builder.Services.AddOrganizations();
 builder.Services.AddCatalog();
 builder.Services.AddTraceability();
+builder.Services.AddOptions<TraceGraphOptions>()
+    .Bind(builder.Configuration.GetSection(TraceGraphOptions.SectionName))
+    .Validate(static options => options.MaxNodes > 0,
+        "Traceability:Graph:MaxNodes must be greater than zero.")
+    .ValidateOnStart();
 builder.Services.AddApiAuthorization();
 builder.Services
     .AddHealthChecks()

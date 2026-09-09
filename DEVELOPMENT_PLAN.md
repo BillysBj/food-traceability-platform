@@ -354,9 +354,9 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-008a** Zulaessige Eventtypen erzwingen (eingeschoben) — **Roadmap-Status: DONE** — setzt D-39 um: `trace.event_type` erhaelt eine Klassifizierung, und ein Event mit einem nicht zugelassenen Typ wird abgelehnt.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen des Pflichttests fehlen weiterhin, weil TRC-010 und TRC-011 offen sind; TRC-013 bleibt deshalb NOT_STARTED.
 - **TRC-009** Cycle Protection — **Roadmap-Status: DONE**
-- **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
+- **TRC-010** Backward Trace — **Roadmap-Status: DONE**
 - **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
-- **TRC-012** Graph Response Model — **Roadmap-Status: NOT_STARTED**
+- **TRC-012** Graph Response Model — **Roadmap-Status: SUPERSEDED** — **Ersetzt durch:** Repository-Task **TRC-010**. Das Antwortmodell aus Knoten und Kanten ist mit TRC-010 entstanden und wird von TRC-011 mitbenutzt.
 - **TRC-013** End-to-End Traceability Tests — **Roadmap-Status: NOT_STARTED**
 - **TRC-014** Mixing Test — **Roadmap-Status: NOT_STARTED**
 - **TRC-015** Split Test — **Roadmap-Status: NOT_STARTED**
@@ -480,7 +480,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M1 – Identity Ready** — **ERREICHT**.
 - **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
-- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-008a**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**. TRC-001 bis TRC-008 sind DONE.
+- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-011**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**. TRC-001 bis TRC-010 einschließlich TRC-008a sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED).
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.

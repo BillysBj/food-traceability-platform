@@ -59,6 +59,10 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string TraceabilityEventConflictErrorCode =
         "TRACEABILITY_EVENT_CONFLICT";
     private const string TraceabilityEventNotFoundTitle = "Traceability event not found.";
+    private const string TraceabilityTraceNotFoundTitle = "Traceability trace not found.";
+    private const string TraceabilityTraceNotFoundErrorCode = "TRACEABILITY_TRACE_NOT_FOUND";
+    private const string TraceabilityTraceTooLargeTitle = "The trace exceeds the configured node limit.";
+    private const string TraceabilityTraceTooLargeErrorCode = "TRACEABILITY_TRACE_TOO_LARGE";
     private const string TraceabilityEventNotFoundErrorCode =
         "TRACEABILITY_EVENT_NOT_FOUND";
     private const string TraceabilityEventValidationTitle =
@@ -279,6 +283,21 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             StatusCodes.Status404NotFound,
             TraceabilityEventNotFoundTitle,
             TraceabilityEventNotFoundErrorCode);
+
+    public ProblemDetails CreateTraceabilityTraceNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status404NotFound,
+            TraceabilityTraceNotFoundTitle,
+            TraceabilityTraceNotFoundErrorCode);
+
+    public ProblemDetails CreateTraceabilityTraceTooLarge(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            TraceabilityTraceTooLargeTitle,
+            TraceabilityTraceTooLargeErrorCode,
+            detail);
 
     public ValidationProblemDetails CreateTraceabilityEventValidationError(
         HttpContext httpContext,

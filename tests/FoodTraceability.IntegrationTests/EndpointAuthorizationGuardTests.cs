@@ -62,6 +62,10 @@ public sealed class EndpointAuthorizationGuardTests
                 "/api/v1/organizations/{organizationId}/traceability/events/{eventId}",
                 "TraceabilityRead"),
             new(
+                "GET",
+                "/api/v1/organizations/{organizationId}/lots/{lotId}/traceability/backward",
+                "TraceabilityRead"),
+            new(
                 "POST",
                 "/api/v1/platform/organizations",
                 "PlatformOrganizationManage"),
