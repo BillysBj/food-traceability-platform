@@ -84,6 +84,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-014** M2-Gate bewertet, ORG-004 und ORG-002 abgeschlossen, ORG-002c zurückgestellt — **Roadmap-Status: DONE**
 - **DOCS-015** ID-007-Hinweis berichtigt und diese Liste vervollständigt — **Roadmap-Status: DONE**
 - **DOCS-016** D-10 über D-38 entschieden und `trace.object_relation` aus dem ER-Diagramm entfernt — **Roadmap-Status: DONE**
+- **DOCS-017** alle neunzehn Eventtypen klassifiziert und D-39 bis D-41 festgehalten — **Roadmap-Status: DONE**
 
 FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
@@ -349,6 +350,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-006** Traceability Event Domain Model — **Roadmap-Status: DONE**
 - **TRC-007** Event Persistence — **Roadmap-Status: DONE**
 - **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: DONE**
+- **TRC-008a** Zulaessige Eventtypen erzwingen (eingeschoben) — **Roadmap-Status: NOT_STARTED** — setzt D-39 um: `trace.event_type` erhaelt eine Klassifizierung, und ein Event mit einem nicht zugelassenen Typ wird abgelehnt.
 - **TRC-009** Cycle Protection — **Roadmap-Status: NOT_STARTED**
 - **TRC-010** Backward Trace — **Roadmap-Status: NOT_STARTED**
 - **TRC-011** Forward Trace — **Roadmap-Status: NOT_STARTED**
@@ -476,7 +478,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M1 – Identity Ready** — **ERREICHT**.
 - **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
-- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-005**, **TRC-006**, **TRC-007**, **TRC-008**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**.
+- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-008a**, **TRC-009**, **TRC-010**, **TRC-011**, **TRC-012**, **TRC-013**, **TRC-014**, **TRC-015**, **TRC-016** und **TRC-017**. TRC-001 bis TRC-008 sind DONE.
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
