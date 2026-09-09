@@ -65,6 +65,9 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-36 | Präzision persistierter Zeitpunkte | ENTSCHIEDEN |
 | D-37 | Plattformweite Benutzerverwaltung und Initialpasswort | ENTSCHIEDEN |
 | D-38 | `trace.object_relation` entfaellt in Pilot 1 | ENTSCHIEDEN |
+| D-39 | Zulaessige Eventtypen in `trace.traceability_event` | ENTSCHIEDEN |
+| D-40 | Organisationsuebergreifende Lineage ueber `logistics.delivery` | ENTSCHIEDEN |
+| D-41 | Probenahme: Menge im Event, Fachdaten in `quality.sample` | ENTSCHIEDEN |
 
 ---
 
@@ -1209,6 +1212,178 @@ eigenen Eintrag; sie wird durch D-38 weder vorbereitet noch ausgeschlossen.
 
 ---
 
+## D-39 – Zulaessige Eventtypen in `trace.traceability_event`
+
+**Status:** ENTSCHIEDEN (2026-09-09)
+**Setzt voraus:** D-28, D-29, D-32, D-38
+**Betrifft:** TRC-005, TRC-008, TRC-008a, TRC-009, QLT-001, LOG-003
+
+`trace.traceability_event` bildet **Materialfluss und Provenance** ab. Nicht
+verbrauchende Status-, Qualitaets- und Logistikvorgaenge werden **nicht**
+kuenstlich ueber Input und Output in den Provenance-Graphen gezwungen.
+
+Anlass: Die Verbrauchspruefung aus TRC-008 zaehlt jeden Input, ohne den
+Eventtyp anzusehen. Wuerde ein TRANSFER als „Lot rein, Lot raus" gebucht,
+haette er die volle Menge verbraucht und ein anschliessender PRESS scheiterte
+mit 409. Dieselbe Falle gilt fuer BLOCK und UNBLOCK.
+
+**Klassifizierung aller neunzehn Typen**
+
+| Gruppe | Typen | Einordnung |
+| --- | --- | --- |
+| A – erzeugt, verbraucht oder transformiert Lots | HARVEST, RECEIVE, PRESS, PROCESS, MIX, SPLIT, BOTTLE, SAMPLE, SELL, RETURN, DISPOSE | Traceability Event |
+| B – Bewegung ohne neue Abstammung | TRANSFER, SHIP, DELIVER | Logistics: `logistics.transport`, `logistics.delivery` |
+| C – Qualitaets- oder Statusaenderung | BLOCK, UNBLOCK, QUALITY_RELEASE | Quality: `quality.lot_block` |
+| D – fachlich offen, zurueckgestellt | STORE, PACK | siehe unten |
+
+Begruendungen zu den nicht offensichtlichen Faellen:
+
+- **RECEIVE, SELL, RETURN** sind Gruppe A, weil nach **D-29** bei einem
+  Organisationsuebergang beim Empfaenger ein **neues Lot** entsteht und beide
+  Seiten ueber die Traceability-Lineage verbunden werden.
+- **SAMPLE** ist Gruppe A, weil eine Probe dem Lot tatsaechlich Menge
+  entnimmt. Die fachliche Erfassung bleibt im Qualitaetsmodul; siehe **D-41**.
+- **DISPOSE** ist Gruppe A als reiner Verbrauch ohne Output.
+- **BOTTLE** ist Gruppe A und Teil des Pilot-Pflichtpfads
+  `OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001`.
+- **STORE** ist zurueckgestellt: `logistics.transport` beschreibt das Bewegen
+  **zwischen** Orten, nicht das Ruhen an einem. Ob Einlagerung ueberhaupt
+  erfasst werden soll, ist nirgends entschieden. Erneut zu bewerten mit
+  EPIC 7.
+- **PACK** ist zurueckgestellt: `trace.logistic_unit` mit `sscc` und
+  `parent_unit_id` modelliert das Verpacken, ist im ER-Diagramm aber als
+  Subtyp von `traceable_object` gezeichnet, den **D-28** fuer Pilot 1
+  gestrichen hat. Die Tabelle ist in Pilot 1 nicht baubar. Erneut zu bewerten,
+  sobald `logistic_unit` existiert.
+
+**Durchsetzung.** Die Einschraenkung wird erzwungen, nicht nur dokumentiert.
+`trace.event_type` erhaelt eine Klassifizierungsspalte, und das Anlegen eines
+Events mit einem nicht zugelassenen Typ wird mit **400** abgelehnt. Dieses Feld
+war in TRC-005 ausdruecklich abgelehnt worden, weil es dort Vorratshaltung
+gewesen waere. Mit dieser Entscheidung hat es eine konkrete Regel, die es
+traegt. Umsetzung: **TRC-008a**.
+
+**In Pilot 1 zugelassen** sind zunaechst nur die Typen der Gruppe A, deren
+Provenance vollstaendig innerhalb einer Organisation entsteht:
+HARVEST, PRESS, PROCESS, MIX, SPLIT, BOTTLE, SAMPLE und DISPOSE.
+
+**RECEIVE, SELL und RETURN bleiben Gruppe A, werden aber erst freigeschaltet,
+wenn LOG-003 und LOG-004 die Bruecke aus D-40 liefern.** Ein RECEIVE ohne
+Lieferbezug wuerde ein Lot ohne Herkunft erfassen, und diese Luecke liesse sich
+nachtraeglich nicht mehr schliessen.
+
+---
+
+## D-40 – Organisationsuebergreifende Lineage ueber `logistics.delivery`
+
+**Status:** ENTSCHIEDEN (2026-09-09)
+**Setzt voraus:** D-11, D-26, D-27, D-29, D-30, D-38
+**Betrifft:** TRC-010, TRC-011, LOG-003, LOG-004
+
+**D-29** verlangt, dass Sender- und Empfaengerlot eines
+Organisationsuebergangs explizit verbunden werden. **TRC-007** bindet jeden
+Input und Output ueber einen zusammengesetzten Fremdschluessel an die
+Organisation seines Events. Ein Event kann deshalb kein Lot einer anderen
+Organisation referenzieren.
+
+Das ist **kein Widerspruch**: D-29 nennt selbst `LOG-003`. Die Bruecke gehoert
+in das Logistikmodul.
+
+**Der Weg ueber die Grenze**
+
+```text
+Senderlot   --event_input-->   SELL-Event (Organisation X)
+Senderlot   --delivery_item.traceable_object_id-->
+                delivery (from_org = X, to_org = Y)
+                delivery_item.received_lot_id --> Empfaengerlot (Organisation Y)
+Empfaengerlot --event_output-- RECEIVE-Event (Organisation Y)
+```
+
+**Forward Trace** folgt innerhalb einer Organisation `event_input` und
+`event_output` und wechselt an der Grenze ueber
+`delivery_item.traceable_object_id` auf `received_lot_id`.
+**Backward Trace** ist spiegelbildlich: ueber `received_lot_id` zurueck auf
+`traceable_object_id` und `delivery.from_org_id`. Je Grenzuebertritt ein
+zusaetzlicher Join.
+
+Ein Spediteur ist **kein** Kettenglied. Er besitzt kein Lot und steht als
+`transport.carrier_org_id` am Transport.
+
+**Kein direkter Verweis zwischen Lots zweier Organisationen.** Wuerde das
+Empfaengerlot unmittelbar auf das Senderlot zeigen, koennte ein Empfaenger
+fremde Lot-Ids durchprobieren und aus dem Fehlerverhalten ablesen, welche
+existieren. Ueber eine Lieferung, die beide Organisationen namentlich fuehrt,
+entsteht diese Preisgabe nicht: `received_lot_id` ist nur auf Positionen einer
+an den Empfaenger adressierten Lieferung setzbar.
+
+**Sichtbarkeit** bleibt bei **D-30**: intern wird der vollstaendige Graph
+traversiert, die API gibt eine projizierte Sicht zurueck. Der unmittelbare
+Partner ist benannt, weiter entfernte Organisationen erscheinen anonymisiert.
+Die Traversierung wertet keine Berechtigung des Aufrufers aus.
+
+**Das bestehende Logistikmodell reicht dafuer nicht.** Erforderlich sind, ohne
+neue Tabelle:
+
+- `logistics.delivery_item.received_lot_id`, nullable, weil sie erst gesetzt
+  wird, wenn der Empfaenger annimmt
+- `logistics.delivery_item.to_organization_id`, denormalisiert, damit ein
+  zusammengesetzter Fremdschluessel `(received_lot_id, to_organization_id)`
+  strukturell erzwingt, dass das Empfaengerlot dem Empfaenger gehoert -
+  dasselbe Muster wie `organization_id` auf `event_input`
+- ein weiterer Alternate Key auf `trace.lot` ueber `(lot_id, organization_id)`
+  als Ziel dieses Fremdschluessels; der aus TRC-007 umfasst drei Spalten und
+  passt nicht
+
+Ein `traceability_event.delivery_id` ist **nicht** erforderlich; mit der
+Bruecke auf Positionsebene waere es Redundanz.
+
+Splittet ein Empfaenger eine Lieferposition in mehrere Lots, erfasst er ein
+RECEIVE und danach ein SPLIT im eigenen Haus. Beides ist bereits modelliert,
+und die Zuordnung bleibt eindeutig.
+
+Umsetzung in **LOG-003** und **LOG-004**, nicht vorher.
+
+---
+
+## D-41 – Probenahme: Menge im Traceability-Event, Fachdaten in `quality.sample`
+
+**Status:** ENTSCHIEDEN (2026-09-09)
+**Setzt voraus:** D-11, D-32, D-39
+**Betrifft:** QLT-001, TRC-008a
+
+Eine Probenahme entnimmt dem Lot tatsaechlich Menge. Diese Menge darf in der
+Traceability-Mengenbilanz **nicht fehlen**, auch nicht bei kleinen Mengen.
+Zugleich bleibt die Probenahme fachlich ein Vorgang des Qualitaetsmoduls.
+
+`quality.sample` fuehrt im ER-Diagramm **keine Mengenspalte**. Die Menge hat im
+Qualitaetsmodul also gar kein Zuhause. Daraus folgt die Aufteilung:
+
+- Die entnommene Menge existiert **genau einmal**, als `event_input` eines
+  SAMPLE-Events in `trace`.
+- `quality.sample` bleibt die fachliche Quelle fuer Probennummer, Art,
+  Zeitpunkt, Status und Laborergebnisse und erhaelt ein
+  `traceability_event_id` als Fremdschluessel auf das zugehoerige Event.
+- Es entstehen zwei Zeilen, aber **keine zwei unabhaengigen Mengendatensaetze**.
+  Die Menge steht an einer Stelle, und der Fremdschluessel macht die Probe vom
+  Event abhaengig.
+
+**Atomar ueber die Modulgrenze.** Der Quality-Service ruft den
+Traceability-**Application-Service** auf - der von **D-11** ausdruecklich
+vorgesehene Weg fuer fachliche Aenderungen an einem fremden Modul - und
+schreibt danach `quality.sample` mit der zurueckgegebenen Event-Id. Beides in
+einer Transaktion.
+
+**Mengen- und Nebenlaeufigkeitsregeln bleiben unveraendert**, weil der
+bestehende Schreibpfad aus TRC-008 unveraendert benutzt wird: Zeilensperre ueber
+`FOR UPDATE`, Verbrauchspruefung und Ablehnung mit 409 bei Ueberverbrauch
+gelten fuer eine Probenahme genauso wie fuer einen PRESS.
+
+**Offener technischer Punkt fuer QLT-001**, keine Entscheidung: Zwei
+Modul-DbContexts in einer Transaktion muessen sich eine `DbConnection` teilen.
+Ob die bestehende Registrierung das hergibt, ist noch nicht geprueft.
+
+---
+
 ## Nächste freie ID
 
-`D-39`
+`D-42`
