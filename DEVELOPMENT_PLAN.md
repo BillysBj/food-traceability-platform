@@ -344,7 +344,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-002** Lot Persistence, Migration, Constraints, Indizes — **Roadmap-Status: DONE**
 - **TRC-003** Create Lot API + Permission + Scope — **Roadmap-Status: DONE**
 - **TRC-004** Lot Read/List + Pagination/Filter — **Roadmap-Status: DONE**
-- **TRC-005** Event Types — **Roadmap-Status: NOT_STARTED**
+- **TRC-005** Event Types — **Roadmap-Status: DONE**
 - **TRC-006** Traceability Event Domain Model — **Roadmap-Status: NOT_STARTED**
 - **TRC-007** Event Persistence — **Roadmap-Status: NOT_STARTED**
 - **TRC-008** Create Traceability Event, mehrere Inputs/Outputs — **Roadmap-Status: NOT_STARTED**
