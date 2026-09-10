@@ -29,6 +29,39 @@ public sealed class TraceabilityEventEndpointTests(PostgreSqlContainerFixture da
     private static readonly TimeSpan DatabaseStateTimeout = TimeSpan.FromSeconds(10);
 
     [Fact]
+    public async Task CreateWithSubMicrosecondOccurredAtReturnsExactlyThePersistedUtcTicks()
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var input = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 10m);
+        var output = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 8m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, setup.Account, factory.RequestCancellationToken);
+        var microsecondValue = new DateTimeOffset(2026, 9, 9, 10, 0, 0, TimeSpan.Zero)
+            .AddTicks(1_234_560);
+        var request = ValidRequest(
+            setup.Organization.LocationId,
+            [new(input.Id, 10m)],
+            [new(output.Id, 8m)]) with
+        {
+            OccurredAt = microsecondValue.AddTicks(7)
+        };
+
+        using var createResponse = await client.PostAsJsonAsync(
+            EventCollectionPath(setup.Organization.Id), request, factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await ReadEventAsync(createResponse, factory.RequestCancellationToken);
+
+        using var getResponse = await client.GetAsync(
+            createResponse.Headers.Location, factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        var read = await ReadEventAsync(getResponse, factory.RequestCancellationToken);
+
+        Assert.Equal(created.OccurredAt.UtcTicks, read.OccurredAt.UtcTicks);
+        Assert.Equal(microsecondValue.UtcTicks, created.OccurredAt.UtcTicks);
+    }
+
+    [Fact]
     public async Task CreateWithInputAndOutputReturns201AndLocationCanBeRead()
     {
         var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);

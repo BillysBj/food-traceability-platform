@@ -1,4 +1,6 @@
+using FoodTraceability.BuildingBlocks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 
 namespace FoodTraceability.Platform.Persistence;
@@ -40,6 +42,17 @@ public static class PersistenceConventions
 
         configurationBuilder
             .Properties<DateTimeOffset>()
+            .HaveConversion<MicrosecondDateTimeOffsetConverter>()
             .HaveColumnType("timestamp with time zone");
+    }
+
+    public sealed class MicrosecondDateTimeOffsetConverter : ValueConverter<DateTimeOffset, DateTimeOffset>
+    {
+        public MicrosecondDateTimeOffsetConverter()
+            : base(
+                value => TimestampPrecision.TruncateToMicroseconds(value),
+                value => value)
+        {
+        }
     }
 }
