@@ -1,3 +1,4 @@
+using FoodTraceability.BuildingBlocks;
 using FoodTraceability.Modules.Traceability.Domain;
 
 namespace FoodTraceability.Modules.Traceability.Application.Events;
@@ -40,7 +41,7 @@ public sealed class CreateTraceabilityEventService(
             command.EventTypeId,
             command.OrganizationId,
             command.LocationId,
-            command.OccurredAt,
+            TimestampPrecision.TruncateToMicroseconds(command.OccurredAt),
             command.ExternalReference,
             command.Description,
             command.CreatedBy,

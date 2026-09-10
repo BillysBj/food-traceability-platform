@@ -17,12 +17,8 @@ public sealed class MicrosecondTimeProvider : TimeProvider
     public override long TimestampFrequency => _inner.TimestampFrequency;
 
     // D-36: PostgreSQL persists microseconds, so truncate before persistence to preserve exact values.
-    public override DateTimeOffset GetUtcNow()
-    {
-        var now = _inner.GetUtcNow();
-        var ticks = now.UtcTicks - now.UtcTicks % TimeSpan.TicksPerMicrosecond;
-        return new DateTimeOffset(ticks, TimeSpan.Zero);
-    }
+    public override DateTimeOffset GetUtcNow() =>
+        TimestampPrecision.TruncateToMicroseconds(_inner.GetUtcNow().ToUniversalTime());
 
     public override long GetTimestamp() => _inner.GetTimestamp();
 
