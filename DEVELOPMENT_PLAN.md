@@ -362,7 +362,7 @@ Milestone: `M3 – Catalog Ready`
 - **TRC-013** End-to-End Traceability Tests — **Roadmap-Status: DONE** — ein durchgehender Test weist alle drei Aussagen des Pflichttests an derselben über die echte API aufgebauten Kette nach.
 - **TRC-014** Mixing Test — **Roadmap-Status: DONE**
 - **TRC-015** Split Test — **Roadmap-Status: DONE**
-- **TRC-016** Cross-Tenant Traceability Test — **Roadmap-Status: NOT_STARTED**
+- **TRC-016** Cross-Tenant Traceability Test — **Roadmap-Status: DONE**
 - **TRC-017** Performance Baseline — **Roadmap-Status: NOT_STARTED**
 
 Pflichtconstraint:
@@ -482,7 +482,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M1 – Identity Ready** — **ERREICHT**.
 - **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
-- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-016** und **TRC-017**. TRC-001 bis TRC-011 einschließlich TRC-008a sowie TRC-013, TRC-013a, TRC-014 und TRC-015 sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED).
+- **M4 – Traceability Core Proven** — **NICHT ERREICHT**. Offen: **TRC-017**. TRC-001 bis TRC-011 einschließlich TRC-008a sowie TRC-013, TRC-013a, TRC-014, TRC-015 und TRC-016 sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED).
 - **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
