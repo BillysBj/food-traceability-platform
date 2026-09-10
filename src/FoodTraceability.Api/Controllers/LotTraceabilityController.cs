@@ -12,6 +12,7 @@ namespace FoodTraceability.Api.Controllers;
 [Route("api/v1/organizations/{organizationId:guid}/lots/{lotId:guid}/traceability")]
 public sealed class LotTraceabilityController(
     BackwardTraceQueryService queryService,
+    ForwardTraceQueryService forwardQueryService,
     UnitQueryService unitQueryService,
     ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
@@ -40,11 +41,45 @@ public sealed class LotTraceabilityController(
         Guid organizationId,
         Guid lotId,
         CancellationToken cancellationToken)
+        => await ReadGraphAsync(queryService.ReadAsync, organizationId, lotId, cancellationToken);
+
+    /// <summary>Returns all descendants of a lot within the route organization.</summary>
+    /// <remarks>
+    /// The root is included even when it has no descendants. Nodes and edges are unique.
+    /// Edges point from an event's input lot to its output lot, independently of traversal direction.
+    /// No partial graph is returned when Traceability:Graph:MaxNodes (default 1000) is exceeded.
+    /// </remarks>
+    /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
+    /// <param name="lotId">The root lot identifier.</param>
+    /// <param name="cancellationToken">Cancels request processing.</param>
+    /// <response code="200">The complete graph, including the root.</response>
+    /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
+    /// <response code="403">The caller lacks organization-wide trace.read permission.</response>
+    /// <response code="404">TRACEABILITY_TRACE_NOT_FOUND: the lot is missing or belongs to another organization.</response>
+    /// <response code="409">TRACEABILITY_TRACE_TOO_LARGE: the graph exceeds the configured node limit.</response>
+    [HttpGet("forward")]
+    [Authorize(Policy = AuthorizationPolicies.TraceabilityRead)]
+    [ProducesResponseType<TraceGraphResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<TraceGraphResponse>> Forward(
+        Guid organizationId,
+        Guid lotId,
+        CancellationToken cancellationToken)
+        => await ReadGraphAsync(forwardQueryService.ReadAsync, organizationId, lotId, cancellationToken);
+
+    private async Task<ActionResult<TraceGraphResponse>> ReadGraphAsync(
+        Func<Guid, Guid, CancellationToken, Task<TraceGraphDetails?>> readAsync,
+        Guid organizationId,
+        Guid lotId,
+        CancellationToken cancellationToken)
     {
         TraceGraphDetails? graph;
         try
         {
-            graph = await queryService.ReadAsync(organizationId, lotId, cancellationToken);
+            graph = await readAsync(organizationId, lotId, cancellationToken);
         }
         catch (TraceTooLargeException exception)
         {

@@ -35,6 +35,8 @@ public static class TraceabilityConfiguration
         services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IBackwardTraceReader, BackwardTraceReader>();
         services.AddScoped<BackwardTraceQueryService>();
+        services.AddScoped<IForwardTraceReader, ForwardTraceReader>();
+        services.AddScoped<ForwardTraceQueryService>();
         services.AddScoped<IEventTypeReader, EventTypeReader>();
         services.AddScoped<EventTypeQueryService>();
         services.AddScoped<ITraceabilityEventReader, TraceabilityEventReader>();
