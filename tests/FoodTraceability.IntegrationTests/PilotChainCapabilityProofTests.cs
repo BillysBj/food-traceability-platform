@@ -1,5 +1,4 @@
 // Pflichtkette aus dem Entwicklungsplan: OL-001 -> PRESS -> OIL-001 -> BOTTLE -> BOT-001.
-// Backward(BOT-001) und Forward(OL-001) fehlen bewusst, solange TRC-010 und TRC-011 offen sind.
 
 using System.Net;
 using System.Net.Http.Headers;
@@ -11,6 +10,7 @@ using FoodTraceability.Api.Contracts.Memberships;
 using FoodTraceability.Api.Contracts.Organizations;
 using FoodTraceability.Api.Contracts.Products;
 using FoodTraceability.Api.Contracts.TraceabilityEvents;
+using FoodTraceability.Api.Contracts.Traces;
 using FoodTraceability.Api.Contracts.Users;
 using FoodTraceability.Modules.Identity.Domain;
 using Microsoft.AspNetCore.Identity;
@@ -30,157 +30,10 @@ public sealed class PilotChainCapabilityProofTests(PostgreSqlContainerFixture da
     [Fact]
     public async Task RealApiRecordsPressAndBottleAsOneConnectedPilotChain()
     {
-        var administrator = await CreatePlatformAdministratorAsync();
         await using var factory = CreateFactory();
-        using var administratorClient = factory.CreateClient();
-        await AuthenticateAsync(
-            administratorClient,
-            administrator.Email,
-            administrator.Password,
-            factory.RequestCancellationToken);
-
-        var suffix = Guid.NewGuid().ToString("N");
-        var organization = await PostAndReadCreatedAsync<OrganizationResponse>(
-            administratorClient,
-            "/api/v1/platform/organizations",
-            new CreateOrganizationRequest(
-                $"TRC-013a Pilot Organization {suffix}",
-                VatId: null,
-                TaxNumber: null,
-                Email: null,
-                Phone: null),
-            factory.RequestCancellationToken);
-
-        var memberEmail = $"trc-013a-producer-{suffix}@example.com";
-        var member = await PostAndReadCreatedAsync<UserResponse>(
-            administratorClient,
-            "/api/v1/platform/users",
-            new CreateUserRequest(
-                memberEmail,
-                "Pilot",
-                "Producer",
-                ValidPassword),
-            factory.RequestCancellationToken);
-
-        await PostExpectingCreatedAsync(
-            administratorClient,
-            MemberCollectionPath(organization.Id),
-            new AddMemberRequest(member.Id),
-            factory.RequestCancellationToken);
-        await PostExpectingCreatedAsync(
-            administratorClient,
-            RoleCollectionPath(organization.Id, member.Id),
-            new AssignRoleRequest(StandardRoleIds.OrganizationAdmin),
-            factory.RequestCancellationToken);
-        await PostExpectingCreatedAsync(
-            administratorClient,
-            RoleCollectionPath(organization.Id, member.Id),
-            new AssignRoleRequest(StandardRoleIds.Producer),
-            factory.RequestCancellationToken);
-
-        var olivesProduct = await CreateProductAsync(
-            administratorClient,
-            $"TRC013A-OLIVES-{suffix}",
-            "Olives",
-            factory.RequestCancellationToken);
-        var oilProduct = await CreateProductAsync(
-            administratorClient,
-            $"TRC013A-OIL-{suffix}",
-            "Olive Oil",
-            factory.RequestCancellationToken);
-        var bottlesProduct = await CreateProductAsync(
-            administratorClient,
-            $"TRC013A-BOTTLES-{suffix}",
-            "Bottled Olive Oil",
-            factory.RequestCancellationToken);
-
         using var producerClient = factory.CreateClient();
-        await AuthenticateAsync(
-            producerClient,
-            memberEmail,
-            ValidPassword,
-            factory.RequestCancellationToken);
-
-        var location = await PostAndReadCreatedAsync<LocationResponse>(
-            producerClient,
-            LocationCollectionPath(organization.Id),
-            new CreateLocationRequest(
-                "Pilot Olive Mill",
-                "Kalamata",
-                "Peloponnese",
-                "GR",
-                Latitude: null,
-                Longitude: null),
-            factory.RequestCancellationToken);
-
-        var olivesArticle = await CreateArticleAsync(
-            producerClient,
-            organization.Id,
-            olivesProduct.Id,
-            "OLIVES-001",
-            factory.RequestCancellationToken);
-        var oilArticle = await CreateArticleAsync(
-            producerClient,
-            organization.Id,
-            oilProduct.Id,
-            "OIL-001",
-            factory.RequestCancellationToken);
-        var bottlesArticle = await CreateArticleAsync(
-            producerClient,
-            organization.Id,
-            bottlesProduct.Id,
-            "BOTTLES-001",
-            factory.RequestCancellationToken);
-
-        var oliveLot = await CreateLotAsync(
-            producerClient,
-            organization.Id,
-            olivesArticle.Id,
-            "OL-001",
-            OliveQuantity,
-            "KG",
-            factory.RequestCancellationToken);
-        var oilLot = await CreateLotAsync(
-            producerClient,
-            organization.Id,
-            oilArticle.Id,
-            "OIL-001",
-            OilQuantity,
-            "L",
-            factory.RequestCancellationToken);
-        var bottleLot = await CreateLotAsync(
-            producerClient,
-            organization.Id,
-            bottlesArticle.Id,
-            "BOT-001",
-            BottleQuantity,
-            "PCS",
-            factory.RequestCancellationToken);
-
-        var press = await CreateEventAsync(
-            producerClient,
-            organization.Id,
-            new CreateTraceabilityEventRequest(
-                "PRESS",
-                location.Id,
-                DateTimeOffset.UtcNow,
-                $"TRC-013a-PRESS-{suffix}",
-                "Pilot chain capability proof: olives to oil",
-                [new TraceabilityEventLotRequest(oliveLot.Id, OliveQuantity)],
-                [new TraceabilityEventLotRequest(oilLot.Id, OilQuantity)]),
-            factory.RequestCancellationToken);
-        var bottle = await CreateEventAsync(
-            producerClient,
-            organization.Id,
-            new CreateTraceabilityEventRequest(
-                "BOTTLE",
-                location.Id,
-                DateTimeOffset.UtcNow,
-                $"TRC-013a-BOTTLE-{suffix}",
-                "Pilot chain capability proof: oil to bottles",
-                [new TraceabilityEventLotRequest(oilLot.Id, OilQuantity)],
-                [new TraceabilityEventLotRequest(bottleLot.Id, BottleQuantity)]),
-            factory.RequestCancellationToken);
+        var (organization, location, oliveLot, oilLot, bottleLot, press, bottle) =
+            await CreatePilotChainAsync(factory, producerClient);
 
         Assert.Equal(
             EventPath(organization.Id, press.Body.Id),
@@ -302,6 +155,244 @@ public sealed class PilotChainCapabilityProofTests(PostgreSqlContainerFixture da
         Assert.Equal(OliveQuantity, persistedLots[oliveLot.Id].Quantity);
         Assert.Equal(OilQuantity, persistedLots[oilLot.Id].Quantity);
         Assert.Equal(BottleQuantity, persistedLots[bottleLot.Id].Quantity);
+    }
+
+    // EPIC 4, Pflichttest aus DEVELOPMENT_PLAN.md:
+    // OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001
+    // Backward(BOT-001) enthält OIL-001 und OL-001. Forward(OL-001) enthält OIL-001 und BOT-001.
+    [Fact]
+    public async Task RealApiRecordsPilotChainAndTracesItBackwardAndForward()
+    {
+        await using var factory = CreateFactory();
+        using var producerClient = factory.CreateClient();
+        var (organization, _, oliveLot, oilLot, bottleLot, press, bottle) =
+            await CreatePilotChainAsync(factory, producerClient);
+
+        using var backwardResponse = await producerClient.GetAsync(
+            $"{LotCollectionPath(organization.Id)}/{bottleLot.Id}/traceability/backward",
+            factory.RequestCancellationToken);
+        using var forwardResponse = await producerClient.GetAsync(
+            $"{LotCollectionPath(organization.Id)}/{oliveLot.Id}/traceability/forward",
+            factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.OK, backwardResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, forwardResponse.StatusCode);
+        var backward = await ReadRequiredAsync<TraceGraphResponse>(
+            backwardResponse.Content, factory.RequestCancellationToken);
+        var forward = await ReadRequiredAsync<TraceGraphResponse>(
+            forwardResponse.Content, factory.RequestCancellationToken);
+
+        TraceEdgeResponse[] expectedEdges =
+        [
+            new(press.Body.Id, "PRESS", press.Body.OccurredAt, oliveLot.Id, oilLot.Id),
+            new(bottle.Body.Id, "BOTTLE", bottle.Body.OccurredAt, oilLot.Id, bottleLot.Id),
+        ];
+
+        // Evaluate all three mandatory statements even when one of them fails.
+        Assert.Multiple(
+            () =>
+            {
+                // Pflichtaussage 1: OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001.
+                Assert.Equal("OL-001", oliveLot.LotNumber);
+                Assert.Equal("OIL-001", oilLot.LotNumber);
+                Assert.Equal("BOT-001", bottleLot.LotNumber);
+                Assert.Equal("PRESS", press.Body.EventTypeCode);
+                Assert.Equal("BOTTLE", bottle.Body.EventTypeCode);
+                Assert.Equal(oliveLot.Id, Assert.Single(press.Body.Inputs).LotId);
+                Assert.Equal(oilLot.Id, Assert.Single(press.Body.Outputs).LotId);
+                Assert.Equal(oilLot.Id, Assert.Single(bottle.Body.Inputs).LotId);
+                Assert.Equal(bottleLot.Id, Assert.Single(bottle.Body.Outputs).LotId);
+            },
+            () =>
+            {
+                // Pflichtaussage 2: Backward(BOT-001) enthält OIL-001 und OL-001.
+                Assert.Contains(backward.Nodes, node => node.LotId == oilLot.Id && node.LotNumber == "OIL-001");
+                Assert.Contains(backward.Nodes, node => node.LotId == oliveLot.Id && node.LotNumber == "OL-001");
+                Assert.Equal(bottleLot.Id, backward.RootLotId);
+                Assert.Contains(backward.Nodes, node => node.LotId == bottleLot.Id && node.LotNumber == "BOT-001");
+                Assert.Equal(3, backward.Nodes.Count);
+                Assert.Equal(3, backward.Nodes.Select(node => node.LotId).Distinct().Count());
+                Assert.Equal(expectedEdges.OrderBy(edge => edge.EventId), backward.Edges.OrderBy(edge => edge.EventId));
+            },
+            () =>
+            {
+                // Pflichtaussage 3: Forward(OL-001) enthält OIL-001 und BOT-001.
+                Assert.Contains(forward.Nodes, node => node.LotId == oilLot.Id && node.LotNumber == "OIL-001");
+                Assert.Contains(forward.Nodes, node => node.LotId == bottleLot.Id && node.LotNumber == "BOT-001");
+                Assert.Equal(oliveLot.Id, forward.RootLotId);
+                Assert.Contains(forward.Nodes, node => node.LotId == oliveLot.Id && node.LotNumber == "OL-001");
+                Assert.Equal(3, forward.Nodes.Count);
+                Assert.Equal(3, forward.Nodes.Select(node => node.LotId).Distinct().Count());
+                Assert.Equal(expectedEdges.OrderBy(edge => edge.EventId), forward.Edges.OrderBy(edge => edge.EventId));
+            },
+            () =>
+            {
+                // Both graphs retain the same input → output direction, including event metadata.
+                Assert.Equal(backward.Edges.OrderBy(edge => edge.EventId), forward.Edges.OrderBy(edge => edge.EventId));
+            });
+    }
+
+    private async Task<(
+        OrganizationResponse Organization,
+        LocationResponse Location,
+        LotResponse OliveLot,
+        LotResponse OilLot,
+        LotResponse BottleLot,
+        (TraceabilityEventResponse Body, Uri Location) Press,
+        (TraceabilityEventResponse Body, Uri Location) Bottle)> CreatePilotChainAsync(
+            ApiWebApplicationFactory factory,
+            HttpClient producerClient)
+    {
+        var administrator = await CreatePlatformAdministratorAsync();
+        using var administratorClient = factory.CreateClient();
+        await AuthenticateAsync(
+            administratorClient,
+            administrator.Email,
+            administrator.Password,
+            factory.RequestCancellationToken);
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var organization = await PostAndReadCreatedAsync<OrganizationResponse>(
+            administratorClient,
+            "/api/v1/platform/organizations",
+            new CreateOrganizationRequest(
+                $"TRC-013a Pilot Organization {suffix}",
+                VatId: null,
+                TaxNumber: null,
+                Email: null,
+                Phone: null),
+            factory.RequestCancellationToken);
+
+        var memberEmail = $"trc-013a-producer-{suffix}@example.com";
+        var member = await PostAndReadCreatedAsync<UserResponse>(
+            administratorClient,
+            "/api/v1/platform/users",
+            new CreateUserRequest(
+                memberEmail,
+                "Pilot",
+                "Producer",
+                ValidPassword),
+            factory.RequestCancellationToken);
+
+        await PostExpectingCreatedAsync(
+            administratorClient,
+            MemberCollectionPath(organization.Id),
+            new AddMemberRequest(member.Id),
+            factory.RequestCancellationToken);
+        await PostExpectingCreatedAsync(
+            administratorClient,
+            RoleCollectionPath(organization.Id, member.Id),
+            new AssignRoleRequest(StandardRoleIds.OrganizationAdmin),
+            factory.RequestCancellationToken);
+        await PostExpectingCreatedAsync(
+            administratorClient,
+            RoleCollectionPath(organization.Id, member.Id),
+            new AssignRoleRequest(StandardRoleIds.Producer),
+            factory.RequestCancellationToken);
+
+        await AuthenticateAsync(
+            producerClient,
+            memberEmail,
+            ValidPassword,
+            factory.RequestCancellationToken);
+
+        var location = await PostAndReadCreatedAsync<LocationResponse>(
+            producerClient,
+            LocationCollectionPath(organization.Id),
+            new CreateLocationRequest(
+                "Pilot Olive Mill",
+                "Kalamata",
+                "Peloponnese",
+                "GR",
+                Latitude: null,
+                Longitude: null),
+            factory.RequestCancellationToken);
+
+        var olivesProduct = await CreateProductAsync(
+            administratorClient,
+            $"TRC013A-OLIVES-{suffix}",
+            "Olives",
+            factory.RequestCancellationToken);
+        var oilProduct = await CreateProductAsync(
+            administratorClient,
+            $"TRC013A-OIL-{suffix}",
+            "Olive Oil",
+            factory.RequestCancellationToken);
+        var bottlesProduct = await CreateProductAsync(
+            administratorClient,
+            $"TRC013A-BOTTLES-{suffix}",
+            "Bottled Olive Oil",
+            factory.RequestCancellationToken);
+
+        var olivesArticle = await CreateArticleAsync(
+            producerClient,
+            organization.Id,
+            olivesProduct.Id,
+            "OLIVES-001",
+            factory.RequestCancellationToken);
+        var oilArticle = await CreateArticleAsync(
+            producerClient,
+            organization.Id,
+            oilProduct.Id,
+            "OIL-001",
+            factory.RequestCancellationToken);
+        var bottlesArticle = await CreateArticleAsync(
+            producerClient,
+            organization.Id,
+            bottlesProduct.Id,
+            "BOTTLES-001",
+            factory.RequestCancellationToken);
+
+        var oliveLot = await CreateLotAsync(
+            producerClient,
+            organization.Id,
+            olivesArticle.Id,
+            "OL-001",
+            OliveQuantity,
+            "KG",
+            factory.RequestCancellationToken);
+        var oilLot = await CreateLotAsync(
+            producerClient,
+            organization.Id,
+            oilArticle.Id,
+            "OIL-001",
+            OilQuantity,
+            "L",
+            factory.RequestCancellationToken);
+        var bottleLot = await CreateLotAsync(
+            producerClient,
+            organization.Id,
+            bottlesArticle.Id,
+            "BOT-001",
+            BottleQuantity,
+            "PCS",
+            factory.RequestCancellationToken);
+
+        var press = await CreateEventAsync(
+            producerClient,
+            organization.Id,
+            new CreateTraceabilityEventRequest(
+                "PRESS",
+                location.Id,
+                DateTimeOffset.UtcNow,
+                $"TRC-013a-PRESS-{suffix}",
+                "Pilot chain capability proof: olives to oil",
+                [new TraceabilityEventLotRequest(oliveLot.Id, OliveQuantity)],
+                [new TraceabilityEventLotRequest(oilLot.Id, OilQuantity)]),
+            factory.RequestCancellationToken);
+        var bottle = await CreateEventAsync(
+            producerClient,
+            organization.Id,
+            new CreateTraceabilityEventRequest(
+                "BOTTLE",
+                location.Id,
+                DateTimeOffset.UtcNow,
+                $"TRC-013a-BOTTLE-{suffix}",
+                "Pilot chain capability proof: oil to bottles",
+                [new TraceabilityEventLotRequest(oilLot.Id, OilQuantity)],
+                [new TraceabilityEventLotRequest(bottleLot.Id, BottleQuantity)]),
+            factory.RequestCancellationToken);
+
+        return (organization, location, oliveLot, oilLot, bottleLot, press, bottle);
     }
 
     private ApiWebApplicationFactory CreateFactory() =>
