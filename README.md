@@ -41,43 +41,78 @@ Put machine-specific Compose changes in `docker-compose.override.yml`. The file 
 
 Set the local PostgreSQL connection string through the standard .NET configuration environment variable `ConnectionStrings__FoodTraceability`. Keep its value in the local environment only; do not add credentials to tracked configuration files. Alternatively, the API can read machine-specific configuration from the already ignored `appsettings.Local.json` when the `Local` environment is selected.
 
-Apply the platform migrations from the repository root:
+Five contexts own migrations, and they must be applied **in this order**:
+
+1. `PlatformDbContext`
+2. `OrganizationsDbContext`
+3. `IdentityDbContext`
+4. `CatalogDbContext`
+5. `TraceabilityDbContext`
+
+The order is not a preference. Identity, Catalog and Traceability declare cross-schema foreign keys into schemas owned by other modules, and PostgreSQL rejects a foreign key whose target schema does not exist yet. Applying Identity before Organizations fails with:
+
+```text
+3F000: schema "org" does not exist
+```
+
+Apply the migrations from the repository root:
 
 ```sh
 dotnet ef database update --project src/Platform/FoodTraceability.Platform.Persistence --startup-project src/FoodTraceability.Api --context PlatformDbContext
 ```
 
-Check that the migration matches the current model:
-
 ```sh
-dotnet ef migrations has-pending-model-changes --project src/Platform/FoodTraceability.Platform.Persistence --startup-project src/FoodTraceability.Api --context PlatformDbContext
+dotnet ef database update --project src/Modules/Organizations/FoodTraceability.Modules.Organizations.Infrastructure --startup-project src/FoodTraceability.Api --context OrganizationsDbContext
 ```
-
-Apply the Identity module migrations through its design-time factory:
 
 ```sh
 dotnet ef database update --project src/Modules/Identity/FoodTraceability.Modules.Identity.Infrastructure --startup-project src/FoodTraceability.Api --context IdentityDbContext
 ```
 
-Check that the Identity migration matches the current model:
-
 ```sh
-dotnet ef migrations has-pending-model-changes --project src/Modules/Identity/FoodTraceability.Modules.Identity.Infrastructure --startup-project src/FoodTraceability.Api --context IdentityDbContext
+dotnet ef database update --project src/Modules/Catalog/FoodTraceability.Modules.Catalog.Infrastructure --startup-project src/FoodTraceability.Api --context CatalogDbContext
 ```
 
-Apply the Organizations module migrations through its design-time factory:
-
 ```sh
-dotnet ef database update --project src/Modules/Organizations/FoodTraceability.Modules.Organizations.Infrastructure --startup-project src/FoodTraceability.Api --context OrganizationsDbContext
+dotnet ef database update --project src/Modules/Traceability/FoodTraceability.Modules.Traceability.Infrastructure --startup-project src/FoodTraceability.Api --context TraceabilityDbContext
 ```
 
-Check that the Organizations migration matches the current model:
+Check that each migration still matches its model by running the same five commands with `migrations has-pending-model-changes` instead of `database update`, for example:
 
 ```sh
-dotnet ef migrations has-pending-model-changes --project src/Modules/Organizations/FoodTraceability.Modules.Organizations.Infrastructure --startup-project src/FoodTraceability.Api --context OrganizationsDbContext
+dotnet ef migrations has-pending-model-changes --project src/Platform/FoodTraceability.Platform.Persistence --startup-project src/FoodTraceability.Api --context PlatformDbContext
 ```
 
 Migrations deliberately do not run automatically when the API starts. Apply them explicitly during deployment or local setup.
+
+## First platform administrator
+
+A freshly migrated database contains no users. There is no seed, no creation at application startup, no creation through a migration and no default credentials; see decision D-34 in `docs/DECISIONS.md`. The only way to create the first platform administrator is an explicit operator action:
+
+```sh
+dotnet run --project src/FoodTraceability.Cli -- bootstrap-platform-admin --email <email> --first-name <first name> --last-name <last name>
+```
+
+The command needs the same `ConnectionStrings__FoodTraceability` value as the migrations.
+
+The password is **not** a command-line argument. It is read interactively, twice, without echo, and must be at least 15 characters long. The command therefore requires a real terminal and refuses redirected input:
+
+```text
+Bootstrap requires an interactive terminal; redirected input is not supported.
+```
+
+If a platform administrator already exists, the command declines by default.
+
+## Setting up a usable system
+
+After the bootstrap, everything else is created through the API, in this order:
+
+```text
+organization -> user -> membership + role -> location
+-> product/article -> lot -> traceability event
+```
+
+The location comes **after** the role assignment, not before it. Creating a location requires the organization-scoped `organization.manage` permission, which a platform administrator does not hold — decision D-27 keeps platform permissions and organization permissions strictly apart. Assign a role that carries `organization.manage`, such as `OrganizationAdmin`, to a member of that organization first; that member can then create the location. A user may hold several roles in the same organization.
 
 ## Running the tests
 
