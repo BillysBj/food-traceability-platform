@@ -1,6 +1,7 @@
 using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Infrastructure;
+using FoodTraceability.Modules.Quality.Infrastructure;
 using FoodTraceability.Modules.Traceability.Infrastructure;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private string? _lotApiConnectionString;
     private string? _organizationsConnectionString;
     private string? _platformAdminBootstrapConnectionString;
+    private string? _qualityConnectionString;
     private string? _traceabilityConnectionString;
 
     public string ConnectionString => GetContainer().GetConnectionString();
@@ -45,6 +47,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     public string TraceabilityConnectionString => _traceabilityConnectionString
         ?? throw new InvalidOperationException("The Traceability test database is not initialized.");
+
+    public string QualityConnectionString => _qualityConnectionString
+        ?? throw new InvalidOperationException("The Quality test database is not initialized.");
 
     public async Task InitializeAsync()
     {
@@ -81,6 +86,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             _traceabilityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_traceability_tests_{Guid.NewGuid():N}",
                 timeout.Token);
+            _qualityConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_quality_tests_{Guid.NewGuid():N}",
+                timeout.Token);
         }
         catch (Exception exception)
         {
@@ -109,6 +117,18 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             await using var catalogContext = CreateCatalogDbContext();
             await catalogContext.Database.MigrateAsync(timeout.Token);
+
+            // Quality owns no Catalog entities. Its migration-level cross-schema FK
+            // requires the referenced catalog table to exist in the same database first.
+            // Catalog in turn requires Organizations before its own migration can run.
+            await using var qualityOrganizationsContext = CreateQualityOrganizationsDbContext();
+            await qualityOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var qualityCatalogContext = CreateQualityCatalogDbContext();
+            await qualityCatalogContext.Database.MigrateAsync(timeout.Token);
+
+            await using var qualityContext = CreateQualityDbContext();
+            await qualityContext.Database.MigrateAsync(timeout.Token);
 
             // Identity owns no Organizations entities. Its migration-level cross-schema FKs
             // nevertheless require the referenced org tables to exist in the same database.
@@ -377,6 +397,36 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             CatalogDbContext.Schema);
 
         return new CatalogDbContext(optionsBuilder.Options);
+    }
+
+    public QualityDbContext CreateQualityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<QualityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            QualityConnectionString,
+            QualityDbContext.Schema);
+
+        return new QualityDbContext(optionsBuilder.Options);
+    }
+
+    public CatalogDbContext CreateQualityCatalogDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<CatalogDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            QualityConnectionString,
+            CatalogDbContext.Schema);
+
+        return new CatalogDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateQualityOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            QualityConnectionString,
+            OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
     }
 
     private async Task<string> CreateDatabaseAsync(

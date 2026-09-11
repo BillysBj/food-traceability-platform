@@ -89,6 +89,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-017** alle neunzehn Eventtypen klassifiziert und D-39 bis D-41 festgehalten — **Roadmap-Status: DONE**
 - **DOCS-018** Setup-Dokumentation im README vervollstaendigt — **Roadmap-Status: DONE** — alle fuenf Migrationen statt drei, die nachgewiesene Reihenfolge Platform → Organizations → Identity → Catalog → Traceability anstelle der bisherigen, die mit `3F000: schema "org" does not exist` scheiterte, dazu der Bootstrap des ersten PlatformAdministrators nach D-34 und die Setup-Reihenfolge bis zum ersten Traceability-Flow. In einer isolierten Wegwerf-Datenbank verifiziert.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen waren nicht Teil von TRC-013a; TRC-013 ergänzt den durchgehenden Test aller drei Pflichtaussagen an derselben über die API aufgebauten Kette.
+- **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 
 FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
@@ -384,6 +385,7 @@ Milestone: `M4 – Traceability Core Proven`
 
 # EPIC 5 – Quality
 
+- **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 - **QLT-001** Quality Parameter — **Roadmap-Status: NOT_STARTED**
 - **QLT-002** Sample — **Roadmap-Status: NOT_STARTED**
 - **QLT-003** Lab Result — **Roadmap-Status: NOT_STARTED**
