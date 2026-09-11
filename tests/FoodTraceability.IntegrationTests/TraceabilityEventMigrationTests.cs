@@ -625,6 +625,48 @@ public sealed class TraceabilityEventMigrationTests(PostgreSqlContainerFixture d
             indexes);
     }
 
+    [Fact]
+    public async Task EventIndexesAreNonUniqueWithRequiredLeadingColumns()
+    {
+        const string sql = """
+            SELECT index_table.relname,
+                   index_metadata.indisunique,
+                   leading_column.attname
+            FROM pg_catalog.pg_index AS index_metadata
+            JOIN pg_catalog.pg_class AS index_table
+              ON index_table.oid = index_metadata.indexrelid
+            JOIN pg_catalog.pg_class AS source_table
+              ON source_table.oid = index_metadata.indrelid
+            JOIN pg_catalog.pg_namespace AS source_schema
+              ON source_schema.oid = source_table.relnamespace
+            JOIN pg_catalog.pg_attribute AS leading_column
+              ON leading_column.attrelid = source_table.oid
+             AND leading_column.attnum = index_metadata.indkey[0]
+            WHERE source_schema.nspname = 'trace'
+              AND source_table.relname = 'traceability_event'
+              AND index_metadata.indisvalid
+              AND index_metadata.indisready;
+            """;
+
+        var indexes = await QueryAsync(
+            sql,
+            static reader => (
+                Name: reader.GetString(0),
+                IsUnique: reader.GetBoolean(1),
+                LeadingColumn: reader.GetString(2)));
+
+        foreach (var column in new[] { "occurred_at", "organization_id" })
+        {
+            var indexName = $"ix_traceability_event_{column}";
+            Assert.True(
+                indexes.Any(index => index.Name == indexName
+                    && !index.IsUnique
+                    && index.LeadingColumn == column),
+                $"Missing non-unique index {indexName} on trace.traceability_event "
+                + $"with leading column {column}.");
+        }
+    }
+
     private async Task<EventData> CreateEventDataAsync()
     {
         var organization = Organization.Create(
