@@ -61,13 +61,14 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-32 | Semantik und Modellierung von `trace.lot.quantity` | ENTSCHIEDEN |
 | D-33 | Einheitengleichheit und Unit-Katalog in Pilot 1 | ENTSCHIEDEN |
 | D-34 | Bootstrap des ersten Plattformadministrators | ENTSCHIEDEN |
-| D-35 | Eindeutigkeit von Organisationen | OFFEN |
+| D-35 | Eindeutigkeit von Organisationen | ENTSCHIEDEN |
 | D-36 | Präzision persistierter Zeitpunkte | ENTSCHIEDEN |
 | D-37 | Plattformweite Benutzerverwaltung und Initialpasswort | ENTSCHIEDEN |
 | D-38 | `trace.object_relation` entfaellt in Pilot 1 | ENTSCHIEDEN |
 | D-39 | Zulaessige Eventtypen in `trace.traceability_event` | ENTSCHIEDEN |
 | D-40 | Organisationsuebergreifende Lineage ueber `logistics.delivery` | ENTSCHIEDEN |
 | D-41 | Probenahme: Menge im Event, Fachdaten in `quality.sample` | ENTSCHIEDEN |
+| D-42 | Eindeutigkeit von Organisationen ueber die VAT-Id | ENTSCHIEDEN |
 
 ---
 
@@ -1037,8 +1038,10 @@ Default-Credentials.
 
 ## D-35 – Eindeutigkeit von Organisationen
 
-**Status:** OFFEN
-**Betrifft:** ORG-001 und künftige Anlage- und Abgleichprozesse für Organisationen
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Beantwortet durch:** D-42 – die Eindeutigkeit läuft über die VAT-Id. Der
+folgende Text bleibt als Herleitung der Frage stehen.
+**Betraf:** ORG-001 und künftige Anlage- und Abgleichprozesse für Organisationen
 
 ### Sachstand
 
@@ -1384,6 +1387,51 @@ Ob die bestehende Registrierung das hergibt, ist noch nicht geprueft.
 
 ---
 
+## D-42 – Eindeutigkeit von Organisationen ueber die VAT-Id
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Beantwortet:** D-35
+**Betrifft:** ORG-001, FIX-013
+
+`org.organization` erhält eine Eindeutigkeit **ausschließlich auf `vat_id`**,
+und nur für Zeilen, in denen sie gesetzt ist. Ein partieller eindeutiger Index.
+
+**`tax_number` bekommt keine Eindeutigkeit.** Ihre Form variiert je Land, und
+dieselbe Ziffernfolge kann in zwei Ländern legitim existieren. Solange die
+Organisation kein Land führt — und das tut sie weder in der Implementierung
+noch im ER-Diagramm —, würde eine globale Eindeutigkeit darauf echte Konflikte
+erfinden.
+
+**`name` bekommt keine Eindeutigkeit.** Ein Name ist kein Identifikator: zwei
+verschiedene Unternehmen dürfen gleich heißen, und ein Unternehmen darf sich
+umbenennen.
+
+**Warum die VAT-Id ohne Länderfeld auskommt:** Sie trägt in der EU das
+Länderpräfix, etwa `DE123456789`, und ist damit von Haus aus global eindeutig.
+Die in D-35 offene Frage nach dem Geltungsbereich stellt sich für sie deshalb
+nicht.
+
+**Normalisierung vor Speicherung und Vergleich:** trimmen, Großschreibung,
+Leer- und Trennzeichen entfernen. Der gespeicherte Wert ist der normalisierte;
+es wird keine zweite Spalte für die Originalschreibweise geführt.
+
+**Antwortverhalten:** Eine Dublette liefert **409 Conflict**, wie bei
+Lotnummer, Artikelnummer und Produktcode auch.
+
+### Bewusst hingenommenes Restrisiko
+
+Organisationen **ohne** VAT-Id bleiben mehrfach anlegbar. Das ist kein
+Versehen: Kleine Erzeuger und landwirtschaftliche Betriebe haben oft keine,
+und sie zur Pflicht zu machen würde legitime Nutzer aussperren. Das Risiko ist
+damit deutlich kleiner als der Zustand vor dieser Entscheidung, in dem
+überhaupt keine Regel griff, aber es ist nicht null.
+
+Eine spätere Verschärfung bleibt möglich: Sobald die Organisation ein Land
+führt, könnte eine Eindeutigkeit je Land für `tax_number` additiv hinzukommen.
+Diese Entscheidung wird durch D-42 weder vorbereitet noch ausgeschlossen.
+
+---
+
 ## Nächste freie ID
 
-`D-42`
+`D-43`
