@@ -49,6 +49,9 @@ internal sealed class TraceabilityEventConfiguration
         builder.Property(traceabilityEvent => traceabilityEvent.CreatedAt)
             .IsRequired();
 
+        builder.HasIndex(traceabilityEvent => traceabilityEvent.OccurredAt);
+        builder.HasIndex(traceabilityEvent => traceabilityEvent.OrganizationId);
+
         // This alternate key is intentionally redundant with the primary key. It is the
         // target of composite FKs that structurally enforce each child's tenant scope.
         builder.HasAlternateKey(traceabilityEvent => new

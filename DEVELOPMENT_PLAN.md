@@ -78,6 +78,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **FIX-005** Rate-Limit-Verhalten statt Werte abgedeckt — **Roadmap-Status: DONE**
 - **FIX-010** persistierte Zeitpunkte zentral auf Mikrosekunden normalisiert — **Roadmap-Status: DONE**
 - **FIX-011** clientgelieferte Zeitstempel zentral auf Mikrosekunden normalisiert — **Roadmap-Status: DONE** — vervollstaendigt D-36: FIX-010 normalisierte nur servergenerierte Zeitpunkte, `occurredAt` kam ungekuerzt in die Erzeugungsantwort zurueck. Aufgefallen beim durchgehenden End-to-End-Test aus TRC-013.
+- **FIX-012** fehlende Pflichtindizes auf `trace.traceability_event` ergaenzt — **Roadmap-Status: DONE** — `occurred_at` und `organization_id` waren nach AGENTS.md §37 gefordert, aber nie angelegt worden. Aufgefallen durch den Indextest aus TRC-017.
 - **DOCS-010** Plan gegen den tatsächlichen Repository-Stand abgeglichen, Roadmap-Status je Task und Milestone-Status eingeführt — **Roadmap-Status: DONE**
 - **DOCS-011** Recovery-Reihenfolge und Steuerungsregeln im Plan verankert — **Roadmap-Status: DONE**
 - **DOCS-012** OPS-001-Status nachgezogen, FIX-009 erfasst, Regel „Statusaktualisierung im Task-Branch“ ergänzt — **Roadmap-Status: DONE**
