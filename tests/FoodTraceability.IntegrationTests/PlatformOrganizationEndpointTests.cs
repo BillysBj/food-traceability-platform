@@ -226,7 +226,7 @@ public sealed class PlatformOrganizationEndpointTests(PostgreSqlContainerFixture
         using var client = factory.CreateClient();
         await AuthenticateAsync(client, account, factory.RequestCancellationToken);
         var duplicateName = $"Duplicate Organization {Guid.NewGuid():N}";
-        var request = ValidRequest(duplicateName);
+        var request = ValidRequest(duplicateName) with { VatId = null };
 
         using var firstResponse = await client.PostAsJsonAsync(
             PlatformOrganizationCollectionPath,
@@ -289,6 +289,63 @@ public sealed class PlatformOrganizationEndpointTests(PostgreSqlContainerFixture
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, platformGetResponse.StatusCode);
         Assert.Equal(created, platformRead);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DuplicateVatIdReturns409WithOrganizationConflict(bool differentSpelling)
+    {
+        var account = await CreateAccountAsync();
+        await AddPlatformRoleAsync(account.UserId, StandardRoleIds.PlatformAdmin);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, account, factory.RequestCancellationToken);
+        var request = ValidRequest($"VAT Organization {Guid.NewGuid():N}");
+
+        using var firstResponse = await client.PostAsJsonAsync(
+            PlatformOrganizationCollectionPath, request, factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        var duplicate = request with
+        {
+            Name = $"Different Name {Guid.NewGuid():N}",
+            VatId = differentSpelling ? $" {request.VatId!.ToLowerInvariant()}- . " : request.VatId
+        };
+        using var response = await client.PostAsJsonAsync(
+            PlatformOrganizationCollectionPath, duplicate, factory.RequestCancellationToken);
+
+        await AssertProblemAsync(
+            response, HttpStatusCode.Conflict, "ORGANIZATION_CONFLICT", factory.RequestCancellationToken);
+    }
+
+    [Fact]
+    public async Task VatIdLengthIsValidatedAfterNormalizationThroughApi()
+    {
+        var account = await CreateAccountAsync();
+        await AddPlatformRoleAsync(account.UserId, StandardRoleIds.PlatformAdmin);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, account, factory.RequestCancellationToken);
+        var normalizedVatId = Guid.NewGuid().ToString("N").ToUpperInvariant()
+            + new string('A', Organization.MaximumVatIdLength - 32);
+        var request = ValidRequest($"Long VAT Organization {Guid.NewGuid():N}") with
+        {
+            VatId = string.Join(" ", normalizedVatId.ToLowerInvariant().ToCharArray())
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            PlatformOrganizationCollectionPath, request, factory.RequestCancellationToken);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await ReadOrganizationAsync(response, factory.RequestCancellationToken);
+        Assert.Equal(normalizedVatId, body.VatId);
+
+        using var invalidResponse = await client.PostAsJsonAsync(
+            PlatformOrganizationCollectionPath, request with { VatId = request.VatId + "b" },
+            factory.RequestCancellationToken);
+        await AssertProblemAsync(
+            invalidResponse, HttpStatusCode.BadRequest, "ORGANIZATION_VALIDATION_FAILED",
+            factory.RequestCancellationToken);
     }
 
     private ApiWebApplicationFactory CreateFactory() =>
@@ -420,7 +477,7 @@ public sealed class PlatformOrganizationEndpointTests(PostgreSqlContainerFixture
     }
 
     private static CreateOrganizationTestRequest ValidRequest(string name) =>
-        new(name, "EL123456789", "TAX-123", "office@example.com", "+30 210 1234567");
+        new(name, $"EL{Guid.NewGuid():N}".ToUpperInvariant(), "TAX-123", "office@example.com", "+30 210 1234567");
 
     private static string PlatformOrganizationCollectionPath =>
         "/api/v1/platform/organizations";

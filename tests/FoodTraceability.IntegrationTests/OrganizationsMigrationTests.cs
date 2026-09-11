@@ -21,8 +21,10 @@ public sealed class OrganizationsMigrationTests(PostgreSqlContainerFixture datab
         await context.Database.MigrateAsync(timeout.Token);
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
-        var migration = Assert.Single(appliedMigrations);
-        Assert.EndsWith("_InitialOrganizations", migration, StringComparison.Ordinal);
+        Assert.Collection(
+            appliedMigrations,
+            migration => Assert.EndsWith("_InitialOrganizations", migration, StringComparison.Ordinal),
+            migration => Assert.EndsWith("_AddOrganizationVatIdUniqueness", migration, StringComparison.Ordinal));
     }
 
     [Fact]

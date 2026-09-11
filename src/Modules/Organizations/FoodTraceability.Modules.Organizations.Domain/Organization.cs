@@ -61,12 +61,21 @@ public sealed class Organization
         return new Organization(
             id,
             NormalizeRequired(name, "Organization name", MaximumNameLength),
-            NormalizeOptional(vatId, "VAT id", MaximumVatIdLength),
+            NormalizeVatId(vatId),
             NormalizeOptional(taxNumber, "Tax number", MaximumTaxNumberLength),
             NormalizeOptional(email, "Email", MaximumEmailLength),
             NormalizeOptional(phone, "Phone", MaximumPhoneLength),
             createdAt,
             createdAt);
+    }
+
+    private static string? NormalizeVatId(string? value)
+    {
+        var normalizedValue = value is null
+            ? null
+            : new string(value.Trim().ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+
+        return NormalizeOptional(normalizedValue, "VAT id", MaximumVatIdLength);
     }
 
     private static string NormalizeRequired(string? value, string fieldName, int maximumLength)

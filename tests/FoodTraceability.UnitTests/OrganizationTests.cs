@@ -71,4 +71,50 @@ public sealed class OrganizationTests
         Assert.Null(organization.Email);
         Assert.Null(organization.Phone);
     }
+
+    [Theory]
+    [InlineData("  de 123 456 789  ")]
+    [InlineData("DE-123.456.789")]
+    public void VatIdIsUppercaseWithOnlyLettersAndDigits(string vatId)
+    {
+        var organization = Organization.Create(
+            OrganizationId, "Aegean Foods", vatId, null, null, null, CreatedAt);
+
+        Assert.Equal("DE123456789", organization.VatId);
+    }
+
+    [Fact]
+    public void VatIdContainingOnlySeparatorsBecomesNull()
+    {
+        var organization = Organization.Create(
+            OrganizationId, "Aegean Foods", " - . / _ \t ", null, null, null, CreatedAt);
+
+        Assert.Null(organization.VatId);
+    }
+
+    [Fact]
+    public void VatIdLengthIsCheckedAfterNormalization()
+    {
+        var vatId = string.Join(" ", Enumerable.Repeat("a", Organization.MaximumVatIdLength));
+        var organization = Organization.Create(
+            OrganizationId, "Aegean Foods", vatId, null, null, null, CreatedAt);
+
+        Assert.Equal(new string('A', Organization.MaximumVatIdLength), organization.VatId);
+        Assert.Throws<OrganizationsDomainException>(() => Organization.Create(
+            OrganizationId, "Aegean Foods", vatId + "b", null, null, null, CreatedAt));
+    }
+
+    [Fact]
+    public void TaxNumberRetainsCaseAndSeparators()
+    {
+        var organization = Organization.Create(
+            OrganizationId, "  Aegean-Foods  ", "de-123", "  tax-12.3 / 4  ",
+            "  Contact@example.com  ", "  +30 210-123  ", CreatedAt);
+
+        Assert.Equal("DE123", organization.VatId);
+        Assert.Equal("tax-12.3 / 4", organization.TaxNumber);
+        Assert.Equal("Aegean-Foods", organization.Name);
+        Assert.Equal("Contact@example.com", organization.Email);
+        Assert.Equal("+30 210-123", organization.Phone);
+    }
 }
