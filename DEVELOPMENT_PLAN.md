@@ -88,6 +88,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-016** D-10 über D-38 entschieden und `trace.object_relation` aus dem ER-Diagramm entfernt — **Roadmap-Status: DONE**
 - **DOCS-017** alle neunzehn Eventtypen klassifiziert und D-39 bis D-41 festgehalten — **Roadmap-Status: DONE**
 - **DOCS-018** Setup-Dokumentation im README vervollstaendigt — **Roadmap-Status: DONE** — alle fuenf Migrationen statt drei, die nachgewiesene Reihenfolge Platform → Organizations → Identity → Catalog → Traceability anstelle der bisherigen, die mit `3F000: schema "org" does not exist` scheiterte, dazu der Bootstrap des ersten PlatformAdministrators nach D-34 und die Setup-Reihenfolge bis zum ersten Traceability-Flow. In einer isolierten Wegwerf-Datenbank verifiziert.
+- **DOCS-019** QLT-001 bewertet und als SUPERSEDED festgehalten — **Roadmap-Status: DONE** — nach der Entscheidung, `quality.parameter` als reinen Seed-Katalog ohne API zu fuehren, blieb fuer den Task kein eigener Inhalt.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen waren nicht Teil von TRC-013a; TRC-013 ergänzt den durchgehenden Test aller drei Pflichtaussagen an derselben über die API aufgebauten Kette.
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 
@@ -386,7 +387,7 @@ Milestone: `M4 – Traceability Core Proven`
 # EPIC 5 – Quality
 
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
-- **QLT-001** Quality Parameter — **Roadmap-Status: NOT_STARTED**
+- **QLT-001** Quality Parameter — **Roadmap-Status: SUPERSEDED** — **Ersetzt durch:** Repository-Task **QLT-001a** sowie **OLV-005**. QLT-001a hat `quality.parameter` angelegt. Die Parameter selbst sind durchgehend branchenspezifisch: `AGENTS.md` §17 nennt Free Acidity, Peroxide Value, K232 und K270 als Pilot-1-Beispiele und fuehrt direkt danach einen eigenen Abschnitt fuer Dairy; dafuer existiert **OLV-005** „Olive Oil Quality Configuration". Ein generischer Parameter wird in keinem Dokument benannt. Ein Lesepfad entsteht in **QLT-003**, wo er zuerst gebraucht wird — so wie der Event-Type-Lesepfad nicht mit TRC-005, sondern mit TRC-008 kam. Damit bleibt fuer QLT-001 kein eigener Inhalt.
 - **QLT-002** Sample — **Roadmap-Status: NOT_STARTED**
 - **QLT-003** Lab Result — **Roadmap-Status: NOT_STARTED**
 - **QLT-004** Specification — **Roadmap-Status: NOT_STARTED**
@@ -486,7 +487,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
 - **M4 – Traceability Core Proven** — **ERREICHT**. Alle Tasks des Epics sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED). Der Pflichttest `OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001` ist mit beiden Traces an derselben ueber die API aufgebauten Kette nachgewiesen.
-- **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-001**, **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**.
+- **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-002**, **QLT-003**, **QLT-004**, **QLT-005**, **QLT-006**, **QLT-007** und **QLT-008**. QLT-001a ist DONE; QLT-001 ist durch QLT-001a und OLV-005 ersetzt (SUPERSEDED).
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
 - **M8 – Public Trace Ready** — **NICHT ERREICHT**. Offen: **PUB-001**, **PUB-002**, **PUB-003**, **PUB-004** und **PUB-005**.
