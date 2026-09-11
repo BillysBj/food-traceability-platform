@@ -7,6 +7,7 @@ using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Catalog.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 using FoodTraceability.Modules.Organizations.Infrastructure;
+using FoodTraceability.Modules.Quality.Infrastructure;
 using FoodTraceability.Modules.Traceability.Infrastructure;
 using FoodTraceability.Modules.Traceability.Infrastructure.Traces;
 using FoodTraceability.Platform.Persistence;
@@ -51,6 +52,7 @@ builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddApiJwtBearerAuthentication();
 builder.Services.AddOrganizations();
 builder.Services.AddCatalog();
+builder.Services.AddQuality();
 builder.Services.AddTraceability();
 builder.Services.AddOptions<TraceGraphOptions>()
     .Bind(builder.Configuration.GetSection(TraceGraphOptions.SectionName))

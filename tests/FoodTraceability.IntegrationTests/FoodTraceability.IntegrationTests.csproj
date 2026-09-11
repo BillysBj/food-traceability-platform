@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\Modules\Catalog\FoodTraceability.Modules.Catalog.Infrastructure\FoodTraceability.Modules.Catalog.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\FoodTraceability.Modules.Identity.Infrastructure\FoodTraceability.Modules.Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Organizations\FoodTraceability.Modules.Organizations.Infrastructure\FoodTraceability.Modules.Organizations.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Quality\FoodTraceability.Modules.Quality.Infrastructure\FoodTraceability.Modules.Quality.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Modules\Traceability\FoodTraceability.Modules.Traceability.Infrastructure\FoodTraceability.Modules.Traceability.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Platform\FoodTraceability.Platform.Persistence\FoodTraceability.Platform.Persistence.csproj" />
   </ItemGroup>
