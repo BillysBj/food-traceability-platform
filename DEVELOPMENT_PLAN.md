@@ -96,12 +96,15 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-021** Faktenprüfung vor der Übergabe verankert und die Milestone-Guard-Lücke geschlossen — **Roadmap-Status: DONE**
 - **DOCS-022** Berechtigung und Eindeutigkeit der Probenahme entschieden — **Roadmap-Status: DONE** — hält D-44 und D-45 fest, zieht `quality.sample` im ER-Diagramm nach und schneidet QLT-002 in QLT-002a und QLT-002.
 - **DOCS-023** Befund aus der Mutationsprüfung der frühen Tests als FIX-014 erfasst — **Roadmap-Status: DONE** — die frühen Tests halten; ein Konjunktionsterm in der Organisationsprüfung kann das Ergebnis jedoch nicht verändern, und die Annahme dahinter existiert nur als Kommentar.
+- **FND-008** Modulkontrakt für das Anlegen eines Traceability-Events — **Roadmap-Status: DONE** — setzt D-48 um. Voraussetzung für QLT-002: D-11 verlangt den Aufruf über eine Application-Abstraktion, die Architekturtests verbieten aber jede Referenz zwischen Modulen. Der Kontrakt liegt deshalb unter `src/Platform`.
+- **FIX-015** Klassifizierungsprüfung an die Modulgrenze ziehen — **Roadmap-Status: NOT_STARTED** — die Regel aus TRC-008a, dass nur `Traceability`-klassifizierte Typen ein Event erzeugen dürfen, steht heute im Controller. Ab QLT-002 gibt es einen zweiten Aufrufer, der sie nicht durchläuft; LOG-003 wird der dritte. Heute kein Loch, weil der Quality-Service immer SAMPLE benutzt.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen waren nicht Teil von TRC-013a; TRC-013 ergänzt den durchgehenden Test aller drei Pflichtaussagen an derselben über die API aufgebauten Kette.
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 
 FIX-006, FIX-007, FIX-008 und FIX-014 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
-hier nicht dupliziert.
+hier nicht dupliziert. FIX-015 ist oben als eingeschobener Task geführt, weil er
+eine terminierte Voraussetzung hat und nicht nur Backlog ist.
 
 ## 3. Standard-Taskformat
 
@@ -396,7 +399,7 @@ Milestone: `M4 – Traceability Core Proven`
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 - **QLT-001** Quality Parameter — **Roadmap-Status: SUPERSEDED** — **Ersetzt durch:** Repository-Task **QLT-001a** sowie **OLV-005**. QLT-001a hat `quality.parameter` angelegt. Die Parameter selbst sind durchgehend branchenspezifisch: `AGENTS.md` §17 nennt Free Acidity, Peroxide Value, K232 und K270 als Pilot-1-Beispiele und fuehrt direkt danach einen eigenen Abschnitt fuer Dairy; dafuer existiert **OLV-005** „Olive Oil Quality Configuration". Ein generischer Parameter wird in keinem Dokument benannt. Ein Lesepfad entsteht in **QLT-003**, wo er zuerst gebraucht wird — so wie der Event-Type-Lesepfad nicht mit TRC-005, sondern mit TRC-008 kam. Damit bleibt fuer QLT-001 kein eigener Inhalt.
 - **QLT-002a** Sample-Domainmodell und -Persistenz (eingeschoben) — **Roadmap-Status: DONE** — legt `quality.sample` samt Migration an: Eindeutigkeit je Organisation nach D-45, drei zusammengesetzte Fremdschlüssel nach D-46, die Mandantengleichheit strukturell erzwingen, und der auf drei Werte begrenzte Probenstatus nach D-47. `trace.lot` erhielt dafür einen zweispaltigen Alternate Key. Ohne Application-Service und ohne Endpunkt; die Kürzung von `takenAt` gehört nach dem Vorbild von `occurredAt` in den Application-Service und damit in QLT-002.
-- **QLT-002** Sample — **Roadmap-Status: NOT_STARTED** — Voraussetzung: **FND-007** und **QLT-002a**. Application-Service mit der gemeinsamen Transaktion nach D-43 und der Endpunkt; Berechtigung nach D-44.
+- **QLT-002** Sample — **Roadmap-Status: NOT_STARTED** — Voraussetzung: **FND-007**, **QLT-002a** und **FND-008**. Application-Service mit der gemeinsamen Transaktion nach D-43 und der Endpunkt; Berechtigung nach D-44, Aufruf des Traceability-Moduls über den Kontrakt nach D-48.
 - **QLT-003** Lab Result — **Roadmap-Status: NOT_STARTED**
 - **QLT-004** Specification — **Roadmap-Status: NOT_STARTED**
 - **QLT-005** Lot Block — **Roadmap-Status: NOT_STARTED**

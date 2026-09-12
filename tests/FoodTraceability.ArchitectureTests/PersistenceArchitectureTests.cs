@@ -154,6 +154,34 @@ public sealed class PersistenceArchitectureTests
     }
 
     [Fact]
+    public void PlatformContractsIsReferencedOnlyWhereAllowed()
+    {
+        var root = FindRepositoryRoot();
+        var projects = LoadProjectGraph();
+        var contractsProject = projects.Values.Single(project =>
+            string.Equals(project.Name, "FoodTraceability.Platform.Contracts", StringComparison.Ordinal));
+        var referringProjects = projects.Values
+            .Where(project => project.ProjectReferences.Contains(contractsProject.Path, StringComparer.OrdinalIgnoreCase))
+            .ToArray();
+
+        Assert.NotEmpty(referringProjects);
+
+        foreach (var referringProject in referringProjects)
+        {
+            var relativePath = Path.GetRelativePath(root, referringProject.Path).Replace('\\', '/');
+            var isAllowed = string.Equals(
+                    referringProject.Name,
+                    "FoodTraceability.Api",
+                    StringComparison.Ordinal)
+                || referringProject.Name.EndsWith(".Application", StringComparison.Ordinal)
+                || referringProject.Name.EndsWith(".Infrastructure", StringComparison.Ordinal)
+                || relativePath.StartsWith("tests/", StringComparison.Ordinal);
+
+            Assert.True(isAllowed, $"{referringProject.Name} must not reference Platform.Contracts.");
+        }
+    }
+
+    [Fact]
     public void MigrationScriptDeclaresIcuCollations()
     {
         using var context = CreatePlatformDbContext();
