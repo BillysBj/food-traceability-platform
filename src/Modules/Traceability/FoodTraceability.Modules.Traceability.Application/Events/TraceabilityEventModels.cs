@@ -2,7 +2,7 @@ namespace FoodTraceability.Modules.Traceability.Application.Events;
 
 public sealed record CreateTraceabilityEventCommand(
     Guid OrganizationId,
-    Guid EventTypeId,
+    string EventTypeCode,
     Guid LocationId,
     DateTimeOffset OccurredAt,
     string? ExternalReference,

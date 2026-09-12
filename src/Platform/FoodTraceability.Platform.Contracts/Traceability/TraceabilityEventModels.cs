@@ -2,7 +2,7 @@ namespace FoodTraceability.Platform.Contracts.Traceability;
 
 public sealed record CreateTraceabilityEventRequest(
     Guid OrganizationId,
-    Guid EventTypeId,
+    string EventTypeCode,
     Guid LocationId,
     DateTimeOffset OccurredAt,
     string? ExternalReference,
