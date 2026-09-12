@@ -3,9 +3,9 @@ using FoodTraceability.Modules.Organizations.Application.Organizations;
 using FoodTraceability.Modules.Organizations.Infrastructure.Organizations;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 
 namespace FoodTraceability.Modules.Organizations.Infrastructure;
 
@@ -15,14 +15,12 @@ public static class OrganizationsConfiguration
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddFoodTraceabilityConnection();
         services.AddDbContext<OrganizationsDbContext>((serviceProvider, options) =>
         {
-            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            var connectionString = configuration.GetConnectionString("FoodTraceability")
-                ?? throw new InvalidOperationException(
-                    "The connection string 'ConnectionStrings:FoodTraceability' is not configured.");
-
-            options.UseFoodTraceabilityPostgres(connectionString, OrganizationsDbContext.Schema);
+            options.UseFoodTraceabilityPostgres(
+                serviceProvider.GetRequiredService<NpgsqlConnection>(),
+                OrganizationsDbContext.Schema);
         });
         services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IOrganizationReader, OrganizationReader>();

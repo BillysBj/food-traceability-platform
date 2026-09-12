@@ -69,6 +69,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-40 | Organisationsuebergreifende Lineage ueber `logistics.delivery` | ENTSCHIEDEN |
 | D-41 | Probenahme: Menge im Event, Fachdaten in `quality.sample` | ENTSCHIEDEN |
 | D-42 | Eindeutigkeit von Organisationen ueber die VAT-Id | ENTSCHIEDEN |
+| D-43 | Geteilte `DbConnection` je Request fuer alle Modul-DbContexts | ENTSCHIEDEN |
 
 ---
 
@@ -1381,10 +1382,10 @@ bestehende Schreibpfad aus TRC-008 unveraendert benutzt wird: Zeilensperre ueber
 `FOR UPDATE`, Verbrauchspruefung und Ablehnung mit 409 bei Ueberverbrauch
 gelten fuer eine Probenahme genauso wie fuer einen PRESS.
 
-**Offener technischer Punkt für QLT-002**, als Task **FND-007** geführt,
-keine Entscheidung: Zwei Modul-DbContexts in einer Transaktion muessen sich
-eine `DbConnection` teilen. Ob die bestehende Registrierung das hergibt, ist
-noch nicht geprueft.
+**Technischer Punkt, entschieden in D-43**, umgesetzt als Task **FND-007**:
+Zwei Modul-DbContexts in einer Transaktion muessen sich eine `DbConnection`
+teilen. Die bestehende Registrierung gibt das nicht her — jeder Kontext baut
+seine eigene Verbindung aus der Verbindungszeichenfolge.
 
 ---
 
@@ -1433,6 +1434,58 @@ Diese Entscheidung wird durch D-42 weder vorbereitet noch ausgeschlossen.
 
 ---
 
+## D-43 – Geteilte `DbConnection` je Request für alle Modul-DbContexts
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Beantwortet:** den in D-41 offen gelassenen technischen Punkt
+**Setzt voraus:** D-11
+**Betrifft:** FND-007, QLT-002, LOG-003
+
+Zwei Modul-DbContexts können nur dann in **einer** Transaktion schreiben, wenn
+sie sich dieselbe `DbConnection` teilen. Heute baut jede Registrierung ihre
+eigene Verbindung aus der Verbindungszeichenfolge; die von D-41 geforderte
+Atomarität über die Modulgrenze ist damit nicht erreichbar.
+
+**Entscheidung:** Eine `NpgsqlConnection` je Request, geteilt von **allen
+sechs** Kontexten — Platform, Organizations, Identity, Catalog, Quality und
+Traceability. Keine Ausnahme, kein Sonderfall für einzelne Module.
+
+**Warum alle sechs und nicht nur Quality und Traceability:** Eine Regel ohne
+Ausnahme ist die einzige, die man nicht falsch anwenden kann. D-40 verlangt
+dieselbe Fähigkeit später für Logistics und Traceability, und Documents wird
+folgen. Eine Sonderregel für zwei Module hätte dieselbe Frage bei jedem
+weiteren modulübergreifenden Schreibvorgang erneut aufgeworfen.
+
+**Bewusst hingenommene Folgen**
+
+Eine `NpgsqlConnection` führt **kein** Kommando parallel aus; Npgsql kennt kein
+MARS. Zwei Modulabfragen desselben Requests können damit dauerhaft nicht
+nebenläufig laufen. Das kostet heute nichts — im Produktionscode existiert
+kein `Task.WhenAll` über Datenbankabfragen — aber es legt fest, dass es dabei
+bleibt.
+
+Ein Request, der die Datenbank berührt, belegt eine Verbindung aus dem Pool
+über seine **volle Dauer**, nicht mehr nur je Abfrage. Bei der Npgsql-Vorgabe
+von 100 Verbindungen ist das für den Pilotbetrieb unkritisch; unter Last wäre
+es der erste Punkt, an dem zu messen wäre.
+
+**Nicht betroffen:** Design-Time-Factories und `PostgreSqlContainerFixture`
+bauen ihre Kontexte selbst und behalten die Registrierung über die
+Verbindungszeichenfolge.
+
+**Die CLI ist betroffen, und das ist richtig so.** Sie ruft dieselbe
+`AddIdentityAuthentication` auf wie die API und öffnet vor dem Bootstrap
+einen eigenen DI-Scope. „Scoped“ heißt hier also nicht „je Request“, sondern
+„je Scope“; der Bootstrap bekommt seine Verbindung genauso wie ein Request.
+
+**Umsetzung der Transaktion:** Ein kleiner Helfer in
+`FoodTraceability.Platform.Persistence` eröffnet die Transaktion und meldet
+einen zweiten Kontext daran an. Ausdrücklich **kein** `IUnitOfWork` und keine
+generische Schicht darüber — AGENTS.md §54 schließt eine Abstraktion ohne
+konkreten Bedarf aus, und der Bedarf ist genau ein Aufrufweg.
+
+---
+
 ## Nächste freie ID
 
-`D-43`
+`D-44`

@@ -14,6 +14,7 @@ using FoodTraceability.Platform.Persistence;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.RateLimiting;
+using Npgsql;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,14 +25,12 @@ builder.Host.UseSerilog((context, services, loggerConfiguration) => loggerConfig
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services), preserveStaticLogger: true);
 
+builder.Services.AddFoodTraceabilityConnection();
 builder.Services.AddDbContext<PlatformDbContext>((serviceProvider, options) =>
 {
-    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    var connectionString = configuration.GetConnectionString("FoodTraceability")
-        ?? throw new InvalidOperationException(
-            "The connection string 'ConnectionStrings:FoodTraceability' is not configured.");
-
-    options.UseFoodTraceabilityPostgres(connectionString, PlatformDbContext.MigrationsHistorySchema);
+    options.UseFoodTraceabilityPostgres(
+        serviceProvider.GetRequiredService<NpgsqlConnection>(),
+        PlatformDbContext.MigrationsHistorySchema);
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddControllers();

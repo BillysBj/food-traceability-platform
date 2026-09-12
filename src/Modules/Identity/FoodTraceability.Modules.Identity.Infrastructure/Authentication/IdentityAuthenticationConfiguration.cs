@@ -15,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Npgsql;
 
 namespace FoodTraceability.Modules.Identity.Infrastructure.Authentication;
 
@@ -29,15 +30,12 @@ public static class IdentityAuthenticationConfiguration
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
+        services.AddFoodTraceabilityConnection();
         services.AddDbContext<IdentityDbContext>((serviceProvider, options) =>
         {
-            var applicationConfiguration = serviceProvider.GetRequiredService<IConfiguration>();
-            var connectionString = applicationConfiguration
-                .GetConnectionString("FoodTraceability")
-                ?? throw new InvalidOperationException(
-                    "The connection string 'ConnectionStrings:FoodTraceability' is not configured.");
-
-            options.UseFoodTraceabilityPostgres(connectionString, IdentityDbContext.Schema);
+            options.UseFoodTraceabilityPostgres(
+                serviceProvider.GetRequiredService<NpgsqlConnection>(),
+                IdentityDbContext.Schema);
         });
 
         services.AddOptions<JwtOptions>()
