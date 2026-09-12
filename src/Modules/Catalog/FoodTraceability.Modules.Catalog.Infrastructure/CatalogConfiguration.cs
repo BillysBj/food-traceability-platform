@@ -7,9 +7,9 @@ using FoodTraceability.Modules.Catalog.Infrastructure.Products;
 using FoodTraceability.Modules.Catalog.Infrastructure.Units;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 
 namespace FoodTraceability.Modules.Catalog.Infrastructure;
 
@@ -19,14 +19,12 @@ public static class CatalogConfiguration
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        services.AddFoodTraceabilityConnection();
         services.AddDbContext<CatalogDbContext>((serviceProvider, options) =>
         {
-            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            var connectionString = configuration.GetConnectionString("FoodTraceability")
-                ?? throw new InvalidOperationException(
-                    "The connection string 'ConnectionStrings:FoodTraceability' is not configured.");
-
-            options.UseFoodTraceabilityPostgres(connectionString, CatalogDbContext.Schema);
+            options.UseFoodTraceabilityPostgres(
+                serviceProvider.GetRequiredService<NpgsqlConnection>(),
+                CatalogDbContext.Schema);
         });
         services.TryAddSingleton<TimeProvider>(MicrosecondTimeProvider.System);
         services.AddScoped<IArticleReader, ArticleReader>();

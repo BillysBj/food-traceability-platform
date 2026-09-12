@@ -1,3 +1,4 @@
+using System.Data.Common;
 using FoodTraceability.BuildingBlocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -21,6 +22,23 @@ public static class PersistenceConventions
         return optionsBuilder
             .UseNpgsql(
                 connectionString,
+                npgsqlOptions => npgsqlOptions.UseFoodTraceabilityMigrationsHistory(migrationsHistorySchema))
+            .UseSnakeCaseNamingConvention();
+    }
+
+    public static DbContextOptionsBuilder UseFoodTraceabilityPostgres(
+        this DbContextOptionsBuilder optionsBuilder,
+        DbConnection connection,
+        string migrationsHistorySchema)
+    {
+        ArgumentNullException.ThrowIfNull(optionsBuilder);
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentException.ThrowIfNullOrWhiteSpace(migrationsHistorySchema);
+
+        return optionsBuilder
+            .UseNpgsql(
+                connection,
+                contextOwnsConnection: false,
                 npgsqlOptions => npgsqlOptions.UseFoodTraceabilityMigrationsHistory(migrationsHistorySchema))
             .UseSnakeCaseNamingConvention();
     }
