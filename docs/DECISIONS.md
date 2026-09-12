@@ -74,6 +74,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-45 | Eindeutigkeit der Probennummer je Organisation | ENTSCHIEDEN |
 | D-46 | Spaltenumfang und Verankerung von `quality.sample` | ENTSCHIEDEN |
 | D-47 | Statuswerte einer Probe | ENTSCHIEDEN |
+| D-48 | Modulkontrakte fuer schreibende Aufrufe ueber Modulgrenzen | ENTSCHIEDEN |
 
 ---
 
@@ -1653,6 +1654,68 @@ enger.
 
 ---
 
+## D-48 – Modulkontrakte für schreibende Aufrufe über Modulgrenzen
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-11, D-41, D-43
+**Betrifft:** FND-008, QLT-002, LOG-003, DOC-002 und jeden künftigen
+modulübergreifenden Schreibvorgang
+
+### Der Widerspruch
+
+D-11 verlangt, dass fachliche Änderungen an einem fremden Modul
+**ausschließlich** über dessen Application- oder API-Abstraktionen erfolgen.
+Der Quality-Service müsste also `CreateTraceabilityEventService` aufrufen.
+
+Zwei Architekturtests verbieten genau das, ohne Ausnahme:
+`SolutionStructureTests.ModulesDoNotReferenceOtherModules` auf Projektebene und
+`TypeDependencyArchitectureTests.ModuleTypesDoNotDependOnOtherModules` auf
+Typebene. Bis QLT-002 ist das nie aufgefallen, weil noch nie ein Modul in ein
+anderes schreiben musste.
+
+### Entscheidung
+
+Der Kontrakt gehört **keinem der beiden Module**. Er liegt in einem Projekt
+unterhalb von `src/Platform`. Das besitzende Modul implementiert ihn, das
+rufende Modul benutzt ihn, und keins von beiden kennt das andere.
+
+Damit bleibt die Modulisolation **strukturell erzwungen** statt über eine
+Ausnahmeliste, und die Zählwerte in
+`ModuleTypesDoNotDependOnOtherModules` — zehn Modulgruppen, dreißig
+Assemblies — bleiben unverändert, weil das Kontraktprojekt nicht unter
+`src/Modules` liegt.
+
+### Regeln für einen Modulkontrakt
+
+- Er trägt **eigene** Datentypen aus einfachen Werten. Niemals einen Domaintyp
+  eines Moduls, sonst wäre die Isolation nur verschoben.
+- Er trägt sein **eigenes Fehlervokabular**. Das rufende Modul darf die
+  Ausnahmetypen des besitzenden nicht kennen; das besitzende übersetzt seine
+  Ausnahmen an der Kontraktgrenze.
+- Die Implementierung wird von der Registrierung des **besitzenden** Moduls
+  in den Dienstcontainer eingetragen.
+- Er enthält **nur**, was ein zweites Modul heute tatsächlich aufruft. Kein
+  Vorrat für gedachte künftige Aufrufer — AGENTS.md §54 gilt unverändert.
+- Wer ihn referenzieren darf, wird durch einen Architekturtest festgehalten,
+  wie es `PlatformPersistenceIsReferencedOnlyWhereAllowed` für die Persistenz
+  tut.
+
+### Warum nicht im API-Projekt orchestrieren
+
+Die API kennt alle Module und könnte beide Dienste nacheinander aufrufen. Dann
+läge aber die Fachlogik — welcher Eventtyp, was bei Überverbrauch geschieht,
+was die Probe festhält — im Kompositionswurzelprojekt, das keinem Modul
+gehört. Jeder weitere Fall würde dort mehr davon ablegen.
+
+### Warum die Regel nicht gelockert wird
+
+Eine Ausnahmeliste für Application-zu-Application-Referenzen wäre der kürzeste
+Weg. Danach hinge D-11 an Disziplin statt an einem Test. Die strukturelle
+Garantie ist das Wertvollste an der bisherigen Architektur; sie wird nicht
+gegen Bequemlichkeit eingetauscht.
+
+---
+
 ## Nächste freie ID
 
-`D-48`
+`D-49`
