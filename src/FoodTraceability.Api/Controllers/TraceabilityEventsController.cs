@@ -4,7 +4,6 @@ using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Organizations.Application.Organizations;
 using FoodTraceability.Modules.Traceability.Application.EventTypes;
 using FoodTraceability.Modules.Traceability.Application.Events;
-using FoodTraceability.Modules.Traceability.Domain;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,20 +47,6 @@ public sealed class TraceabilityEventsController(
         CreateTraceabilityEventRequest request,
         CancellationToken cancellationToken)
     {
-        var eventType = await eventTypeQueryService.FindByCodeAsync(
-            request.EventTypeCode,
-            cancellationToken);
-        if (eventType is null)
-        {
-            return ValidationError("The referenced event type does not exist.");
-        }
-
-        if (eventType.Classification != EventTypeClassification.Traceability)
-        {
-            return ValidationError(
-                $"Event type '{request.EventTypeCode}' is not allowed for traceability events.");
-        }
-
         if (request.LocationId is not Guid locationId)
         {
             return ValidationError("A location id is required.");
@@ -95,7 +80,7 @@ public sealed class TraceabilityEventsController(
             traceabilityEvent = await createService.CreateAsync(
                 new CreateTraceabilityEventCommand(
                     organizationId,
-                    eventType.Id,
+                    request.EventTypeCode!,
                     locationId,
                     occurredAt,
                     request.ExternalReference,

@@ -56,7 +56,7 @@ public sealed class TraceabilityEventCreatorContractTests(PostgreSqlContainerFix
 
         Assert.NotEqual(Guid.Empty, result.EventId);
         Assert.Equal(request.OrganizationId, persisted.OrganizationId);
-        Assert.Equal(request.EventTypeId, persisted.EventTypeId);
+        Assert.Equal(PressId, persisted.EventTypeId);
         Assert.Equal(request.LocationId, persisted.LocationId);
         Assert.Equal(request.ExternalReference, persisted.ExternalReference);
         Assert.Equal(request.Description, persisted.Description);
@@ -73,6 +73,72 @@ public sealed class TraceabilityEventCreatorContractTests(PostgreSqlContainerFix
                 .OrderBy(line => line.LotId));
         Assert.All(persisted.Inputs, line => Assert.Equal(KilogramId, line.UnitId));
         Assert.All(persisted.Outputs, line => Assert.Equal(KilogramId, line.UnitId));
+    }
+
+    [Theory]
+    [InlineData("NOT_A_REGISTERED_EVENT", false, "The referenced event type does not exist.")]
+    [InlineData("NOT_A_REGISTERED_EVENT", true, "The referenced event type does not exist.")]
+    [InlineData("QUALITY_RELEASE", false, "Event type 'QUALITY_RELEASE' is not allowed for traceability events.")]
+    [InlineData("QUALITY_RELEASE", true, "Event type 'QUALITY_RELEASE' is not allowed for traceability events.")]
+    [InlineData(" quality_release ", false, "Event type ' quality_release ' is not allowed for traceability events.")]
+    public async Task InvalidEventTypeCodeThrowsContractValidationExceptionBeforeQuantityValidation(
+        string eventTypeCode,
+        bool invalidQuantity,
+        string expectedMessage)
+    {
+        await using var factory = CreateFactory();
+        var request = (await CreateRequestAsync(factory)) with { EventTypeCode = eventTypeCode };
+        if (invalidQuantity)
+        {
+            request = request with { Inputs = [new(request.Inputs![0].LotId, 0m)] };
+        }
+
+        using var scope = factory.Services.CreateScope();
+        var creator = scope.ServiceProvider.GetRequiredService<ITraceabilityEventCreator>();
+
+        var exception = await Assert.ThrowsAsync<TraceabilityEventValidationException>(() =>
+            creator.CreateAsync(request, factory.RequestCancellationToken));
+
+        Assert.Equal(expectedMessage, exception.Message);
+        var context = scope.ServiceProvider.GetRequiredService<TraceabilityDbContext>();
+        Assert.False(await context.TraceabilityEvents.AnyAsync(
+            traceabilityEvent => traceabilityEvent.OrganizationId == request.OrganizationId,
+            factory.RequestCancellationToken));
+    }
+
+    [Fact]
+    public async Task SampleCodeCreatesEventThroughContract()
+    {
+        await using var factory = CreateFactory();
+        var cancellationToken = factory.RequestCancellationToken;
+        var request = (await CreateRequestAsync(factory)) with { EventTypeCode = "SAMPLE", Outputs = [] };
+        CreateTraceabilityEventResult result;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var creator = scope.ServiceProvider.GetRequiredService<ITraceabilityEventCreator>();
+            result = await creator.CreateAsync(request, cancellationToken);
+        }
+
+        using var verificationScope = factory.Services.CreateScope();
+        var context = verificationScope.ServiceProvider.GetRequiredService<TraceabilityDbContext>();
+        var persisted = await context.TraceabilityEvents
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(traceabilityEvent => traceabilityEvent.Inputs)
+            .Include(traceabilityEvent => traceabilityEvent.Outputs)
+            .SingleAsync(traceabilityEvent => traceabilityEvent.Id == result.EventId, cancellationToken);
+        var eventType = await context.EventTypes.AsNoTracking()
+            .SingleAsync(eventType => eventType.Id == persisted.EventTypeId, cancellationToken);
+
+        Assert.NotEqual(Guid.Empty, result.EventId);
+        Assert.Equal("SAMPLE", eventType.Code.Value);
+        Assert.Equal(request.OrganizationId, persisted.OrganizationId);
+        Assert.Equal(
+            request.Inputs!.OrderBy(line => line.LotId),
+            persisted.Inputs.Select(line => new TraceabilityEventLot(line.LotId, line.Quantity))
+                .OrderBy(line => line.LotId));
+        Assert.Empty(persisted.Outputs);
     }
 
     [Fact]
@@ -118,7 +184,7 @@ public sealed class TraceabilityEventCreatorContractTests(PostgreSqlContainerFix
                 .GetRequiredService<ModuleEvents.CreateTraceabilityEventService>();
             var command = new ModuleEvents.CreateTraceabilityEventCommand(
                 request.OrganizationId,
-                request.EventTypeId,
+                request.EventTypeCode,
                 request.LocationId,
                 request.OccurredAt,
                 request.ExternalReference,
@@ -209,7 +275,7 @@ public sealed class TraceabilityEventCreatorContractTests(PostgreSqlContainerFix
 
         return new CreateTraceabilityEventRequest(
             organizationId,
-            PressId,
+            "PRESS",
             locationId,
             new DateTimeOffset(2026, 9, 9, 10, 0, 0, TimeSpan.Zero).AddTicks(1_234_567),
             $"CONTRACT-EVENT-{Guid.NewGuid():N}",

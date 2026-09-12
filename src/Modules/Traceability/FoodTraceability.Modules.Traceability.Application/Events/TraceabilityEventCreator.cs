@@ -16,7 +16,7 @@ public sealed class TraceabilityEventCreator(CreateTraceabilityEventService serv
             var created = await service.CreateAsync(
                 new CreateTraceabilityEventCommand(
                     request.OrganizationId,
-                    request.EventTypeId,
+                    request.EventTypeCode,
                     request.LocationId,
                     request.OccurredAt,
                     request.ExternalReference,

@@ -285,6 +285,39 @@ public sealed class TraceabilityEventEndpointTests(PostgreSqlContainerFixture da
             traceabilityEvent => traceabilityEvent.OrganizationId == setup.Organization.Id));
     }
 
+    [Theory]
+    [InlineData("NOT_A_REGISTERED_EVENT", "The referenced event type does not exist.")]
+    [InlineData("QUALITY_RELEASE", "Event type 'QUALITY_RELEASE' is not allowed for traceability events.")]
+    public async Task InvalidEventTypeCodeReturns400WithExactValidationMessage(
+        string eventTypeCode,
+        string expectedMessage)
+    {
+        var setup = await CreateAuthorizedSetupAsync(StandardRoleIds.Producer);
+        var output = await CreateLotAsync(setup.Organization.Id, setup.Article.Id, 1m);
+        await using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+        await AuthenticateAsync(client, setup.Account, factory.RequestCancellationToken);
+        var request = ValidRequest(
+            setup.Organization.LocationId,
+            [],
+            [new(output.Id, 1m)]) with
+        {
+            EventTypeCode = eventTypeCode
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            EventCollectionPath(setup.Organization.Id),
+            request,
+            factory.RequestCancellationToken);
+
+        using var problem = await AssertProblemAsync(
+            response,
+            HttpStatusCode.BadRequest,
+            "TRACEABILITY_EVENT_VALIDATION_FAILED",
+            factory.RequestCancellationToken);
+        Assert.Equal(expectedMessage, problem.RootElement.GetProperty("detail").GetString());
+    }
+
     [Fact]
     public async Task LocationFromAnotherOrganizationReturns400()
     {

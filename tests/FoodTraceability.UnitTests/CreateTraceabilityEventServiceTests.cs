@@ -1,3 +1,4 @@
+using FoodTraceability.Modules.Traceability.Application.EventTypes;
 using FoodTraceability.Modules.Traceability.Application.Events;
 using FoodTraceability.Modules.Traceability.Domain;
 
@@ -129,14 +130,14 @@ public sealed class CreateTraceabilityEventServiceTests
 
     private static CreateTraceabilityEventService CreateService(
         ITraceabilityEventWriter writer) =>
-        new(writer, new FixedTimeProvider(CreatedAt));
+        new(writer, new EventTypeQueryService(new StubEventTypeReader()), new FixedTimeProvider(CreatedAt));
 
     private static CreateTraceabilityEventCommand ValidCommand(
         IReadOnlyList<TraceabilityEventLotCommand>? inputs,
         IReadOnlyList<TraceabilityEventLotCommand>? outputs) =>
         new(
             OrganizationId,
-            EventTypeId,
+            "PRESS",
             LocationId,
             OccurredAt,
             " EXT-123 ",
@@ -144,6 +145,17 @@ public sealed class CreateTraceabilityEventServiceTests
             CreatedBy,
             inputs,
             outputs);
+
+    private sealed class StubEventTypeReader : IEventTypeReader
+    {
+        public Task<EventTypeLookup?> FindByCodeAsync(string code, CancellationToken cancellationToken) =>
+            Task.FromResult<EventTypeLookup?>(code == "PRESS"
+                ? new(EventTypeId, EventTypeClassification.Traceability)
+                : null);
+
+        public Task<string?> FindCodeByIdAsync(Guid eventTypeId, CancellationToken cancellationToken) =>
+            Task.FromResult<string?>(eventTypeId == EventTypeId ? "PRESS" : null);
+    }
 
     private sealed class StubTraceabilityEventWriter(
         IReadOnlyDictionary<Guid, ReferencedLotDetails> referencedLots)

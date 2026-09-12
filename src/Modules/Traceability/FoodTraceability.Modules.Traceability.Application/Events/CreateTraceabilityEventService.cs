@@ -1,10 +1,12 @@
 using FoodTraceability.BuildingBlocks;
+using FoodTraceability.Modules.Traceability.Application.EventTypes;
 using FoodTraceability.Modules.Traceability.Domain;
 
 namespace FoodTraceability.Modules.Traceability.Application.Events;
 
 public sealed class CreateTraceabilityEventService(
     ITraceabilityEventWriter writer,
+    EventTypeQueryService eventTypeQueryService,
     TimeProvider timeProvider)
 {
     private const decimal MaximumSupportedQuantity = 999999999999.999999m;
@@ -14,6 +16,21 @@ public sealed class CreateTraceabilityEventService(
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        var eventType = await eventTypeQueryService.FindByCodeAsync(
+            command.EventTypeCode,
+            cancellationToken);
+        if (eventType is null)
+        {
+            throw new TraceabilityEventValidationException(
+                "The referenced event type does not exist.");
+        }
+
+        if (eventType.Classification != EventTypeClassification.Traceability)
+        {
+            throw new TraceabilityEventValidationException(
+                $"Event type '{command.EventTypeCode}' is not allowed for traceability events.");
+        }
 
         if (command.Inputs is null)
         {
@@ -38,7 +55,7 @@ public sealed class CreateTraceabilityEventService(
 
         var newEvent = new NewTraceabilityEvent(
             Guid.NewGuid(),
-            command.EventTypeId,
+            eventType.Id,
             command.OrganizationId,
             command.LocationId,
             TimestampPrecision.TruncateToMicroseconds(command.OccurredAt),
