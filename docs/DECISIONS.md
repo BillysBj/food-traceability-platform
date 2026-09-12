@@ -75,6 +75,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-46 | Spaltenumfang und Verankerung von `quality.sample` | ENTSCHIEDEN |
 | D-47 | Statuswerte einer Probe | ENTSCHIEDEN |
 | D-48 | Modulkontrakte fuer schreibende Aufrufe ueber Modulgrenzen | ENTSCHIEDEN |
+| D-49 | Modulkontrakte sprechen in fachlichen Codes, nicht in Ids | ENTSCHIEDEN |
 
 ---
 
@@ -1716,6 +1717,40 @@ gegen Bequemlichkeit eingetauscht.
 
 ---
 
+## D-49 – Modulkontrakte sprechen in fachlichen Codes, nicht in Ids
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-11, D-48
+**Betrifft:** FIX-015, QLT-002, LOG-003, DOC-002
+
+Der Kontrakt aus FND-008 nahm eine Event-Typ-**Id** entgegen. Das Quality-Modul
+kennt diese Id nicht — sie gehört Traceability. Es bliebe nur, den geseedeten
+Wert als Quelltextkonstante zu kopieren. Das ist eine verborgene Kopplung: Läuft
+sie auseinander, bemerkt es kein Test, sondern erst ein Fehlschlag zur Laufzeit.
+
+**Entscheidung:** Ein Modulkontrakt nimmt **fachliche Codes** entgegen, keine
+technischen Ids fremder Tabellen. Das besitzende Modul löst den Code auf,
+prüft ihn und wirft bei einem unbekannten oder unzulässigen Code seine
+Kontraktausnahme.
+
+**Die Folge, die den eigentlichen Gewinn ausmacht:** Die Regel aus TRC-008a —
+nur `Traceability`-klassifizierte Typen dürfen ein Event erzeugen — stand
+bisher im `TraceabilityEventsController`, also beim Aufrufer. Ein zweiter
+Aufrufer wäre per Konstruktion ungeschützt gewesen. Auflösung und Prüfung
+wandern deshalb in `CreateTraceabilityEventService`, und beide Aufrufer —
+Controller wie Kontraktadapter — sind ab dann von derselben Stelle geschützt.
+
+Die Fehlermeldungen bleiben wortgleich, damit sich für einen Client nichts
+ändert: „The referenced event type does not exist." und „Event type '<code>' is
+not allowed for traceability events."
+
+**Grenze dieser Regel:** Sie gilt für fachliche Schlüssel mit stabiler
+Bedeutung — Eventtypcode, Einheitencode, Parametercode. Sie gilt **nicht** für
+Ids von Datensätzen, die der Aufrufer selbst besitzt oder zuvor selbst angelegt
+hat; Lot-, Standort- und Organisations-Ids bleiben Ids.
+
+---
+
 ## Nächste freie ID
 
-`D-49`
+`D-50`
