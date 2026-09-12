@@ -14,19 +14,22 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
     [Fact]
     public async Task QualityMigrationAppliesToEmptyDatabase()
     {
-        // The fixture creates a fresh database and migrates Organizations, Catalog, then Quality.
+        // The fixture migrates Organizations, Catalog, Identity, Traceability, then Quality.
         await using var context = database.CreateQualityDbContext();
         using var timeout = new CancellationTokenSource(QueryTimeout);
 
         await context.Database.MigrateAsync(timeout.Token);
-        var migrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
+        var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
-        Assert.EndsWith("_InitialQuality", Assert.Single(migrations), StringComparison.Ordinal);
+        var migrations = appliedMigrations.ToArray();
+        Assert.Equal(2, migrations.Length);
+        Assert.EndsWith("_InitialQuality", migrations[0], StringComparison.Ordinal);
+        Assert.EndsWith("_AddSample", migrations[1], StringComparison.Ordinal);
         Assert.False(context.Database.HasPendingModelChanges());
     }
 
     [Fact]
-    public async Task QualitySchemaExistsWithOnlyParameterAndMigrationHistory()
+    public async Task QualitySchemaExistsWithOnlyParameterSampleAndMigrationHistory()
     {
         var tables = await QueryAsync(
             """
@@ -37,7 +40,7 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
             """,
             static reader => reader.GetString(0));
 
-        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "parameter"], tables);
+        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "parameter", "sample"], tables);
     }
 
     [Fact]
@@ -75,12 +78,12 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
             ORDER BY table_schema;
             """,
             static reader => reader.GetString(0));
-        Assert.Equal(["catalog", "org", "quality"], histories);
+        Assert.Equal(["catalog", "identity", "org", "quality", "trace"], histories);
 
         var migrationCounts = await QueryAsync(
             "SELECT COUNT(*) FROM quality.__ef_migrations_history;",
             static reader => reader.GetInt64(0));
-        Assert.Equal(1L, Assert.Single(migrationCounts));
+        Assert.Equal(2L, Assert.Single(migrationCounts));
     }
 
     [Fact]
@@ -178,14 +181,17 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
-    public void QualityModelContainsOnlyParameterAndNoCrossModuleForeignKey()
+    public void QualityModelContainsOnlyParameterAndSampleAndNoCrossModuleForeignKey()
     {
         using var context = database.CreateQualityDbContext();
 
-        var entityType = Assert.Single(context.Model.GetEntityTypes());
-        Assert.Equal(typeof(Parameter), entityType.ClrType);
-        Assert.Empty(entityType.GetForeignKeys());
-        Assert.Empty(entityType.GetNavigations());
+        var entityTypes = context.Model.GetEntityTypes().OrderBy(entity => entity.ClrType.Name).ToArray();
+        Assert.Equal([typeof(Parameter), typeof(Sample)], entityTypes.Select(entity => entity.ClrType));
+        Assert.All(entityTypes, entityType =>
+        {
+            Assert.Empty(entityType.GetForeignKeys());
+            Assert.Empty(entityType.GetNavigations());
+        });
     }
 
     private static Parameter CreateParameter(string code, Guid? unitId = null)

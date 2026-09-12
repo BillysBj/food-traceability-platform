@@ -59,6 +59,11 @@ internal sealed class LotConfiguration : IEntityTypeConfiguration<Lot>
             lot.UnitId,
         }).HasName("ak_lot_lot_id_organization_id_unit_id");
 
+        // D-46: target for the composite (lot_id, organization_id) foreign key from
+        // quality.sample, which references a lot without carrying its quantity unit.
+        builder.HasAlternateKey(lot => new { lot.Id, lot.OrganizationId })
+            .HasName("ak_lot_lot_id_organization_id");
+
         // The foreign keys to catalog.article and catalog.unit are added explicitly in the
         // migration. Configuring them here would require a project reference to the Catalog
         // module and would break module isolation (D-11).
