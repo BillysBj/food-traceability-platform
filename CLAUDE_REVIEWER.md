@@ -717,6 +717,24 @@ Der Statuswechsel gehört deshalb zu den Acceptance Criteria des jeweiligen
 Tasks. Solange der Plan noch den vorherigen Status ausweist, ist der Task nicht
 abgeschlossen. Diese Regel gilt auch für reine Dokumentationstasks.
 
+### Faktenprüfung vor jeder Codex-Übergabe
+
+- Jede Tatsachenbehauptung in einem Task wird vor der Übergabe am Repository
+  geprüft und nicht aus dem Gedächtnis, aus einem früheren Task oder aus einem
+  Dokument abgeleitet, das selbst veraltet sein kann. Das betrifft Dateipfade,
+  Klassen-, Methoden- und Testnamen, Spalten, Constraints, Migrationen,
+  Berechtigungen, Statusangaben und Mengenangaben.
+- Die Behauptung, etwas existiere nicht, ist ebenfalls eine Behauptung und
+  wird genauso geprüft.
+- Trägt eine nicht offensichtliche Behauptung den Task, wird im Task genannt,
+  woran sie geprüft wurde.
+- Ein Task, dessen Angaben dem Repository widersprechen, ist ein Fehler des
+  Tasks und nicht der Umsetzung. Er wird zurückgezogen und korrigiert, statt
+  bei der Umsetzung ausgeglichen zu werden.
+- Zwei Acceptance Criteria desselben Tasks dürfen einander nicht
+  widersprechen. Ein als Selbstnachweis formulierter Punkt muss tatsächlich
+  fehlschlagen können.
+
 ### Kontrollblock vor jeder Codex-Übergabe
 
 ```text

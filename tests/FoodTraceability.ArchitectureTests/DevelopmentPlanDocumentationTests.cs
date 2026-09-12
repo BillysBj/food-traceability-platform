@@ -173,6 +173,66 @@ public sealed partial class DevelopmentPlanDocumentationTests
             epicMilestoneIds.Order(StringComparer.Ordinal));
     }
 
+    [Fact]
+    public void OpenTasksNamedInAMilestoneRowMatchTheEpic()
+    {
+        var developmentPlan = ReadRepositoryFile(DevelopmentPlanPath);
+        var epicLists = ExtractSection(
+            developmentPlan,
+            EpicListsStartMarker,
+            EpicListsEndMarker);
+        var milestoneSection = ExtractSection(
+            developmentPlan,
+            MilestoneStatusStartMarker,
+            EpicListsEndMarker);
+        var milestoneRows = MilestoneRowRegex()
+            .Matches(milestoneSection)
+            .ToDictionary(match => match.Groups["id"].Value, match => match.Value);
+        var epicMilestoneIds = new List<string>();
+
+        foreach (Match epicMatch in EpicBlockRegex().Matches(epicLists))
+        {
+            var epicBody = epicMatch.Groups["body"].Value;
+            var milestoneMatch = Assert.Single(
+                EpicMilestoneRegex().Matches(epicBody).Cast<Match>());
+            var milestoneId = milestoneMatch.Groups["id"].Value;
+            var openTaskIds = TaskLineRegex()
+                .Matches(epicBody)
+                .Where(match => GetRoadmapStatus(match.Value) is "NOT_STARTED" or "IN_PROGRESS")
+                .Select(match => match.Groups["id"].Value)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            const string openMarker = "Offen:";
+            var milestoneRow = milestoneRows[milestoneId];
+            var openMarkerIndex = milestoneRow.IndexOf(openMarker, StringComparison.Ordinal);
+            var openList = openMarkerIndex < 0
+                ? string.Empty
+                : milestoneRow[(openMarkerIndex + openMarker.Length)..].Split('.', 2)[0];
+            var namedOpenTaskIds = TaskIdReferenceRegex()
+                .Matches(openList)
+                .Select(match => match.Groups["id"].Value)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            var missingTaskIds = openTaskIds.Except(namedOpenTaskIds, StringComparer.Ordinal);
+            var extraTaskIds = namedOpenTaskIds.Except(openTaskIds, StringComparer.Ordinal);
+
+            Assert.True(
+                openTaskIds.SequenceEqual(namedOpenTaskIds, StringComparer.Ordinal),
+                $"Milestone '{milestoneId}' open tasks do not match its epic. " +
+                $"Missing: [{string.Join(", ", missingTaskIds)}]. " +
+                $"Extra: [{string.Join(", ", extraTaskIds)}].");
+
+            epicMilestoneIds.Add(milestoneId);
+        }
+
+        Assert.Equal(
+            milestoneRows.Keys.Order(StringComparer.Ordinal),
+            epicMilestoneIds.Order(StringComparer.Ordinal));
+    }
+
     private static string[] GetEpicTaskLines()
     {
         var developmentPlan = ReadRepositoryFile(DevelopmentPlanPath);
@@ -257,6 +317,9 @@ public sealed partial class DevelopmentPlanDocumentationTests
 
     [GeneratedRegex("(?m)^- \\*\\*(?<id>[A-Z][A-Z0-9]*-\\d{3}[a-z]?)\\*\\*[^\\r\\n]*$")]
     private static partial Regex TaskLineRegex();
+
+    [GeneratedRegex("\\*\\*(?<id>[A-Z][A-Z0-9]*-\\d{3}[a-z]?)\\*\\*")]
+    private static partial Regex TaskIdReferenceRegex();
 
     [GeneratedRegex("\\*\\*Roadmap-Status:\\s*(?<status>[A-Z_]+)\\*\\*")]
     private static partial Regex RoadmapStatusMarkerRegex();
