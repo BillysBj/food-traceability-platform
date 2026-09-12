@@ -7,6 +7,7 @@ using FoodTraceability.Modules.Traceability.Infrastructure.EventTypes;
 using FoodTraceability.Modules.Traceability.Infrastructure.Events;
 using FoodTraceability.Modules.Traceability.Infrastructure.Lots;
 using FoodTraceability.Modules.Traceability.Infrastructure.Traces;
+using FoodTraceability.Platform.Contracts.Traceability;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,6 +40,7 @@ public static class TraceabilityConfiguration
         services.AddScoped<ITraceabilityEventWriter, TraceabilityEventWriter>();
         services.AddScoped<TraceabilityEventQueryService>();
         services.AddScoped<CreateTraceabilityEventService>();
+        services.AddScoped<ITraceabilityEventCreator, TraceabilityEventCreator>();
         services.AddScoped<ILotReader, LotReader>();
         services.AddScoped<ILotWriter, LotWriter>();
         services.AddScoped<LotQueryService>();
