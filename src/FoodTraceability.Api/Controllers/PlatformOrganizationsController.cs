@@ -17,8 +17,10 @@ public sealed class PlatformOrganizationsController(
     /// <summary>Creates an organization through the platform administration scope.</summary>
     /// <remarks>
     /// This platform endpoint has no organization context. Authorization is based exclusively
-    /// on <c>organization.manage</c> from the caller's platform permissions. Organization names,
-    /// VAT IDs, and tax numbers are not currently subject to uniqueness rules.
+    /// on <c>organization.manage</c> from the caller's platform permissions.
+    /// VAT IDs are stored uppercase with only letters and digits, and are unique when set.
+    /// The 64-character VAT ID limit applies after normalization.
+    /// Organization names and tax numbers do not have uniqueness rules.
     /// </remarks>
     /// <param name="request">The organization data.</param>
     /// <param name="cancellationToken">Cancels request processing.</param>
@@ -27,12 +29,14 @@ public sealed class PlatformOrganizationsController(
     /// <response code="400">The organization request is invalid.</response>
     /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
     /// <response code="403">The caller lacks platform-wide organization.manage permission.</response>
+    /// <response code="409">An organization with the same normalized VAT ID already exists.</response>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.PlatformOrganizationManage)]
     [ProducesResponseType<OrganizationResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<OrganizationResponse>> Create(
         CreateOrganizationRequest request,
         CancellationToken cancellationToken)
@@ -48,6 +52,13 @@ public sealed class PlatformOrganizationsController(
                     request.Email,
                     request.Phone),
                 cancellationToken);
+        }
+        catch (OrganizationConflictException exception)
+        {
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateOrganizationConflict(
+                    HttpContext,
+                    exception.Message));
         }
         catch (OrganizationValidationException exception)
         {

@@ -40,6 +40,8 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string MembershipNotFoundErrorCode = "MEMBERSHIP_NOT_FOUND";
     private const string MembershipValidationTitle = "The membership request is invalid.";
     private const string MembershipValidationErrorCode = "MEMBERSHIP_VALIDATION_FAILED";
+    private const string OrganizationConflictTitle = "The organization conflicts with existing data.";
+    private const string OrganizationConflictErrorCode = "ORGANIZATION_CONFLICT";
     private const string OrganizationNotFoundTitle = "Organization not found.";
     private const string OrganizationNotFoundErrorCode = "ORGANIZATION_NOT_FOUND";
     private const string OrganizationValidationTitle = "The organization request is invalid.";
@@ -204,6 +206,14 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         problemDetails.Extensions[ErrorCodeExtensionName] = MembershipValidationErrorCode;
         return problemDetails;
     }
+
+    public ProblemDetails CreateOrganizationConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            OrganizationConflictTitle,
+            OrganizationConflictErrorCode,
+            detail);
 
     public ProblemDetails CreateOrganizationNotFound(HttpContext httpContext) =>
         CreateApiProblemDetails(

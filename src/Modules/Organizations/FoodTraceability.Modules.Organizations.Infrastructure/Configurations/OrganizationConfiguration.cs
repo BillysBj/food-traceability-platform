@@ -23,6 +23,11 @@ internal sealed class OrganizationConfiguration : IEntityTypeConfiguration<Organ
         builder.Property(organization => organization.VatId)
             .HasMaxLength(Organization.MaximumVatIdLength);
 
+        builder.HasIndex(organization => organization.VatId)
+            .HasDatabaseName("ux_organization_vat_id")
+            .IsUnique()
+            .HasFilter("vat_id IS NOT NULL");
+
         builder.Property(organization => organization.TaxNumber)
             .HasMaxLength(Organization.MaximumTaxNumberLength);
 

@@ -27,9 +27,9 @@ public sealed class PlatformOrganizationApiFoundationTests
         var get = itemPath.GetProperty("get");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        AssertOperation(post, ["201", "400", "401", "403"]);
+        AssertOperation(post, ["201", "400", "401", "403", "409"]);
         AssertOperation(get, ["200", "401", "403", "404"]);
-        Assert.False(post.GetProperty("responses").TryGetProperty("409", out _));
+        AssertSchemaReference(post.GetProperty("responses"), "409", "ProblemDetails");
         AssertSchemaReference(post.GetProperty("responses"), "201", "OrganizationResponse");
         AssertSchemaReference(post.GetProperty("responses"), "400", "ValidationProblemDetails");
         AssertSchemaReference(post.GetProperty("responses"), "401", "ProblemDetails");
