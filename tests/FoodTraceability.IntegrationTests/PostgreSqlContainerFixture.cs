@@ -118,14 +118,19 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             await using var catalogContext = CreateCatalogDbContext();
             await catalogContext.Database.MigrateAsync(timeout.Token);
 
-            // Quality owns no Catalog entities. Its migration-level cross-schema FK
-            // requires the referenced catalog table to exist in the same database first.
-            // Catalog in turn requires Organizations before its own migration can run.
+            // Quality's migration-level cross-schema FKs require Catalog, Organizations,
+            // and Traceability. Traceability in turn requires Identity before migration.
             await using var qualityOrganizationsContext = CreateQualityOrganizationsDbContext();
             await qualityOrganizationsContext.Database.MigrateAsync(timeout.Token);
 
             await using var qualityCatalogContext = CreateQualityCatalogDbContext();
             await qualityCatalogContext.Database.MigrateAsync(timeout.Token);
+
+            await using var qualityIdentityContext = CreateQualityIdentityDbContext();
+            await qualityIdentityContext.Database.MigrateAsync(timeout.Token);
+
+            await using var qualityTraceabilityContext = CreateQualityTraceabilityDbContext();
+            await qualityTraceabilityContext.Database.MigrateAsync(timeout.Token);
 
             await using var qualityContext = CreateQualityDbContext();
             await qualityContext.Database.MigrateAsync(timeout.Token);
@@ -417,6 +422,26 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             CatalogDbContext.Schema);
 
         return new CatalogDbContext(optionsBuilder.Options);
+    }
+
+    public IdentityDbContext CreateQualityIdentityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<IdentityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            QualityConnectionString,
+            IdentityDbContext.Schema);
+
+        return new IdentityDbContext(optionsBuilder.Options);
+    }
+
+    public TraceabilityDbContext CreateQualityTraceabilityDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<TraceabilityDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(
+            QualityConnectionString,
+            TraceabilityDbContext.Schema);
+
+        return new TraceabilityDbContext(optionsBuilder.Options);
     }
 
     public OrganizationsDbContext CreateQualityOrganizationsDbContext()

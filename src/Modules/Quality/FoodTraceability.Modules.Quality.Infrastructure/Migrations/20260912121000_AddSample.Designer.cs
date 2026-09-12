@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace FoodTraceability.Modules.Quality.Infrastructure.Migrations;
 
 [DbContext(typeof(QualityDbContext))]
-partial class QualityDbContextModelSnapshot : ModelSnapshot
+[Migration("20260912121000_AddSample")]
+partial class AddSample
 {
-    protected override void BuildModel(ModelBuilder modelBuilder)
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
         modelBuilder
             .HasAnnotation("ProductVersion", "10.0.11")

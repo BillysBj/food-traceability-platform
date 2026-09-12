@@ -72,6 +72,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-43 | Geteilte `DbConnection` je Request fuer alle Modul-DbContexts | ENTSCHIEDEN |
 | D-44 | Berechtigungsgrenze bei modulueberschreitenden Schreibvorgaengen | ENTSCHIEDEN |
 | D-45 | Eindeutigkeit der Probennummer je Organisation | ENTSCHIEDEN |
+| D-46 | Spaltenumfang und Verankerung von `quality.sample` | ENTSCHIEDEN |
+| D-47 | Statuswerte einer Probe | ENTSCHIEDEN |
 
 ---
 
@@ -1562,6 +1564,95 @@ Labor sein Ergebnis zuordnet; Dubletten machen die Zuordnung mehrdeutig.
 
 ---
 
+## D-46 – Spaltenumfang und Verankerung von `quality.sample`
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-11, D-27, D-41, D-45
+**Betrifft:** QLT-002a, QLT-002, QLT-003
+
+### `sample_type` entfällt vorerst
+
+Das ER-Diagramm führt die Spalte, aber **kein Dokument nennt eine einzige
+Probenart**. `AGENTS.md` §17 listet die Tabelle und schweigt zu den Werten.
+
+Die Spalte wird deshalb nicht angelegt. Das ist dasselbe Vorgehen wie bei
+`quality.parameter`, das in QLT-001a bewusst ohne Namensspalte entstand,
+solange D-07 offen ist: ein Feld, dessen Wertevorrat niemand benennen kann,
+wird nicht auf Vorrat gebaut. Sie kommt, sobald jemand sagen kann, welche
+Werte sie trägt.
+
+**Abweichung vom ER-Diagramm, ausdrücklich festgehalten.**
+
+### Strukturelle Verankerung statt Prüfung im Code
+
+`quality.sample` führt `organization_id` (D-45) und verankert damit **beide**
+fachlichen Bezüge mandantensicher über zusammengesetzte Fremdschlüssel:
+
+- `(traceability_event_id, organization_id)` auf
+  `ak_traceability_event_event_id_organization_id` — dieser Alternate Key
+  existiert bereits.
+- `(lot_id, organization_id)` auf `trace.lot`. Dort existiert bislang nur ein
+  **dreispaltiger** Alternate Key, der zusätzlich `unit_id` verlangt; das ist
+  für eine Probe sinnlos. `trace.lot` erhält deshalb zusätzlich einen
+  zweispaltigen Alternate Key. Er wird in einer **Traceability**-Migration
+  angelegt, weil dem Modul die Tabelle gehört.
+- `(location_id, organization_id)` auf `org.location` — dieser Alternate Key
+  existiert bereits.
+
+Das ist dieselbe Technik, die `trace.event_input` schon benutzt. Die
+Mandantengleichheit ist damit vom Datenbankschema erzwungen und nicht von
+Anwendungscode zugesichert.
+
+### Bewusst hingenommenes Restrisiko
+
+Der zusammengesetzte Fremdschlüssel stellt sicher, dass Probe, Lot, Event und
+Standort **derselben Organisation** gehören. Er stellt **nicht** sicher, dass
+`quality.sample.lot_id` dasselbe Lot bezeichnet, das das SAMPLE-Event als
+`event_input` verbraucht. Beide könnten auf verschiedene Lots derselben
+Organisation zeigen.
+
+Dagegen schützt die Anwendung: Probe und Event entstehen im selben
+Application-Service in einer Transaktion (D-43), und QLT-002a macht weder das
+eine noch das andere änderbar. Ein nachträgliches Auseinanderlaufen ist damit
+ausgeschlossen; ein falscher Wert bei der Anlage bliebe es nicht.
+
+### Warum `lot_id` nicht entfällt
+
+Denkbar wäre, die Spalte zu streichen und das Lot ausschließlich über
+`trace.event_input` zu erreichen — eine Quelle statt zweier, in der Logik von
+D-41. Dagegen spricht, dass **jeder** Lesepfad des Qualitätsmoduls beim Lot
+beginnt: QLT-003, QLT-005 und QLT-006. Sie alle über die Interna von
+Traceability zu führen, würde die Module auf dem Lesepfad enger koppeln, als
+D-11 verlangt.
+
+---
+
+## D-47 – Statuswerte einer Probe
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-41
+**Betrifft:** QLT-002a, QLT-003, QLT-005, QLT-006
+
+`AGENTS.md` §18 nennt `PENDING`, `PASS`, `FAIL`, `BLOCKED` und `RELEASED`.
+
+**Eine Probe trägt davon nur `PENDING`, `PASS` und `FAIL`.**
+
+`BLOCKED` und `RELEASED` beschreiben, was mit dem **Lot** geschieht, und dafür
+existieren **QLT-005** und **QLT-006** als eigene Tasks mit eigenen
+Berechtigungen — `quality.block` und `quality.release`. Eine gesperrte Probe
+hätte keine definierte Bedeutung, und spätestens QLT-005 müsste klären, worin
+sie sich von einem gesperrten Lot unterscheidet.
+
+Der Ablauf einer Probe ist damit: genommen und unbewertet (`PENDING`), danach
+bewertet (`PASS` oder `FAIL`). Den Übergang setzt **QLT-003** mit dem
+Laborergebnis; QLT-002a legt Proben ausschließlich als `PENDING` an.
+
+Die Einschränkung gegenüber §18 ist eine Entscheidung und kein Versehen. §18
+beschreibt den Qualitätsstatus des Lots; der Statusbegriff der Probe ist
+enger.
+
+---
+
 ## Nächste freie ID
 
-`D-46`
+`D-48`

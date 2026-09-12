@@ -11,6 +11,8 @@ public sealed class QualityDbContext(DbContextOptions<QualityDbContext> options)
 
     public DbSet<Parameter> Parameters => Set<Parameter>();
 
+    public DbSet<Sample> Samples => Set<Sample>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
