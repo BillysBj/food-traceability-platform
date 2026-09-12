@@ -95,10 +95,11 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-020** D-35 über D-42 entschieden — **Roadmap-Status: DONE** — die Eindeutigkeit von Organisationen läuft über die VAT-Id; umgesetzt in FIX-013.
 - **DOCS-021** Faktenprüfung vor der Übergabe verankert und die Milestone-Guard-Lücke geschlossen — **Roadmap-Status: DONE**
 - **DOCS-022** Berechtigung und Eindeutigkeit der Probenahme entschieden — **Roadmap-Status: DONE** — hält D-44 und D-45 fest, zieht `quality.sample` im ER-Diagramm nach und schneidet QLT-002 in QLT-002a und QLT-002.
+- **DOCS-023** Befund aus der Mutationsprüfung der frühen Tests als FIX-014 erfasst — **Roadmap-Status: DONE** — die frühen Tests halten; ein Konjunktionsterm in der Organisationsprüfung kann das Ergebnis jedoch nicht verändern, und die Annahme dahinter existiert nur als Kommentar.
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen waren nicht Teil von TRC-013a; TRC-013 ergänzt den durchgehenden Test aller drei Pflichtaussagen an derselben über die API aufgebauten Kette.
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 
-FIX-006, FIX-007 und FIX-008 sind noch nicht umgesetzt; sie bleiben
+FIX-006, FIX-007, FIX-008 und FIX-014 sind noch nicht umgesetzt; sie bleiben
 ausschließlich in den bestehenden Backlog-Einträgen dieses Dokuments und werden
 hier nicht dupliziert.
 
@@ -603,6 +604,43 @@ Normalisierung bleibt einmalig im `UnitQueryService`.
 **Warum nicht nebenbei erledigt:** Das ändert eine öffentliche
 Application-Signatur im Catalog-Modul und betrifft damit auch künftige
 Aufrufer. Gehört in einen eigenen Task.
+
+## FIX-014 – Ungeprüfte Annahme in der Organisationsprüfung
+
+**Status:** OFFEN
+**Herkunft:** Mutationsprüfung der frühen Tests, 2026-09-12
+
+`DatabaseAuthorizationHandler.cs` prüft:
+
+```csharp
+return authorization.HasOrganizationMembership(organizationId)
+    && authorization.HasOrganizationPermission(organizationId, permissionCode);
+```
+
+Die erste Bedingung **kann das Ergebnis nicht verändern**.
+`HasOrganizationPermission` sucht einen Berechtigungssatz mit passender
+Organisation *und* passendem Code; `HasOrganizationMembership` sucht denselben
+Satz nur mit passender Organisation. Die zweite Bedingung impliziert die erste,
+immer.
+
+Nachgewiesen und nicht hergeleitet: Wird der Konjunktionsterm entfernt, bleiben
+**alle 945 Tests grün**. Jemand könnte die Zeile als redundant löschen, und kein
+Test würde es merken.
+
+Ein Loch ist das nicht. Aber der Kommentar direkt darüber begründet die Zeile
+mit einer Annahme — „OrganizationPermissionSets are created only from
+memberships and assignments whose location_id is NULL". Solange diese Annahme
+gilt, ist die Zeile wirkungslos. Fällt sie, wird die Zeile die einzige
+Verteidigung, und dann verlässt sich die Mandantentrennung auf etwas, das nie
+geprüft wurde.
+
+**Ziel:** Die Zeile bleibt. Der Kommentar wird zur geprüften Aussage — ein Test
+auf Ebene des `EffectiveAuthorizationService`, der nachweist, dass nie ein
+Berechtigungssatz für eine Organisation ohne Mitgliedschaft entsteht.
+
+**Warum nicht nebenbei erledigt:** Ein neuer Test an der Autorisierung gehört
+nicht in einen fremden Branch, und die Aussage muss erst am Aufbaupfad des
+Dienstes belegt werden, statt sie am Modell zu behaupten.
 
 ## FIX-009 - Klartextpasswörter erscheinen im generierten `ToString()`
 
