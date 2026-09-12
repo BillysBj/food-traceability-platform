@@ -1219,7 +1219,7 @@ eigenen Eintrag; sie wird durch D-38 weder vorbereitet noch ausgeschlossen.
 
 **Status:** ENTSCHIEDEN (2026-09-09)
 **Setzt voraus:** D-28, D-29, D-32, D-38
-**Betrifft:** TRC-005, TRC-008, TRC-008a, TRC-009, QLT-001, LOG-003
+**Betrifft:** TRC-005, TRC-008, TRC-008a, TRC-009, QLT-002, LOG-003
 
 `trace.traceability_event` bildet **Materialfluss und Provenance** ab. Nicht
 verbrauchende Status-, Qualitaets- und Logistikvorgaenge werden **nicht**
@@ -1352,7 +1352,7 @@ Umsetzung in **LOG-003** und **LOG-004**, nicht vorher.
 
 **Status:** ENTSCHIEDEN (2026-09-09)
 **Setzt voraus:** D-11, D-32, D-39
-**Betrifft:** QLT-001, TRC-008a
+**Betrifft:** QLT-002, TRC-008a
 
 Eine Probenahme entnimmt dem Lot tatsaechlich Menge. Diese Menge darf in der
 Traceability-Mengenbilanz **nicht fehlen**, auch nicht bei kleinen Mengen.
@@ -1381,9 +1381,10 @@ bestehende Schreibpfad aus TRC-008 unveraendert benutzt wird: Zeilensperre ueber
 `FOR UPDATE`, Verbrauchspruefung und Ablehnung mit 409 bei Ueberverbrauch
 gelten fuer eine Probenahme genauso wie fuer einen PRESS.
 
-**Offener technischer Punkt fuer QLT-001**, keine Entscheidung: Zwei
-Modul-DbContexts in einer Transaktion muessen sich eine `DbConnection` teilen.
-Ob die bestehende Registrierung das hergibt, ist noch nicht geprueft.
+**Offener technischer Punkt für QLT-002**, als Task **FND-007** geführt,
+keine Entscheidung: Zwei Modul-DbContexts in einer Transaktion muessen sich
+eine `DbConnection` teilen. Ob die bestehende Registrierung das hergibt, ist
+noch nicht geprueft.
 
 ---
 

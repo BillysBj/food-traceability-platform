@@ -1923,6 +1923,16 @@ Wenn eine fachliche Regel fehlt:
 - TODO / offene Entscheidung dokumentieren
 - technische Struktur vorbereiten
 
+Wenn eine Angabe im Task nicht zutrifft:
+
+1. nicht ausgleichen und nicht umgehen
+2. stoppen
+3. die Angabe aus dem Task und den tatsächlichen Befund im Repository
+   nebeneinander melden
+4. keine Ersatzlösung implementieren und keinen Ersatzweg erfinden
+
+Das gilt auch dann, wenn eine naheliegende Korrektur existiert.
+
 ---
 
 # 54. Keine Overengineering-Regel

@@ -51,8 +51,9 @@ Abweichungen werden dokumentiert und nicht rückwirkend bereinigt.
 
 ## Eingeschobene Tasks
 
-Aufgeführt sind alle nach `main` gemergten Tasks, die im ursprünglichen
-Entwicklungsplan keinen eigenen Eintrag hatten. Reine Umnummerierungen sowie die
+Aufgeführt sind alle eingeschobenen Tasks, die im ursprünglichen
+Entwicklungsplan keinen eigenen Eintrag hatten, sowohl nach `main` gemergte
+als auch noch offene Tasks. Reine Umnummerierungen sowie die
 Aufteilung eines geplanten Tasks auf mehrere Repository-Tasks – etwa ID-005 in
 ID-005a und ID-005b – gelten nicht als eingeschoben; sie sind in den Epic-Listen
 beim jeweiligen Plan-Task vermerkt.
@@ -90,6 +91,9 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-017** alle neunzehn Eventtypen klassifiziert und D-39 bis D-41 festgehalten — **Roadmap-Status: DONE**
 - **DOCS-018** Setup-Dokumentation im README vervollstaendigt — **Roadmap-Status: DONE** — alle fuenf Migrationen statt drei, die nachgewiesene Reihenfolge Platform → Organizations → Identity → Catalog → Traceability anstelle der bisherigen, die mit `3F000: schema "org" does not exist` scheiterte, dazu der Bootstrap des ersten PlatformAdministrators nach D-34 und die Setup-Reihenfolge bis zum ersten Traceability-Flow. In einer isolierten Wegwerf-Datenbank verifiziert.
 - **DOCS-019** QLT-001 bewertet und als SUPERSEDED festgehalten — **Roadmap-Status: DONE** — nach der Entscheidung, `quality.parameter` als reinen Seed-Katalog ohne API zu fuehren, blieb fuer den Task kein eigener Inhalt.
+- **FND-007** Gemeinsame `DbConnection` je Request für Modul-DbContexts — **Roadmap-Status: NOT_STARTED** — Zweck: zwei Modul-DbContexts in einer Transaktion, der in D-41 offen gelassene technische Punkt. Voraussetzung für QLT-002. M0 bleibt erreicht: das Foundation-Gate war ohne diese Fähigkeit tatsächlich erfüllt, der Bedarf entstand erst mit D-41.
+- **DOCS-020** D-35 über D-42 entschieden — **Roadmap-Status: DONE** — die Eindeutigkeit von Organisationen läuft über die VAT-Id; umgesetzt in FIX-013.
+- **DOCS-021** Faktenprüfung vor der Übergabe verankert und die Milestone-Guard-Lücke geschlossen — **Roadmap-Status: DONE**
 - **TRC-013a** Capability-Nachweis der Pilot-Kette (eingeschoben) — **Roadmap-Status: DONE** — weist OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001 über die echte API nach und korrigiert die Setup-Reihenfolge im dokumentierten Zielpfad. Die Backward- und Forward-Aussagen waren nicht Teil von TRC-013a; TRC-013 ergänzt den durchgehenden Test aller drei Pflichtaussagen an derselben über die API aufgebauten Kette.
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 
@@ -389,7 +393,7 @@ Milestone: `M4 – Traceability Core Proven`
 
 - **QLT-001a** Quality Persistence Foundation (eingeschoben) — **Roadmap-Status: DONE** — legt DbContext, Schema `quality`, erste Migration und `quality.parameter` an. Bewusst ohne Namensspalte, solange D-07 offen ist.
 - **QLT-001** Quality Parameter — **Roadmap-Status: SUPERSEDED** — **Ersetzt durch:** Repository-Task **QLT-001a** sowie **OLV-005**. QLT-001a hat `quality.parameter` angelegt. Die Parameter selbst sind durchgehend branchenspezifisch: `AGENTS.md` §17 nennt Free Acidity, Peroxide Value, K232 und K270 als Pilot-1-Beispiele und fuehrt direkt danach einen eigenen Abschnitt fuer Dairy; dafuer existiert **OLV-005** „Olive Oil Quality Configuration". Ein generischer Parameter wird in keinem Dokument benannt. Ein Lesepfad entsteht in **QLT-003**, wo er zuerst gebraucht wird — so wie der Event-Type-Lesepfad nicht mit TRC-005, sondern mit TRC-008 kam. Damit bleibt fuer QLT-001 kein eigener Inhalt.
-- **QLT-002** Sample — **Roadmap-Status: NOT_STARTED**
+- **QLT-002** Sample — **Roadmap-Status: NOT_STARTED** — Voraussetzung: **FND-007**.
 - **QLT-003** Lab Result — **Roadmap-Status: NOT_STARTED**
 - **QLT-004** Specification — **Roadmap-Status: NOT_STARTED**
 - **QLT-005** Lot Block — **Roadmap-Status: NOT_STARTED**
