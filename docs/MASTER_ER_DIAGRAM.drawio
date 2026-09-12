@@ -125,8 +125,8 @@
         <mxCell id="42" value="Quality" style="rounded=1;whiteSpace=wrap;html=1;fontStyle=1;fontSize=18;fillColor=#ffe6cc;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="3500" y="45" width="520" height="40" as="geometry"/>
         </mxCell>
-        <mxCell id="43" value="&lt;b&gt;quality.sample&lt;/b&gt;&lt;br&gt;sample_id PK&lt;br&gt;lot_id FK&lt;br&gt;location_id FK&lt;br&gt;sample_number&lt;br&gt;sample_type&lt;br&gt;taken_at&lt;br&gt;status" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#ffe6cc;strokeColor=#666666;" vertex="1" parent="1">
-          <mxGeometry x="3500" y="100" width="250" height="158" as="geometry"/>
+        <mxCell id="43" value="&lt;b&gt;quality.sample&lt;/b&gt;&lt;br&gt;sample_id PK&lt;br&gt;organization_id FK&lt;br&gt;lot_id FK&lt;br&gt;location_id FK&lt;br&gt;traceability_event_id FK&lt;br&gt;sample_number&lt;br&gt;sample_type&lt;br&gt;taken_at&lt;br&gt;status" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#ffe6cc;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="3500" y="100" width="250" height="190" as="geometry"/>
         </mxCell>
         <mxCell id="44" value="&lt;b&gt;quality.parameter&lt;/b&gt;&lt;br&gt;parameter_id PK&lt;br&gt;code&lt;br&gt;name&lt;br&gt;unit_id FK?&lt;br&gt;standard_method" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacing=8;fontSize=11;fillColor=#ffe6cc;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="3770" y="100" width="250" height="150" as="geometry"/>

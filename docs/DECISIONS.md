@@ -70,6 +70,8 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-41 | Probenahme: Menge im Event, Fachdaten in `quality.sample` | ENTSCHIEDEN |
 | D-42 | Eindeutigkeit von Organisationen ueber die VAT-Id | ENTSCHIEDEN |
 | D-43 | Geteilte `DbConnection` je Request fuer alle Modul-DbContexts | ENTSCHIEDEN |
+| D-44 | Berechtigungsgrenze bei modulueberschreitenden Schreibvorgaengen | ENTSCHIEDEN |
+| D-45 | Eindeutigkeit der Probennummer je Organisation | ENTSCHIEDEN |
 
 ---
 
@@ -1486,6 +1488,80 @@ konkreten Bedarf aus, und der Bedarf ist genau ein Aufrufweg.
 
 ---
 
+## D-44 – Berechtigungsgrenze bei modulübergreifenden Schreibvorgängen
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-11, D-20, D-41
+**Betrifft:** QLT-002, QLT-005, QLT-006, LOG-003, DOC-002
+
+Eine Probenahme schreibt nach D-41 ein SAMPLE-Event in `trace`. Der
+`QualityManager` hält `quality.sample.create`, aber **nicht**
+`trace.event.create` — das halten nur `Processor` und `Bottler`. Damit stellt
+sich die Frage, welche Berechtigung der Endpunkt verlangt.
+
+**Entscheidung:** Die Berechtigung wird **am Endpunkt der Fachoperation**
+geprüft, und nur dort. Ein modulübergreifender Aufruf über einen
+Application-Service — der von D-11 vorgesehene Weg — prüft **keine zweite**
+Berechtigung des aufrufenden Benutzers. Für die Probenahme heißt das:
+`quality.sample.create` genügt.
+
+**Warum nicht beide verlangen:** `quality.sample.create` ist ausschließlich dem
+`QualityManager` zugeordnet, und diese Rolle hält `trace.event.create` nicht.
+Beide zu verlangen hieße, dass die Berechtigung für die einzige Rolle, die sie
+trägt, nie ausreicht — sie wäre dann falsch geschnitten. Und dem
+`QualityManager` zusätzlich `trace.event.create` zu geben, würde ihm erlauben,
+beliebige Events wie PRESS oder BOTTLE zu erzeugen: deutlich mehr Rechte, als
+die Probenahme braucht, und eine neu erfundene Berechtigungszuordnung.
+
+**Die Grenze, die damit gilt:** Eine Berechtigung beschreibt eine
+**Fachoperation**, nicht die Tabellen, die sie berührt. Was ein
+Application-Service als Folge dieser Operation schreibt, ist Teil der
+Operation. Die `ApprovedRolePermissionMatrix` bleibt unverändert.
+
+**Das ist keine Aufweichung der Mandantentrennung.** Organisation und
+Standort werden weiterhin je Schreibvorgang geprüft; D-27 bleibt unberührt.
+Es geht ausschließlich um die Frage, welche Berechtigungscodes ein Endpunkt
+verlangt.
+
+---
+
+## D-45 – Eindeutigkeit der Probennummer je Organisation
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-41
+**Betrifft:** QLT-002a, QLT-002, QLT-003
+
+`quality.sample.sample_number` trägt in keinem Dokument eine
+Eindeutigkeitsregel. Das ER-Diagramm führt auf der Tabelle die Spalten
+`sample_id`, `lot_id`, `location_id`, `sample_number`, `sample_type`,
+`taken_at` und `status` — und **kein** `organization_id`.
+
+**Entscheidung:** `UNIQUE (organization_id, UPPER(sample_number))`, also
+eindeutig je Organisation und ohne Rücksicht auf Groß- und Kleinschreibung.
+Das ist dieselbe Regel wie `ux_lot_organization_id_lot_number_upper` bei
+`trace.lot`.
+
+**`quality.sample` erhält dafür eine `organization_id`-Spalte.** Sie ist keine
+Vorratshaltung: ohne sie hat die Eindeutigkeit keinen Geltungsbereich, und
+jede mandantengetrennte Abfrage müsste über `trace.lot` joinen — über eine
+Modulgrenze hinweg. Jede andere mandantenbezogene Tabelle dieses Repositories
+führt die Spalte ebenfalls direkt.
+
+**Abweichung vom ER-Diagramm, ausdrücklich festgehalten:** `organization_id`
+und das von D-41 geforderte `traceability_event_id` fehlen dort. Das Diagramm
+wird mit dieser Entscheidung nachgezogen.
+
+**Gleichlauf von Organisation und Lot** wird strukturell erzwungen, nicht nur
+geprüft: `trace.lot` führt bereits einen Alternate Key. Ob der bestehende
+dreispaltige Schlüssel dafür genügt oder ein zweispaltiger hinzukommt, ist
+eine Umsetzungsfrage von QLT-002a und keine Entscheidung.
+
+**Warum nicht je Lot:** Zwei Lots derselben Organisation dürften dann dieselbe
+Probennummer tragen. Die Probennummer ist aber die Referenz, unter der ein
+Labor sein Ergebnis zuordnet; Dubletten machen die Zuordnung mehrdeutig.
+
+---
+
 ## Nächste freie ID
 
-`D-44`
+`D-46`
