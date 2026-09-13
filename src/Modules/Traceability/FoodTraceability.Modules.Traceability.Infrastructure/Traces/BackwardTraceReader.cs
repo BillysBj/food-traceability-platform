@@ -1,5 +1,6 @@
 using System.Data;
 using FoodTraceability.Modules.Traceability.Application.Traces;
+using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -7,6 +8,7 @@ namespace FoodTraceability.Modules.Traceability.Infrastructure.Traces;
 
 internal sealed class BackwardTraceReader(
     TraceabilityDbContext dbContext,
+    ScopedTransaction scopedTransaction,
     IOptions<TraceGraphOptions> options) : IBackwardTraceReader
 {
     public async Task<TraceGraphDetails?> ReadAsync(
@@ -14,6 +16,13 @@ internal sealed class BackwardTraceReader(
         Guid lotId,
         CancellationToken cancellationToken)
     {
+        if (scopedTransaction.IsActive)
+        {
+            throw new InvalidOperationException(
+                "Backward trace requires its own RepeatableRead transaction for a consistent snapshot; "
+                + "an active outer transaction could have a different isolation level.");
+        }
+
         var maxNodes = options.Value.MaxNodes;
         // Keep the bound check, nodes and edges in one snapshot. Concurrent events must
         // not add ancestry between the bound check and the graph reads.

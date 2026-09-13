@@ -76,6 +76,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-47 | Statuswerte einer Probe | ENTSCHIEDEN |
 | D-48 | Modulkontrakte fuer schreibende Aufrufe ueber Modulgrenzen | ENTSCHIEDEN |
 | D-49 | Modulkontrakte sprechen in fachlichen Codes, nicht in Ids | ENTSCHIEDEN |
+| D-50 | Die Transaktion gehoert dem Scope, nicht dem Aufrufer | ENTSCHIEDEN |
 
 ---
 
@@ -1751,6 +1752,83 @@ hat; Lot-, Standort- und Organisations-Ids bleiben Ids.
 
 ---
 
+## D-50 – Die Transaktion gehört dem Scope, nicht dem Aufrufer
+
+**Status:** ENTSCHIEDEN (2026-09-12)
+**Setzt voraus:** D-11, D-41, D-43, D-48
+**Korrigiert:** die in FND-007 gewählte Form
+**Betrifft:** FND-009, QLT-002, LOG-003, DOC-002
+
+### Was an FND-007 unvollständig war
+
+FND-007 hat die geteilte `DbConnection` je Scope gebaut und dazu den Helfer
+`BeginSharedTransactionAsync(owner, participant)`. Er verlangt **beide**
+DbContexts als Parameter. Über eine Modulgrenze hinweg ist das nie möglich:
+das Quality-Modul darf `TraceabilityDbContext` nicht einmal sehen. Die
+Fähigkeit wurde damit für einen Fall nachgewiesen, den es an der einzigen
+Stelle, für die sie gebaut wurde, nicht gibt.
+
+Hinzu kommt, dass `TraceabilityEventWriter` unbedingt eine eigene Transaktion
+eröffnet. Läuft außen bereits eine auf derselben Verbindung, bricht Npgsql ab.
+Gemessen, nicht hergeleitet:
+
+```text
+InvalidOperationException: A transaction is already in progress;
+nested/concurrent transactions aren't supported.
+```
+
+### Entscheidung
+
+Die Transaktion gehört dem **DI-Scope**, nicht dem aufrufenden Dienst.
+`Platform.Persistence` hält sie als scoped Dienst auf der geteilten
+Verbindung. Jeder Modulkontext meldet sich **selbst** daran an, ohne einen
+anderen Kontext zu kennen.
+
+Ein Schreibpfad, der heute eine eigene Transaktion eröffnet, **benutzt eine
+laufende äußere mit** und eröffnet nur dann eine eigene, wenn keine läuft.
+Commit und Rollback bleiben bei dem, der die Transaktion eröffnet hat.
+
+`BeginSharedTransactionAsync` entfällt. Eine Zusicherung, die im einzigen
+vorgesehenen Fall nicht anwendbar ist, bleibt nicht als toter Code stehen.
+
+### Folge für den Advisory Lock
+
+`pg_advisory_xact_lock` ist transaktionsgebunden. In einer äußeren Transaktion
+wird er damit über den **ganzen** modulübergreifenden Vorgang gehalten statt
+nur über den Eventschreibvorgang. Das ist fachlich strenger als heute und
+ausdrücklich gewollt: Probe und Event entstehen unter derselben Serialisierung
+je Organisation.
+
+### Nicht jeder Schreibpfad darf mitbenutzen
+
+Im Produktionscode eröffnen sieben Stellen selbst eine Transaktion. Sie werden
+**nicht** gleich behandelt:
+
+- `TraceabilityEventWriter` benutzt eine laufende äußere mit. Das ist der Fall,
+  den QLT-002 braucht.
+- `BackwardTraceReader` und `ForwardTraceReader` verlangen ausdrücklich
+  `IsolationLevel.RepeatableRead`. Sie dürfen eine äußere Transaktion **nicht**
+  stillschweigend mitbenutzen: sie bekämen deren Isolationsstufe, und die
+  konsistente Momentaufnahme, auf der TRC-010 und TRC-011 beruhen, wäre ohne
+  jede Fehlermeldung verloren. Läuft eine äußere Transaktion, brechen sie
+  deshalb mit einer Meldung ab, die den Grund nennt.
+- Die vier Identity-Pfade — Anmeldung, Token-Erneuerung, Benutzeranlage und der
+  Bootstrap — bleiben unverändert. Kein modulübergreifender Aufruf erreicht sie
+  heute. Würde einer sie künftig umschließen, scheitert er sichtbar mit der
+  Npgsql-Meldung statt still etwas Falsches zu tun; das ist für den Moment
+  ausreichend und hier festgehalten, damit es niemand für ein Versehen hält.
+
+Die Regel lautet also nicht „jeder Schreibpfad tritt bei", sondern: wer eine
+bestimmte Isolationsstufe braucht, tritt nicht bei, sondern lehnt ab.
+
+### Grenze
+
+Dies ist **kein** generisches Unit-of-Work-Muster und wird keines. Es gibt
+genau eine Transaktion je Scope, sie wird ausdrücklich eröffnet, und wer sie
+nicht eröffnet hat, schließt sie nicht. AGENTS.md §54 bleibt unberührt.
+
+---
+
 ## Nächste freie ID
 
-`D-50`
+`D-51`

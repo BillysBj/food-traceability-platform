@@ -4,9 +4,11 @@ using FoodTraceability.Modules.Identity.Domain;
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Domain;
 using FoodTraceability.Modules.Organizations.Infrastructure;
+using FoodTraceability.Modules.Traceability.Application.Traces;
 using FoodTraceability.Modules.Traceability.Domain;
 using FoodTraceability.Modules.Traceability.Infrastructure;
 using FoodTraceability.Platform.Contracts.Traceability;
+using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ModuleEvents = FoodTraceability.Modules.Traceability.Application.Events;
@@ -210,6 +212,161 @@ public sealed class TraceabilityEventCreatorContractTests(PostgreSqlContainerFix
                 creator.CreateAsync(request, cancellationToken));
 
         Assert.Equal(original.Message, translated.Message);
+    }
+
+    // Reproduces the cross-module call that failed with a nested Npgsql transaction
+    // before FND-009. The caller knows only its context and the platform contract.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OuterTransactionIncludesCallerWriteAndContractEventWithAllInputs(bool commit)
+    {
+        await using var factory = CreateFactory();
+        var cancellationToken = factory.RequestCancellationToken;
+        var request = (await CreateRequestAsync(factory)) with
+        {
+            EventTypeCode = "SAMPLE",
+            LocationId = Guid.NewGuid(),
+            Outputs = [],
+        };
+        CreateTraceabilityEventResult result;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+            var organizations = scope.ServiceProvider.GetRequiredService<OrganizationsDbContext>();
+            await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+            await scopedTransaction.EnlistAsync(organizations, cancellationToken);
+            organizations.Locations.Add(Location.Create(
+                request.LocationId,
+                request.OrganizationId,
+                "Outer transaction location",
+                city: null,
+                region: null,
+                countryCode: null,
+                latitude: null,
+                longitude: null,
+                DateTimeOffset.UtcNow));
+            Assert.Equal(1, await organizations.SaveChangesAsync(cancellationToken));
+
+            var creator = scope.ServiceProvider.GetRequiredService<ITraceabilityEventCreator>();
+            result = await creator.CreateAsync(request, cancellationToken);
+            Assert.NotEqual(Guid.Empty, result.EventId);
+            Assert.True(scopedTransaction.IsActive);
+
+            if (commit)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+            else
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+        }
+
+        using var verificationScope = factory.Services.CreateScope();
+        var persistedOrganizations = verificationScope.ServiceProvider
+            .GetRequiredService<OrganizationsDbContext>();
+        Assert.Equal(commit, await persistedOrganizations.Locations.AsNoTracking()
+            .AnyAsync(location => location.Id == request.LocationId, cancellationToken));
+        var persistedTraceability = verificationScope.ServiceProvider
+            .GetRequiredService<TraceabilityDbContext>();
+        Assert.Equal(commit, await persistedTraceability.TraceabilityEvents.AsNoTracking()
+            .AnyAsync(traceabilityEvent => traceabilityEvent.Id == result.EventId, cancellationToken));
+        var inputs = await persistedTraceability.Set<EventInput>().AsNoTracking()
+            .Where(input => EF.Property<Guid>(input, "EventId") == result.EventId)
+            .ToListAsync(cancellationToken);
+        if (commit)
+        {
+            Assert.Equal(
+                request.Inputs!.OrderBy(line => line.LotId),
+                inputs.Select(input => new TraceabilityEventLot(input.LotId, input.Quantity))
+                    .OrderBy(line => line.LotId));
+            Assert.All(inputs, input => Assert.Equal(KilogramId, input.UnitId));
+        }
+        else
+        {
+            Assert.Empty(inputs);
+        }
+    }
+
+    [Fact]
+    public async Task OverconsumptionRollsBackOwnedTransactionWithoutPartialEvent()
+    {
+        await using var factory = CreateFactory();
+        var cancellationToken = factory.RequestCancellationToken;
+        var validRequest = await CreateRequestAsync(factory);
+        var request = Overconsume(validRequest);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+            var creator = scope.ServiceProvider.GetRequiredService<ITraceabilityEventCreator>();
+            Assert.False(scopedTransaction.IsActive);
+
+            await Assert.ThrowsAsync<TraceabilityEventConflictException>(() =>
+                creator.CreateAsync(request, cancellationToken));
+
+            Assert.False(scopedTransaction.IsActive);
+            var context = scope.ServiceProvider.GetRequiredService<TraceabilityDbContext>();
+            Assert.Null(context.Database.CurrentTransaction);
+        }
+
+        using var verificationScope = factory.Services.CreateScope();
+        var persisted = verificationScope.ServiceProvider.GetRequiredService<TraceabilityDbContext>();
+        Assert.False(await persisted.TraceabilityEvents.AsNoTracking()
+            .AnyAsync(traceabilityEvent => traceabilityEvent.OrganizationId == request.OrganizationId,
+                cancellationToken));
+        Assert.False(await persisted.Set<EventInput>().AsNoTracking()
+            .AnyAsync(input => EF.Property<Guid>(input, "OrganizationId") == request.OrganizationId,
+                cancellationToken));
+        Assert.False(await persisted.Set<EventOutput>().AsNoTracking()
+            .AnyAsync(output => EF.Property<Guid>(output, "OrganizationId") == request.OrganizationId,
+                cancellationToken));
+    }
+
+    [Fact]
+    public async Task BackwardTraceRejectsOuterTransactionBecauseItRequiresRepeatableRead()
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+        var cancellationToken = factory.RequestCancellationToken;
+        await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+        var reader = scope.ServiceProvider.GetRequiredService<IBackwardTraceReader>();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            reader.ReadAsync(Guid.NewGuid(), Guid.NewGuid(), cancellationToken));
+
+        Assert.Equal(
+            "Backward trace requires its own RepeatableRead transaction for a consistent snapshot; "
+            + "an active outer transaction could have a different isolation level.",
+            exception.Message);
+        Assert.True(scopedTransaction.IsActive);
+        Assert.Null(scope.ServiceProvider.GetRequiredService<TraceabilityDbContext>().Database.CurrentTransaction);
+        await transaction.RollbackAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task ForwardTraceRejectsOuterTransactionBecauseItRequiresRepeatableRead()
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+        var cancellationToken = factory.RequestCancellationToken;
+        await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+        var reader = scope.ServiceProvider.GetRequiredService<IForwardTraceReader>();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            reader.ReadAsync(Guid.NewGuid(), Guid.NewGuid(), cancellationToken));
+
+        Assert.Equal(
+            "Forward trace requires its own RepeatableRead transaction for a consistent snapshot; "
+            + "an active outer transaction could have a different isolation level.",
+            exception.Message);
+        Assert.True(scopedTransaction.IsActive);
+        Assert.Null(scope.ServiceProvider.GetRequiredService<TraceabilityDbContext>().Database.CurrentTransaction);
+        await transaction.RollbackAsync(cancellationToken);
     }
 
     private static CreateTraceabilityEventRequest Overconsume(CreateTraceabilityEventRequest request) =>
