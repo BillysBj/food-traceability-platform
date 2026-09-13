@@ -2,12 +2,15 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using FoodTraceability.Modules.Traceability.Application.Events;
 using FoodTraceability.Modules.Traceability.Domain;
+using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace FoodTraceability.Modules.Traceability.Infrastructure.Events;
 
-internal sealed class TraceabilityEventWriter(TraceabilityDbContext dbContext)
+internal sealed class TraceabilityEventWriter(
+    TraceabilityDbContext dbContext,
+    ScopedTransaction scopedTransaction)
     : ITraceabilityEventWriter
 {
     private const string EventTypeForeignKey =
@@ -37,8 +40,10 @@ internal sealed class TraceabilityEventWriter(TraceabilityDbContext dbContext)
         var organizationLockKey = BinaryPrimitives.ReadInt64BigEndian(
             SHA256.HashData(newEvent.OrganizationId.ToByteArray(bigEndian: true)));
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(
-            cancellationToken);
+        await using var transaction = scopedTransaction.IsActive
+            ? null
+            : await scopedTransaction.BeginAsync(cancellationToken);
+        await scopedTransaction.EnlistAsync(dbContext, cancellationToken);
 
         // TRC-007's composite FKs bind every input/output lot to its event's organization.
         // Every ancestry edge therefore stays within one organization, and cycles cannot
@@ -175,7 +180,10 @@ internal sealed class TraceabilityEventWriter(TraceabilityDbContext dbContext)
                 "One or more referenced lots do not exist in this organization.");
         }
 
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
         return traceabilityEvent;
     }
 

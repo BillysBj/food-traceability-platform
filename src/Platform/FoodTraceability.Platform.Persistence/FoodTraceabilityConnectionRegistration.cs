@@ -20,6 +20,7 @@ public static class FoodTraceabilityConnectionRegistration
 
             return new NpgsqlConnection(connectionString);
         });
+        services.TryAddScoped<ScopedTransaction>();
 
         return services;
     }

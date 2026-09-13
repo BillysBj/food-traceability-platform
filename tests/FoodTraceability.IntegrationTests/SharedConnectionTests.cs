@@ -68,13 +68,15 @@ public sealed class SharedConnectionTests(PostgreSqlContainerFixture database)
         {
             var organizations = scope.ServiceProvider.GetRequiredService<OrganizationsDbContext>();
             var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-            await using var transaction = await organizations.BeginSharedTransactionAsync(
-                catalog,
-                cancellationToken);
+            var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+            await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+            await scopedTransaction.EnlistAsync(organizations, cancellationToken);
+            await scopedTransaction.EnlistAsync(catalog, cancellationToken);
 
+            Assert.NotNull(organizations.Database.CurrentTransaction);
             Assert.NotNull(catalog.Database.CurrentTransaction);
             Assert.Same(
-                transaction.GetDbTransaction(),
+                organizations.Database.CurrentTransaction.GetDbTransaction(),
                 catalog.Database.CurrentTransaction.GetDbTransaction());
 
             organizations.Organizations.Add(Organization.Create(
@@ -125,15 +127,127 @@ public sealed class SharedConnectionTests(PostgreSqlContainerFixture database)
         using var participantScope = factory.Services.CreateScope();
         var owner = ownerScope.ServiceProvider.GetRequiredService<OrganizationsDbContext>();
         var participant = participantScope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+        var scopedTransaction = ownerScope.ServiceProvider.GetRequiredService<ScopedTransaction>();
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            owner.BeginSharedTransactionAsync(participant, factory.RequestCancellationToken));
+            scopedTransaction.EnlistAsync(participant, factory.RequestCancellationToken));
 
         Assert.Contains("same DbConnection instance", exception.Message);
         Assert.Null(owner.Database.CurrentTransaction);
         Assert.Null(participant.Database.CurrentTransaction);
         Assert.Equal(ConnectionState.Closed, owner.Database.GetDbConnection().State);
         Assert.Equal(ConnectionState.Closed, participant.Database.GetDbConnection().State);
+    }
+
+    [Fact]
+    public async Task EnlistingWithoutTransactionDoesNotOpenConnection()
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<OrganizationsDbContext>();
+        var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+
+        await scopedTransaction.EnlistAsync(context, factory.RequestCancellationToken);
+
+        Assert.False(scopedTransaction.IsActive);
+        Assert.Null(context.Database.CurrentTransaction);
+        Assert.Equal(ConnectionState.Closed, context.Database.GetDbConnection().State);
+    }
+
+    [Fact]
+    public async Task OpeningTwiceRejectsNestedTransactionAndLeavesOriginalActive()
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+        var cancellationToken = factory.RequestCancellationToken;
+        await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            scopedTransaction.BeginAsync(cancellationToken));
+
+        Assert.Equal(
+            "A transaction is already active in this DI scope; nested transactions are not supported.",
+            exception.Message);
+        Assert.True(scopedTransaction.IsActive);
+        await transaction.RollbackAsync(cancellationToken);
+        Assert.False(scopedTransaction.IsActive);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CompletingTransactionClearsEnlistmentsAndAllowsContextReuse(bool commit)
+    {
+        await using var factory = CreateFactory();
+        using var scope = factory.Services.CreateScope();
+        var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+        var context = scope.ServiceProvider.GetRequiredService<OrganizationsDbContext>();
+        var cancellationToken = factory.RequestCancellationToken;
+        await using var transaction = await scopedTransaction.BeginAsync(cancellationToken);
+        await scopedTransaction.EnlistAsync(context, cancellationToken);
+        var enlistment = context.Database.CurrentTransaction;
+        Assert.NotNull(enlistment);
+        await scopedTransaction.EnlistAsync(context, cancellationToken);
+        Assert.Same(enlistment, context.Database.CurrentTransaction);
+
+        if (commit)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            await transaction.RollbackAsync(cancellationToken);
+        }
+
+        Assert.False(scopedTransaction.IsActive);
+        Assert.Null(context.Database.CurrentTransaction);
+        await using var nextTransaction = await scopedTransaction.BeginAsync(cancellationToken);
+        await scopedTransaction.EnlistAsync(context, cancellationToken);
+        Assert.NotNull(context.Database.CurrentTransaction);
+        Assert.NotSame(enlistment, context.Database.CurrentTransaction);
+        await nextTransaction.RollbackAsync(cancellationToken);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DisposingScopeRollsBackUncompletedTransaction(bool disposeAsync)
+    {
+        await using var factory = CreateFactory();
+        var cancellationToken = factory.RequestCancellationToken;
+        var productId = Guid.NewGuid();
+        var scope = factory.Services.CreateAsyncScope();
+        try
+        {
+            var scopedTransaction = scope.ServiceProvider.GetRequiredService<ScopedTransaction>();
+            // Deliberately leave completion and handle disposal to the owning scope.
+            _ = await scopedTransaction.BeginAsync(cancellationToken);
+            var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+            await scopedTransaction.EnlistAsync(catalog, cancellationToken);
+            catalog.Products.Add(Product.Create(
+                productId,
+                $"SCOPE-{productId:N}",
+                "Uncommitted scope product",
+                DateTimeOffset.UtcNow));
+            Assert.Equal(1, await catalog.SaveChangesAsync(cancellationToken));
+        }
+        finally
+        {
+            if (disposeAsync)
+            {
+                await scope.DisposeAsync();
+            }
+            else
+            {
+                scope.Dispose();
+            }
+        }
+
+        using var verificationScope = factory.Services.CreateScope();
+        var persisted = verificationScope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+        Assert.False(await persisted.Products.AsNoTracking()
+            .AnyAsync(product => product.Id == productId, cancellationToken));
     }
 
     private ApiWebApplicationFactory CreateFactory() =>
