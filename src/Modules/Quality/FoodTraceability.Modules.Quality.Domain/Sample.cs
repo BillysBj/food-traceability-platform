@@ -40,9 +40,12 @@ public sealed class Sample
 
     public DateTimeOffset TakenAt { get; }
 
-    public SampleStatus Status { get; }
+    public SampleStatus Status { get; private set; }
 
     public DateTimeOffset CreatedAt { get; }
+
+    // D-51: failure is final; a later passing result cannot reverse it.
+    public void Fail() => Status = SampleStatus.Fail;
 
     public static Sample Create(
         Guid id,

@@ -1,5 +1,7 @@
+using FoodTraceability.Api.Controllers;
 using FoodTraceability.Api.Middleware;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Options;
@@ -37,6 +39,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string SampleConflictErrorCode = "SAMPLE_CONFLICT";
     private const string SampleValidationTitle = "The sample request is invalid.";
     private const string SampleValidationErrorCode = "SAMPLE_VALIDATION_FAILED";
+    private const string LabResultConflictTitle = "The lab result conflicts with existing data.";
+    private const string LabResultConflictErrorCode = "LAB_RESULT_CONFLICT";
+    private const string LabResultSampleNotFoundTitle = "Sample not found.";
+    private const string LabResultSampleNotFoundErrorCode = "LAB_RESULT_SAMPLE_NOT_FOUND";
+    private const string LabResultValidationTitle = "The lab result request is invalid.";
+    private const string LabResultValidationErrorCode = "LAB_RESULT_VALIDATION_FAILED";
     private const string MembershipConflictTitle =
         "The membership conflicts with existing data.";
     private const string MembershipConflictErrorCode = "MEMBERSHIP_CONFLICT";
@@ -352,6 +360,27 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         return problemDetails;
     }
 
+    public ProblemDetails CreateLabResultConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status409Conflict,
+            LabResultConflictTitle, LabResultConflictErrorCode, detail);
+
+    public ProblemDetails CreateLabResultSampleNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            LabResultSampleNotFoundTitle, LabResultSampleNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateLabResultValidationError(HttpContext httpContext, string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("LabResult", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext, modelState, StatusCodes.Status400BadRequest,
+            LabResultValidationTitle, detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = LabResultValidationErrorCode;
+        return problemDetails;
+    }
+
     public ProblemDetails CreateUnhandledError(HttpContext httpContext, string? detail) =>
         CreateApiProblemDetails(
             httpContext,
@@ -446,6 +475,15 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             Detail = detail,
             Instance = instance
         };
+
+        // Include automatic model-binding failures (invalid JSON, decimal or timestamp)
+        // in the new endpoint's error vocabulary without changing existing endpoints.
+        if (httpContext.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>()
+                ?.ControllerTypeInfo.AsType() == typeof(LabResultsController))
+        {
+            problemDetails.Title = LabResultValidationTitle;
+            problemDetails.Extensions[ErrorCodeExtensionName] = LabResultValidationErrorCode;
+        }
 
         ApplyDefaults(httpContext, problemDetails);
         return problemDetails;
