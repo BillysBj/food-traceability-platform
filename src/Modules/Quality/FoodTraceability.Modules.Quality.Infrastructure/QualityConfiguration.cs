@@ -1,3 +1,5 @@
+using FoodTraceability.Modules.Quality.Application.Samples;
+using FoodTraceability.Modules.Quality.Infrastructure.Samples;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +20,9 @@ public static class QualityConfiguration
                 serviceProvider.GetRequiredService<NpgsqlConnection>(),
                 QualityDbContext.Schema);
         });
+
+        services.AddScoped<ISampleWriter, SampleWriter>();
+        services.AddScoped<CreateSampleService>();
 
         return services;
     }

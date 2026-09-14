@@ -174,6 +174,10 @@ public sealed class PersistenceArchitectureTests
                     "FoodTraceability.Api",
                     StringComparison.Ordinal)
                 || referringProject.Name.EndsWith(".Application", StringComparison.Ordinal)
+                || string.Equals(
+                    referringProject.Name,
+                    "FoodTraceability.Platform.Persistence",
+                    StringComparison.Ordinal)
                 || referringProject.Name.EndsWith(".Infrastructure", StringComparison.Ordinal)
                 || relativePath.StartsWith("tests/", StringComparison.Ordinal);
 

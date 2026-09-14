@@ -1,3 +1,4 @@
+using FoodTraceability.Platform.Contracts.Transactions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -21,6 +22,7 @@ public static class FoodTraceabilityConnectionRegistration
             return new NpgsqlConnection(connectionString);
         });
         services.TryAddScoped<ScopedTransaction>();
+        services.TryAddScoped<IApplicationTransaction, ApplicationTransaction>();
 
         return services;
     }

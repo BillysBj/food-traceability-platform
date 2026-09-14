@@ -163,10 +163,19 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
     public async Task ReferencedCatalogUnitCannotBeDeleted()
     {
         using var timeout = new CancellationTokenSource(QueryTimeout);
-        await using var catalogContext = database.CreateQualityCatalogDbContext();
-        var unitId = await catalogContext.Units.Select(unit => unit.Id).FirstAsync(timeout.Token);
         await using var context = database.CreateQualityDbContext();
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
+        var unitId = Guid.NewGuid();
+        var unitCode = $"Q{unitId:N}"[..16].ToUpperInvariant();
+        var createdAt = DateTimeOffset.UtcNow;
+
+        // Only this parameter may reference the unit; roll back both rows together.
+        await context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO catalog.unit (unit_id, code, symbol, dimension, created_at)
+            VALUES ({unitId}, {unitCode}, 'q', 'MASS', {createdAt})
+            """, timeout.Token);
+
         var parameter = CreateParameter("REFERENCED_UNIT", unitId);
         context.Parameters.Add(parameter);
         Assert.Equal(1, await context.SaveChangesAsync(timeout.Token));
