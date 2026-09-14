@@ -77,6 +77,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-48 | Modulkontrakte fuer schreibende Aufrufe ueber Modulgrenzen | ENTSCHIEDEN |
 | D-49 | Modulkontrakte sprechen in fachlichen Codes, nicht in Ids | ENTSCHIEDEN |
 | D-50 | Die Transaktion gehoert dem Scope, nicht dem Aufrufer | ENTSCHIEDEN |
+| D-51 | Laborergebnis: Messwert, Bewertung und der Weg zum Probenstatus | ENTSCHIEDEN |
 
 ---
 
@@ -1647,8 +1648,12 @@ hätte keine definierte Bedeutung, und spätestens QLT-005 müsste klären, wori
 sie sich von einem gesperrten Lot unterscheidet.
 
 Der Ablauf einer Probe ist damit: genommen und unbewertet (`PENDING`), danach
-bewertet (`PASS` oder `FAIL`). Den Übergang setzt **QLT-003** mit dem
-Laborergebnis; QLT-002a legt Proben ausschließlich als `PENDING` an.
+bewertet (`PASS` oder `FAIL`). QLT-002a legt Proben ausschließlich als
+`PENDING` an.
+
+**Abgeändert durch D-51:** Der ursprüngliche Satz wies den gesamten Übergang
+**QLT-003** zu. Tatsächlich setzt QLT-003 nur `FAIL`; `PASS` verlangt die
+Spezifikation und folgt mit **QLT-004**. Die Begründung steht in D-51.
 
 Die Einschränkung gegenüber §18 ist eine Entscheidung und kein Versehen. §18
 beschreibt den Qualitätsstatus des Lots; der Statusbegriff der Probe ist
@@ -1829,6 +1834,77 @@ nicht eröffnet hat, schließt sie nicht. AGENTS.md §54 bleibt unberührt.
 
 ---
 
+## D-51 – Laborergebnis: Messwert, Bewertung und der Weg zum Probenstatus
+
+**Status:** ENTSCHIEDEN (2026-09-14)
+**Ändert ab:** D-47, soweit dort der Übergang auf `PASS` QLT-003 zugewiesen war
+**Setzt voraus:** D-07, D-41, D-47
+**Betrifft:** QLT-003a, QLT-003, QLT-004
+
+`AGENTS.md` nennt `quality.lab_result` und schweigt zum Inhalt. Das
+ER-Diagramm gibt `lab_result_id`, `sample_id`, `parameter_id`, `value`,
+`assessment`, `method` und `measured_at`. Drei Dinge waren damit offen.
+
+### Der Messwert ist eine Dezimalzahl
+
+`value` ist `decimal` mit Genauigkeit **18** und **6** Nachkommastellen, wie
+`trace.lot.quantity` und `trace.event_input.quantity`.
+
+Alle vier in `AGENTS.md` §17 genannten Pilot-1-Parameter — Free Acidity,
+Peroxide Value, K232, K270 — sind numerisch. Nicht-numerische Ergebnisse wie
+„nicht nachweisbar" gehören zu Mikrobiologie und Rückstandstests, also zu
+Dairy und Meat. Sie werden hier **festgehalten, aber nicht gebaut**; ein
+zweites Feld auf Vorrat für eine Branche außerhalb von Pilot 1 wäre genau das,
+was D-46 bei `sample_type` abgelehnt hat.
+
+Der Preis ist benannt: Ein Dairy- oder Meat-Pilot braucht dafür eine eigene
+Entscheidung und eine Migration. Das ist billiger als ein Feld, dessen
+Bedeutung heute niemand festlegen kann.
+
+### Das Labor bewertet jedes Ergebnis selbst
+
+`assessment` steht im ER-Diagramm auf dem **Ergebnis**, nicht auf der Probe.
+Das Labor bewertet also je Parameter. Zulässig sind genau **`PASS`** und
+**`FAIL`**, festgehalten durch eine CHECK-Constraint, wie bei `sample.status`
+nach D-47.
+
+Kein `INCONCLUSIVE`: Es müsste entschieden werden, was es für den Probenstatus
+bedeutet, und kein Dokument verlangt es.
+
+`method` auf dem Ergebnis ist das **tatsächlich benutzte** Verfahren und damit
+etwas anderes als `parameter.standard_method`, das Verfahren, das für den
+Parameter vorgesehen ist. Beides nebeneinander zu führen ist keine Dublette.
+
+### `FAIL` sofort, `PASS` erst mit der Spezifikation
+
+Ein einziges fehlgeschlagenes Ergebnis macht die Probe **`FAIL`**. Das ist
+eindeutig und braucht keine Spezifikation: ein gerissener Grenzwert bleibt
+gerissen, gleich welche Parameter sonst noch geprüft werden.
+
+**`PASS` setzt QLT-003 nicht.** Es verlangt die Aussage, dass **alle
+erforderlichen** Parameter geprüft und bestanden sind, und welche erforderlich
+sind, steht erst in `quality.specification` — also in **QLT-004**.
+
+Die Alternative wäre gewesen, `PASS` aus den vorhandenen Ergebnissen
+abzuleiten. Dann würde ein einziges bestandenes Ergebnis eine Probe freigeben,
+deren übrige Parameter noch gar nicht gemessen wurden. Eine Freigabe auf
+unvollständiger Grundlage ist in einem Lebensmittel-Rückverfolgungssystem
+schlechter als gar keine.
+
+**Der Übergang ist einseitig und endgültig.** `FAIL` wird von einem späteren
+`PASS`-Ergebnis nicht zurückgenommen; eine Probe, die einmal durchgefallen
+ist, bleibt durchgefallen. Eine Neubewertung wäre eine neue Probe.
+
+### Bekannte Lücke, ausdrücklich festgehalten
+
+`quality.parameter` enthält **keine Zeile**. QLT-001a hat die Tabelle angelegt,
+und die Parameter selbst sind nach DOCS-019 branchenspezifisch und gehören zu
+**OLV-005**. Der Endpunkt aus QLT-003 ist damit gebaut und geprüft, im
+Echtbetrieb aber erst nach OLV-005 benutzbar. Das ist kein Versehen, sondern
+der Unterschied zwischen Task-Fortschritt und Capability-Fortschritt.
+
+---
+
 ## Nächste freie ID
 
-`D-51`
+`D-52`
