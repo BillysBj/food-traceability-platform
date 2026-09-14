@@ -78,6 +78,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-49 | Modulkontrakte sprechen in fachlichen Codes, nicht in Ids | ENTSCHIEDEN |
 | D-50 | Die Transaktion gehoert dem Scope, nicht dem Aufrufer | ENTSCHIEDEN |
 | D-51 | Laborergebnis: Messwert, Bewertung und der Weg zum Probenstatus | ENTSCHIEDEN |
+| D-52 | Spezifikation: Geltungsbereich, Grenzwerte und der Weg auf PASS | ENTSCHIEDEN |
 
 ---
 
@@ -1905,6 +1906,87 @@ der Unterschied zwischen Task-Fortschritt und Capability-Fortschritt.
 
 ---
 
+## D-52 – Spezifikation: Geltungsbereich, Grenzwerte und der Weg auf PASS
+
+**Status:** ENTSCHIEDEN (2026-09-14)
+**Vervollständigt:** D-51, soweit dort `PASS` auf QLT-004 verschoben wurde
+**Setzt voraus:** D-07, D-44, D-47, D-51
+**Betrifft:** QLT-004a, QLT-004, QLT-005, QLT-006, OLV-005
+
+Das ER-Diagramm gibt `quality.specification` mit `article_id FK?`,
+`profile_id FK?`, `name`, `version`, `valid_from/to` und
+`quality.specification_parameter` mit `min/max/target` und `required`.
+
+### Das Labor bewertet, die Grenzwerte sind Referenz
+
+`min`, `max` und `target` werden gespeichert und ausgegeben, damit ein Labor
+weiß, wogegen es misst. **Das System rechnet nicht dagegen.** D-51 bleibt
+unverändert: die vom Labor gelieferte Bewertung gilt.
+
+Die Alternative hätte bedeutet, dass ein Labor einen Grenzfall nicht mehr
+begründet überstimmen kann, und sie hätte verlangt, einen Widerspruch zwischen
+geliefertem Urteil und gerechnetem Urteil aufzulösen. Für ein
+Rückverfolgungssystem ist das Urteil des messenden Labors die belastbarere
+Quelle.
+
+**Für den Weg auf `PASS` zählt deshalb allein `required`**, nicht die
+Grenzwerte.
+
+### Der Weg auf PASS
+
+Eine Probe wird **`PASS`**, wenn für **jeden** als `required` geführten
+Parameter der anwendbaren Spezifikation ein Ergebnis mit der Bewertung `PASS`
+vorliegt. Existiert keine anwendbare Spezifikation, bleibt die Probe
+`PENDING` — ohne die Aussage, welche Parameter erforderlich sind, ist eine
+Freigabe nicht begründbar.
+
+`FAIL` bleibt nach D-51 einseitig und endgültig und wird von dieser Auswertung
+nicht angefasst.
+
+**Anwendbar** ist die Spezifikation des Artikels, deren Gültigkeitszeitraum den
+Zeitpunkt der Probenahme enthält. Sind es mehrere, ist das ein
+Konfigurationsfehler und wird als solcher gemeldet, statt eine davon
+stillschweigend zu wählen.
+
+**Nebenläufigkeit:** Die Auswertung sperrt die Probenzeile, bevor sie die
+Ergebnisse zählt. Ohne das könnten zwei gleichzeitig gemeldete Ergebnisse
+einander nicht sehen und die Probe bliebe `PENDING`, obwohl sie vollständig
+ist. Dasselbe Mittel benutzt der Traceability-Schreibpfad seit TRC-009.
+
+### Kein Verwaltungsendpunkt
+
+Eine Spezifikation ist Konfiguration, wie `quality.parameter`. Das Modul kennt
+fünf Berechtigungen, und keine passt auf „Spezifikation anlegen". Eine zu
+erfinden wäre eine erfundene Berechtigungszuordnung.
+
+Der Inhalt kommt mit **OLV-005**, das ohnehin „Olive Oil Quality
+Configuration" heißt. Damit gilt für die Spezifikation dieselbe ehrliche
+Einschränkung wie für die Parameter: die Maschinerie ist gebaut und geprüft,
+im Echtbetrieb nutzbar wird sie erst mit OLV-005.
+
+### Abweichungen vom ER-Diagramm, ausdrücklich festgehalten
+
+**`profile_id` entfällt vorerst.** Produktprofile entstehen mit **CAT-005**,
+und der Task ist zurückgestellt. Eine Spezifikation hängt deshalb
+ausschließlich am Artikel. `article_id` wird damit zur Pflicht statt zur
+Option; eine Spezifikation ohne Bezug hätte keinen Geltungsbereich.
+
+**`name` entfällt vorerst.** Ein Name ist Anzeigetext, und D-07 ist offen —
+dieselbe Begründung, aus der `quality.parameter` in QLT-001a ohne Namensspalte
+entstand. Identifiziert wird eine Spezifikation über Artikel und Version.
+
+### Festlegungen, die aus dem Obigen folgen
+
+- `version` ist eine ganze Zahl, je Artikel eindeutig. Ein Textformat wie
+  „2024.1" verlangt eine Sortierregel, die kein Dokument nennt.
+- `min`, `max` und `target` sind `numeric(18,6)` wie der Messwert in D-51 und
+  jeweils optional; ein Parameter kann eine Ober- ohne Untergrenze haben.
+- `required` ist ein Wahrheitswert ohne Vorgabewert — wer eine Spezifikation
+  anlegt, entscheidet ihn bewusst.
+- Je Spezifikation kommt jeder Parameter höchstens einmal vor.
+
+---
+
 ## Nächste freie ID
 
-`D-52`
+`D-53`
