@@ -1,0 +1,113 @@
+using FoodTraceability.Api.Contracts.LabResults;
+using FoodTraceability.Api.Errors;
+using FoodTraceability.Api.Security;
+using FoodTraceability.Modules.Quality.Application.LabResults;
+using FoodTraceability.Modules.Quality.Domain;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FoodTraceability.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/organizations/{organizationId:guid}/samples/{sampleId:guid}/results")]
+public sealed class LabResultsController(
+    CreateLabResultService createService,
+    ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
+{
+    /// <summary>Records one laboratory result for a sample and parameter.</summary>
+    /// <remarks>
+    /// FAIL sets the sample to FAIL permanently. PASS leaves its status unchanged (D-51).
+    /// Only organization-wide quality.result.create is required. Result and sample change
+    /// are saved atomically. The Location identifies the result; retrieval is not yet implemented.
+    /// </remarks>
+    /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
+    /// <param name="sampleId">The sample identifier within that organization.</param>
+    /// <param name="request">Parameter, measurement, assessment, method and measurement time.</param>
+    /// <param name="cancellationToken">Cancels request processing.</param>
+    /// <response code="201">The created result and resulting sample status.</response>
+    /// <response code="400">LAB_RESULT_VALIDATION_FAILED: invalid request or unknown parameter.</response>
+    /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
+    /// <response code="403">The caller lacks organization-wide quality.result.create permission.</response>
+    /// <response code="404">LAB_RESULT_SAMPLE_NOT_FOUND: the sample does not exist in this organization.</response>
+    /// <response code="409">LAB_RESULT_CONFLICT: this sample already has a result for the parameter.</response>
+    [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.LabResultCreate)]
+    [ProducesResponseType<LabResultResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<LabResultResponse>> Create(
+        Guid organizationId,
+        Guid sampleId,
+        CreateLabResultRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.MeasuredAt is not DateTimeOffset measuredAt)
+        {
+            return ValidationError("A measurement time is required.");
+        }
+
+        if (request.Value is not decimal value)
+        {
+            return ValidationError("A measurement value is required.");
+        }
+
+        LabResultAssessment? assessment = request.Assessment switch
+        {
+            "PASS" => LabResultAssessment.Pass,
+            "FAIL" => LabResultAssessment.Fail,
+            _ => null,
+        };
+        if (assessment is null)
+        {
+            return ValidationError("Lab result assessment must be PASS or FAIL.");
+        }
+
+        LabResultDetails result;
+        try
+        {
+            result = await createService.CreateAsync(
+                new CreateLabResultCommand(organizationId, sampleId, request.ParameterId,
+                    value, assessment.Value, request.Method, measuredAt),
+                cancellationToken);
+        }
+        catch (LabResultSampleNotFoundException)
+        {
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateLabResultSampleNotFound(HttpContext));
+        }
+        catch (LabResultValidationException exception)
+        {
+            return ValidationError(exception.Message);
+        }
+        catch (LabResultConflictException exception)
+        {
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateLabResultConflict(HttpContext, exception.Message));
+        }
+
+        var response = new LabResultResponse(
+            result.Id, result.SampleId, result.ParameterId, result.Value,
+            result.Assessment switch
+            {
+                LabResultAssessment.Pass => "PASS",
+                LabResultAssessment.Fail => "FAIL",
+                _ => throw new InvalidOperationException($"Unknown lab result assessment '{result.Assessment}'."),
+            },
+            result.Method, result.MeasuredAt,
+            result.SampleStatus switch
+            {
+                SampleStatus.Pending => "PENDING",
+                SampleStatus.Pass => "PASS",
+                SampleStatus.Fail => "FAIL",
+                _ => throw new InvalidOperationException($"Unknown sample status '{result.SampleStatus}'."),
+            });
+        return Created($"/api/v1/organizations/{organizationId}/samples/{sampleId}/results/{result.Id}", response);
+    }
+
+    private ObjectResult ValidationError(string detail) =>
+        problemDetailsFactory.CreateResult(
+            problemDetailsFactory.CreateLabResultValidationError(HttpContext, detail));
+}

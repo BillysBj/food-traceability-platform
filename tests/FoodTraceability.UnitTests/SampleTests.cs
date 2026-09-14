@@ -102,6 +102,26 @@ public sealed class SampleTests
         Assert.True(createdAt.EqualsExact(sample.CreatedAt));
     }
 
+    [Fact]
+    public void FailIsIdempotentAndLeavesEveryOtherPropertyUnchanged()
+    {
+        var sample = Create();
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            sample.Fail();
+
+            Assert.Equal(SampleStatus.Fail, sample.Status);
+            Assert.Equal(SampleId, sample.Id);
+            Assert.Equal(OrganizationId, sample.OrganizationId);
+            Assert.Equal(LotId, sample.LotId);
+            Assert.Equal(LocationId, sample.LocationId);
+            Assert.Equal(EventId, sample.TraceabilityEventId);
+            Assert.Equal("Sample-123", sample.SampleNumber);
+            Assert.Equal(TakenAt, sample.TakenAt);
+            Assert.Equal(CreatedAt, sample.CreatedAt);
+        }
+    }
+
     private static Sample Create(
         Guid? id = null,
         Guid? organizationId = null,

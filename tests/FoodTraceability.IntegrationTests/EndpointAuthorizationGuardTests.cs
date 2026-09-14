@@ -17,6 +17,7 @@ public sealed class EndpointAuthorizationGuardTests
             new("POST", "/api/v1/auth/refresh", null),
             new("POST", "/api/v1/auth/logout", null),
             new("POST", "/api/v1/organizations/{organizationId}/samples", "SampleCreate"),
+            new("POST", "/api/v1/organizations/{organizationId}/samples/{sampleId}/results", "LabResultCreate"),
             new("GET", "/api/v1/me", "ActiveUser"),
             new(
                 "GET",

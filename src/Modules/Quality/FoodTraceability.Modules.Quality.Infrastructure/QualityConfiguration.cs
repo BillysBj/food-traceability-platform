@@ -1,4 +1,6 @@
+using FoodTraceability.Modules.Quality.Application.LabResults;
 using FoodTraceability.Modules.Quality.Application.Samples;
+using FoodTraceability.Modules.Quality.Infrastructure.LabResults;
 using FoodTraceability.Modules.Quality.Infrastructure.Samples;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +25,8 @@ public static class QualityConfiguration
 
         services.AddScoped<ISampleWriter, SampleWriter>();
         services.AddScoped<CreateSampleService>();
+        services.AddScoped<ILabResultWriter, LabResultWriter>();
+        services.AddScoped<CreateLabResultService>();
 
         return services;
     }
