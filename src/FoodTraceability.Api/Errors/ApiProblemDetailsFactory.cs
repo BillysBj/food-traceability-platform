@@ -33,6 +33,10 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LotNotFoundErrorCode = "LOT_NOT_FOUND";
     private const string LotValidationTitle = "The lot request is invalid.";
     private const string LotValidationErrorCode = "LOT_VALIDATION_FAILED";
+    private const string SampleConflictTitle = "The sample conflicts with existing data.";
+    private const string SampleConflictErrorCode = "SAMPLE_CONFLICT";
+    private const string SampleValidationTitle = "The sample request is invalid.";
+    private const string SampleValidationErrorCode = "SAMPLE_VALIDATION_FAILED";
     private const string MembershipConflictTitle =
         "The membership conflicts with existing data.";
     private const string MembershipConflictErrorCode = "MEMBERSHIP_CONFLICT";
@@ -323,6 +327,28 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             detail: detail);
         problemDetails.Extensions[ErrorCodeExtensionName] =
             TraceabilityEventValidationErrorCode;
+        return problemDetails;
+    }
+
+    public ProblemDetails CreateSampleConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext,
+            StatusCodes.Status409Conflict,
+            SampleConflictTitle,
+            SampleConflictErrorCode,
+            detail);
+
+    public ValidationProblemDetails CreateSampleValidationError(HttpContext httpContext, string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("Sample", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext,
+            modelState,
+            StatusCodes.Status400BadRequest,
+            SampleValidationTitle,
+            detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = SampleValidationErrorCode;
         return problemDetails;
     }
 

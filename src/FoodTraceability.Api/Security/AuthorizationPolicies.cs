@@ -14,6 +14,7 @@ public static class AuthorizationPolicies
     public const string PlatformProductRead = "PlatformProductRead";
     public const string PlatformUserManage = "PlatformUserManage";
     public const string PlatformUserRead = "PlatformUserRead";
+    public const string SampleCreate = "SampleCreate";
     public const string TraceabilityEventCreate = "TraceabilityEventCreate";
     public const string TraceabilityRead = "TraceabilityRead";
 }
