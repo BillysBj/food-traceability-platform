@@ -22,14 +22,15 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(2, migrations.Length);
+        Assert.Equal(3, migrations.Length);
         Assert.EndsWith("_InitialQuality", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddSample", migrations[1], StringComparison.Ordinal);
+        Assert.EndsWith("_AddLabResult", migrations[2], StringComparison.Ordinal);
         Assert.False(context.Database.HasPendingModelChanges());
     }
 
     [Fact]
-    public async Task QualitySchemaExistsWithOnlyParameterSampleAndMigrationHistory()
+    public async Task QualitySchemaExistsWithOnlyLabResultParameterSampleAndMigrationHistory()
     {
         var tables = await QueryAsync(
             """
@@ -40,7 +41,7 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
             """,
             static reader => reader.GetString(0));
 
-        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "parameter", "sample"], tables);
+        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "lab_result", "parameter", "sample"], tables);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
         var migrationCounts = await QueryAsync(
             "SELECT COUNT(*) FROM quality.__ef_migrations_history;",
             static reader => reader.GetInt64(0));
-        Assert.Equal(2L, Assert.Single(migrationCounts));
+        Assert.Equal(3L, Assert.Single(migrationCounts));
     }
 
     [Fact]
@@ -190,15 +191,16 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
-    public void QualityModelContainsOnlyParameterAndSampleAndNoCrossModuleForeignKey()
+    public void QualityModelContainsOnlyLabResultParameterAndSampleAndNoCrossModuleForeignKey()
     {
         using var context = database.CreateQualityDbContext();
 
         var entityTypes = context.Model.GetEntityTypes().OrderBy(entity => entity.ClrType.Name).ToArray();
-        Assert.Equal([typeof(Parameter), typeof(Sample)], entityTypes.Select(entity => entity.ClrType));
+        Assert.Equal([typeof(LabResult), typeof(Parameter), typeof(Sample)], entityTypes.Select(entity => entity.ClrType));
         Assert.All(entityTypes, entityType =>
         {
-            Assert.Empty(entityType.GetForeignKeys());
+            Assert.All(entityType.GetForeignKeys(), foreignKey =>
+                Assert.Contains(foreignKey.PrincipalEntityType, entityTypes));
             Assert.Empty(entityType.GetNavigations());
         });
     }
