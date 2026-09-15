@@ -1,6 +1,6 @@
 namespace FoodTraceability.Api.Contracts.LabResults;
 
-/// <summary>The created laboratory result and the resulting sample status (PENDING or FAIL in QLT-003).</summary>
+/// <summary>The created laboratory result and the resulting sample status (PENDING, PASS or FAIL).</summary>
 public sealed record LabResultResponse(
     Guid Id,
     Guid SampleId,

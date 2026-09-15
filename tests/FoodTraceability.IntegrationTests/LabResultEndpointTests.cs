@@ -19,22 +19,25 @@ namespace FoodTraceability.IntegrationTests;
 
 [Collection(PostgreSqlDatabaseCollection.Name)]
 [Trait("Category", "Database")]
-public sealed class LabResultEndpointTests(PostgreSqlContainerFixture database) : IAsyncLifetime
+public sealed partial class LabResultEndpointTests(PostgreSqlContainerFixture database) : IAsyncLifetime
 {
     private const string ValidPassword = "Valid-test-password-42!";
     private static readonly DateTimeOffset MeasuredAt = new(2026, 9, 14, 10, 0, 0, TimeSpan.Zero);
     private readonly List<Guid> _sampleIds = [];
     private readonly List<Guid> _parameterIds = [];
+    private readonly List<Guid> _specificationIds = [];
 
     public Task InitializeAsync() => Task.CompletedTask;
 
     public async Task DisposeAsync()
     {
         // The shared fixture also verifies the empty reference catalog. Remove only
-        // this test's results and parameters, including after a failed assertion.
+        // this test's results, specifications and parameters, including after a failed assertion.
         await using var context = database.CreateQualityDbContext();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
         await context.LabResults.Where(item => _sampleIds.Contains(item.SampleId)).ExecuteDeleteAsync(timeout.Token);
+        await context.SpecificationParameters.Where(item => _specificationIds.Contains(item.SpecificationId)).ExecuteDeleteAsync(timeout.Token);
+        await context.Specifications.Where(item => _specificationIds.Contains(item.Id)).ExecuteDeleteAsync(timeout.Token);
         await context.Parameters.Where(item => _parameterIds.Contains(item.Id)).ExecuteDeleteAsync(timeout.Token);
     }
 
@@ -236,7 +239,8 @@ public sealed class LabResultEndpointTests(PostgreSqlContainerFixture database) 
         await AssertResultCountAsync(factory, setup, 0);
     }
 
-    private ApiWebApplicationFactory CreateFactory(SaveChangesProbe? saveProbe = null) => new(
+    private ApiWebApplicationFactory CreateFactory(
+        SaveChangesProbe? saveProbe = null, DbCommandInterceptor? commandProbe = null) => new(
         Environments.Development,
         new Dictionary<string, string?>
         {
@@ -248,6 +252,10 @@ public sealed class LabResultEndpointTests(PostgreSqlContainerFixture database) 
             if (saveProbe is not null)
             {
                 services.AddDbContext<QualityDbContext>((_, options) => options.AddInterceptors(saveProbe));
+            }
+            if (commandProbe is not null)
+            {
+                services.AddDbContext<QualityDbContext>((_, options) => options.AddInterceptors(commandProbe));
             }
         });
 
@@ -312,7 +320,7 @@ public sealed class LabResultEndpointTests(PostgreSqlContainerFixture database) 
             await context.SaveChangesAsync();
         }
 
-        return new Setup(account, sample, await CreateParameterAsync());
+        return new Setup(account, sample, await CreateParameterAsync(), article.Id);
     }
 
     private async Task<Parameter> CreateParameterAsync()
@@ -417,6 +425,6 @@ public sealed class LabResultEndpointTests(PostgreSqlContainerFixture database) 
     }
 
     private sealed record TestAccount(Guid UserId, string Email);
-    private sealed record Setup(TestAccount Account, Sample Sample, Parameter Parameter);
+    private sealed record Setup(TestAccount Account, Sample Sample, Parameter Parameter, Guid ArticleId);
     private sealed record TokenResponse(string AccessToken);
 }

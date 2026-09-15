@@ -17,6 +17,8 @@ public sealed class LabResultApiFoundationTests
         var path = root.GetProperty("paths").GetProperty("/api/v1/organizations/{organizationId}/samples/{sampleId}/results");
         Assert.False(path.TryGetProperty("get", out _));
         var operation = path.GetProperty("post");
+        Assert.Contains("QUALITY_SPECIFICATION_AMBIGUOUS", operation.GetProperty("responses")
+            .GetProperty("409").GetProperty("description").GetString());
         var security = Assert.Single(operation.GetProperty("security").EnumerateArray());
         Assert.True(security.TryGetProperty("Bearer", out _));
         var expectedResponses = new Dictionary<string, string>
