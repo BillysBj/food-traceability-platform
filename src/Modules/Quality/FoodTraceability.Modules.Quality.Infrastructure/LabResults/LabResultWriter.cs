@@ -1,31 +1,35 @@
 using FoodTraceability.Modules.Quality.Application.LabResults;
 using FoodTraceability.Modules.Quality.Domain;
+using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace FoodTraceability.Modules.Quality.Infrastructure.LabResults;
 
-internal sealed class LabResultWriter(QualityDbContext dbContext) : ILabResultWriter
+internal sealed class LabResultWriter(QualityDbContext dbContext, ScopedTransaction transaction) : ILabResultWriter
 {
     private const string SampleParameterUniqueIndex = "ux_lab_result_sample_id_parameter_id";
     private const string SampleForeignKey = "fk_lab_result_sample";
     private const string ParameterForeignKey = "fk_lab_result_parameter";
 
-    public Task<Sample?> FindSampleAsync(
-        Guid organizationId, Guid sampleId, CancellationToken cancellationToken) =>
-        dbContext.Samples.SingleOrDefaultAsync(
+    public async Task<Sample?> FindSampleAsync(
+        Guid organizationId, Guid sampleId, CancellationToken cancellationToken)
+    {
+        await transaction.EnlistAsync(dbContext, cancellationToken);
+        return await dbContext.Samples.SingleOrDefaultAsync(
             sample => sample.Id == sampleId && sample.OrganizationId == organizationId,
             cancellationToken);
+    }
 
     public async Task AddAsync(LabResult result, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(result);
 
+        await transaction.EnlistAsync(dbContext, cancellationToken);
         dbContext.LabResults.Add(result);
         try
         {
-            // EF tracks only the actual sample change. Do not call Update(sample):
-            // PASS must never write a stale PENDING status over a concurrent FAIL.
+            // Persist only actual changes to the tracked sample together with the result.
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException exception)

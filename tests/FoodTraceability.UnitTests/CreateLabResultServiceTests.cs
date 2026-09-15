@@ -1,5 +1,7 @@
 using FoodTraceability.Modules.Quality.Application.LabResults;
 using FoodTraceability.Modules.Quality.Domain;
+using FoodTraceability.Platform.Contracts.Traceability;
+using FoodTraceability.Platform.Contracts.Transactions;
 
 namespace FoodTraceability.UnitTests;
 
@@ -12,7 +14,10 @@ public sealed class CreateLabResultServiceTests
         var sample = Sample.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
             Guid.NewGuid(), "RESULT-SAMPLE", now, now);
         var writer = new StubWriter(sample);
-        var service = new CreateLabResultService(writer, new FixedTimeProvider(now));
+        var evaluation = new UnexpectedEvaluation();
+        var transaction = new StubTransaction();
+        var service = new CreateLabResultService(writer, new FixedTimeProvider(now), transaction,
+            evaluation, evaluation, evaluation);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var expectedTime = now.AddTicks(1234560);
         var command = new CreateLabResultCommand(sample.OrganizationId, sample.Id, Guid.NewGuid(),
@@ -28,13 +33,19 @@ public sealed class CreateLabResultServiceTests
         Assert.Equal(SampleStatus.Fail, result.SampleStatus);
         Assert.Equal(timeout.Token, writer.ReadToken);
         Assert.Equal(timeout.Token, writer.WriteToken);
+        Assert.True(transaction.Committed);
+        Assert.True(transaction.Disposed);
+        Assert.Equal(timeout.Token, transaction.CommitToken);
     }
 
     [Fact]
     public async Task MissingSampleStopsBeforeValidationOrWriting()
     {
         var writer = new StubWriter(null);
-        var service = new CreateLabResultService(writer, TimeProvider.System);
+        var evaluation = new UnexpectedEvaluation();
+        var transaction = new StubTransaction();
+        var service = new CreateLabResultService(writer, TimeProvider.System, transaction,
+            evaluation, evaluation, evaluation);
         var command = new CreateLabResultCommand(Guid.NewGuid(), Guid.NewGuid(), Guid.Empty,
             0m, LabResultAssessment.Pass, null, DateTimeOffset.UtcNow);
 
@@ -44,6 +55,75 @@ public sealed class CreateLabResultServiceTests
         Assert.Equal(command.OrganizationId, writer.OrganizationId);
         Assert.Equal(command.SampleId, writer.SampleId);
         Assert.Null(writer.Result);
+        Assert.False(transaction.Committed);
+        Assert.True(transaction.Disposed);
+    }
+
+    [Fact]
+    public async Task FailureObservedAfterLockSkipsSpecificationAndCannotBeOverwritten()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var sample = Sample.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            Guid.NewGuid(), "CONCURRENT-FAIL", now, now);
+        var writer = new StubWriter(sample);
+        var evaluation = new UnexpectedEvaluation();
+        var transaction = new StubTransaction();
+        var service = new CreateLabResultService(writer, TimeProvider.System, transaction,
+            new ConcurrentFailureReader(), evaluation, evaluation);
+
+        var result = await service.CreateAsync(new CreateLabResultCommand(
+            sample.OrganizationId, sample.Id, Guid.NewGuid(), 1m, LabResultAssessment.Pass, "ISO 660", now),
+            CancellationToken.None);
+
+        Assert.Equal(SampleStatus.Fail, result.SampleStatus);
+        Assert.Equal(SampleStatus.Fail, writer.StatusAtWrite);
+        Assert.True(transaction.Committed);
+    }
+
+    private sealed class ConcurrentFailureReader : ISampleResultReader
+    {
+        public Task<IReadOnlyList<SampleResultAssessment>> LockAndReadAsync(Sample sample, CancellationToken cancellationToken)
+        {
+            sample.Fail();
+            return Task.FromResult<IReadOnlyList<SampleResultAssessment>>([]);
+        }
+    }
+
+    private sealed class UnexpectedEvaluation : ISampleResultReader, ILotArticleReader, IApplicableSpecificationReader
+    {
+        public Task<IReadOnlyList<SampleResultAssessment>> LockAndReadAsync(Sample sample, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Result evaluation must not run.");
+
+        public Task<Guid?> FindArticleIdAsync(Guid organizationId, Guid lotId, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Lot resolution must not run.");
+
+        public Task<IReadOnlyList<ApplicableSpecification>> FindAsync(Guid articleId, DateTimeOffset takenAt, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Specification lookup must not run.");
+    }
+
+    private sealed class StubTransaction : IApplicationTransaction, IApplicationTransactionHandle
+    {
+        public bool Committed { get; private set; }
+        public bool Disposed { get; private set; }
+        public CancellationToken CommitToken { get; private set; }
+
+        public Task<IApplicationTransactionHandle> BeginAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IApplicationTransactionHandle>(this);
+
+        public Task CommitAsync(CancellationToken cancellationToken)
+        {
+            Committed = true;
+            CommitToken = cancellationToken;
+            return Task.CompletedTask;
+        }
+
+        public Task RollbackAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public ValueTask DisposeAsync()
+        {
+            Disposed = true;
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

@@ -47,6 +47,14 @@ public sealed class Sample
     // D-51: failure is final; a later passing result cannot reverse it.
     public void Fail() => Status = SampleStatus.Fail;
 
+    public void Pass()
+    {
+        if (Status == SampleStatus.Pending)
+        {
+            Status = SampleStatus.Pass;
+        }
+    }
+
     public static Sample Create(
         Guid id,
         Guid organizationId,

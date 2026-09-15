@@ -122,6 +122,33 @@ public sealed class SampleTests
         }
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PassIsIdempotentNeverReversesFailAndLeavesEveryOtherPropertyUnchanged(bool failed)
+    {
+        var sample = Create();
+        if (failed)
+        {
+            sample.Fail();
+        }
+
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            sample.Pass();
+
+            Assert.Equal(failed ? SampleStatus.Fail : SampleStatus.Pass, sample.Status);
+            Assert.Equal(SampleId, sample.Id);
+            Assert.Equal(OrganizationId, sample.OrganizationId);
+            Assert.Equal(LotId, sample.LotId);
+            Assert.Equal(LocationId, sample.LocationId);
+            Assert.Equal(EventId, sample.TraceabilityEventId);
+            Assert.Equal("Sample-123", sample.SampleNumber);
+            Assert.Equal(TakenAt, sample.TakenAt);
+            Assert.Equal(CreatedAt, sample.CreatedAt);
+        }
+    }
+
     private static Sample Create(
         Guid? id = null,
         Guid? organizationId = null,

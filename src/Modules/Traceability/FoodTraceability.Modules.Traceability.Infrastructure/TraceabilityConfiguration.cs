@@ -42,6 +42,7 @@ public static class TraceabilityConfiguration
         services.AddScoped<CreateTraceabilityEventService>();
         services.AddScoped<ITraceabilityEventCreator, TraceabilityEventCreator>();
         services.AddScoped<ILotReader, LotReader>();
+        services.AddScoped<ILotArticleReader, LotArticleReader>();
         services.AddScoped<ILotWriter, LotWriter>();
         services.AddScoped<LotQueryService>();
         services.AddScoped<CreateLotService>();

@@ -41,6 +41,8 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string SampleValidationErrorCode = "SAMPLE_VALIDATION_FAILED";
     private const string LabResultConflictTitle = "The lab result conflicts with existing data.";
     private const string LabResultConflictErrorCode = "LAB_RESULT_CONFLICT";
+    private const string AmbiguousSpecificationTitle = "The quality specification configuration is ambiguous.";
+    private const string AmbiguousSpecificationErrorCode = "QUALITY_SPECIFICATION_AMBIGUOUS";
     private const string LabResultSampleNotFoundTitle = "Sample not found.";
     private const string LabResultSampleNotFoundErrorCode = "LAB_RESULT_SAMPLE_NOT_FOUND";
     private const string LabResultValidationTitle = "The lab result request is invalid.";
@@ -364,6 +366,11 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         CreateApiProblemDetails(
             httpContext, StatusCodes.Status409Conflict,
             LabResultConflictTitle, LabResultConflictErrorCode, detail);
+
+    public ProblemDetails CreateAmbiguousSpecification(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status409Conflict,
+            AmbiguousSpecificationTitle, AmbiguousSpecificationErrorCode, detail);
 
     public ProblemDetails CreateLabResultSampleNotFound(HttpContext httpContext) =>
         CreateApiProblemDetails(

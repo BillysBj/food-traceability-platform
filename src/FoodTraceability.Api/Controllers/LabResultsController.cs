@@ -16,7 +16,9 @@ public sealed class LabResultsController(
 {
     /// <summary>Records one laboratory result for a sample and parameter.</summary>
     /// <remarks>
-    /// FAIL sets the sample to FAIL permanently. PASS leaves its status unchanged (D-51).
+    /// FAIL sets the sample to FAIL permanently. PASS completes a PENDING sample when all
+    /// required parameters of its applicable article specification have PASS results (D-52).
+    /// Without an applicable specification the sample remains PENDING. Limits are reference values only.
     /// Only organization-wide quality.result.create is required. Result and sample change
     /// are saved atomically. The Location identifies the result; retrieval is not yet implemented.
     /// </remarks>
@@ -29,7 +31,7 @@ public sealed class LabResultsController(
     /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
     /// <response code="403">The caller lacks organization-wide quality.result.create permission.</response>
     /// <response code="404">LAB_RESULT_SAMPLE_NOT_FOUND: the sample does not exist in this organization.</response>
-    /// <response code="409">LAB_RESULT_CONFLICT: this sample already has a result for the parameter.</response>
+    /// <response code="409">LAB_RESULT_CONFLICT: duplicate parameter result; QUALITY_SPECIFICATION_AMBIGUOUS: multiple specifications apply.</response>
     [HttpPost]
     [Authorize(Policy = AuthorizationPolicies.LabResultCreate)]
     [ProducesResponseType<LabResultResponse>(StatusCodes.Status201Created)]
@@ -86,6 +88,11 @@ public sealed class LabResultsController(
         {
             return problemDetailsFactory.CreateResult(
                 problemDetailsFactory.CreateLabResultConflict(HttpContext, exception.Message));
+        }
+        catch (AmbiguousSpecificationException exception)
+        {
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateAmbiguousSpecification(HttpContext, exception.Message));
         }
 
         var response = new LabResultResponse(
