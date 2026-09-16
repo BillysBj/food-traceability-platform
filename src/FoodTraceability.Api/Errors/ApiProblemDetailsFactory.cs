@@ -47,6 +47,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LabResultSampleNotFoundErrorCode = "LAB_RESULT_SAMPLE_NOT_FOUND";
     private const string LabResultValidationTitle = "The lab result request is invalid.";
     private const string LabResultValidationErrorCode = "LAB_RESULT_VALIDATION_FAILED";
+    private const string LotBlockConflictTitle = "The lot already has an open block.";
+    private const string LotBlockConflictErrorCode = "LOT_BLOCK_CONFLICT";
+    private const string LotBlockNotFoundTitle = "Lot not found.";
+    private const string LotBlockNotFoundErrorCode = "LOT_BLOCK_LOT_NOT_FOUND";
+    private const string LotBlockValidationTitle = "The lot block request is invalid.";
+    private const string LotBlockValidationErrorCode = "LOT_BLOCK_VALIDATION_FAILED";
     private const string MembershipConflictTitle =
         "The membership conflicts with existing data.";
     private const string MembershipConflictErrorCode = "MEMBERSHIP_CONFLICT";
@@ -388,6 +394,27 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         return problemDetails;
     }
 
+    public ProblemDetails CreateLotBlockConflict(HttpContext httpContext, string detail) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status409Conflict,
+            LotBlockConflictTitle, LotBlockConflictErrorCode, detail);
+
+    public ProblemDetails CreateLotBlockNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            LotBlockNotFoundTitle, LotBlockNotFoundErrorCode);
+
+    public ValidationProblemDetails CreateLotBlockValidationError(HttpContext httpContext, string detail)
+    {
+        var modelState = new ModelStateDictionary();
+        modelState.AddModelError("LotBlock", detail);
+        var problemDetails = CreateValidationProblemDetails(
+            httpContext, modelState, StatusCodes.Status400BadRequest,
+            LotBlockValidationTitle, detail: detail);
+        problemDetails.Extensions[ErrorCodeExtensionName] = LotBlockValidationErrorCode;
+        return problemDetails;
+    }
+
     public ProblemDetails CreateUnhandledError(HttpContext httpContext, string? detail) =>
         CreateApiProblemDetails(
             httpContext,
@@ -490,6 +517,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         {
             problemDetails.Title = LabResultValidationTitle;
             problemDetails.Extensions[ErrorCodeExtensionName] = LabResultValidationErrorCode;
+        }
+        else if (httpContext.GetEndpoint()?.Metadata.GetMetadata<ControllerActionDescriptor>()
+                     ?.ControllerTypeInfo.AsType() == typeof(LotBlocksController))
+        {
+            problemDetails.Title = LotBlockValidationTitle;
+            problemDetails.Extensions[ErrorCodeExtensionName] = LotBlockValidationErrorCode;
         }
 
         ApplyDefaults(httpContext, problemDetails);
