@@ -53,6 +53,10 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LotBlockNotFoundErrorCode = "LOT_BLOCK_LOT_NOT_FOUND";
     private const string LotBlockValidationTitle = "The lot block request is invalid.";
     private const string LotBlockValidationErrorCode = "LOT_BLOCK_VALIDATION_FAILED";
+    private const string LotBlockReleaseNotFoundTitle = "Lot block not found.";
+    private const string LotBlockReleaseNotFoundErrorCode = "LOT_BLOCK_RELEASE_NOT_FOUND";
+    private const string LotBlockReleaseConflictTitle = "The lot block has already been released.";
+    private const string LotBlockReleaseConflictErrorCode = "LOT_BLOCK_RELEASE_CONFLICT";
     private const string MembershipConflictTitle =
         "The membership conflicts with existing data.";
     private const string MembershipConflictErrorCode = "MEMBERSHIP_CONFLICT";
@@ -398,6 +402,16 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         CreateApiProblemDetails(
             httpContext, StatusCodes.Status409Conflict,
             LotBlockConflictTitle, LotBlockConflictErrorCode, detail);
+
+    public ProblemDetails CreateLotBlockReleaseNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            LotBlockReleaseNotFoundTitle, LotBlockReleaseNotFoundErrorCode);
+
+    public ProblemDetails CreateLotBlockReleaseConflict(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status409Conflict,
+            LotBlockReleaseConflictTitle, LotBlockReleaseConflictErrorCode);
 
     public ProblemDetails CreateLotBlockNotFound(HttpContext httpContext) =>
         CreateApiProblemDetails(

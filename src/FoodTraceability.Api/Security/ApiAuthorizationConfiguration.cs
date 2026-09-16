@@ -16,6 +16,7 @@ public static class ApiAuthorizationConfiguration
     private const string SampleCreatePermission = "quality.sample.create";
     private const string LabResultCreatePermission = "quality.result.create";
     private const string QualityBlockPermission = "quality.block";
+    private const string QualityReleasePermission = "quality.release";
     private const string TraceabilityEventCreatePermission = "trace.event.create";
     private const string TraceabilityReadPermission = "trace.read";
     private const string UserManagePermission = "user.manage";
@@ -110,6 +111,12 @@ public static class ApiAuthorizationConfiguration
                     .RequireAuthenticatedUser()
                     .AddRequirements(
                         new OrganizationPermissionRequirement(QualityBlockPermission)));
+            options.AddPolicy(
+                AuthorizationPolicies.QualityRelease,
+                policy => policy
+                    .RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new OrganizationPermissionRequirement(QualityReleasePermission)));
             options.AddPolicy(
                 AuthorizationPolicies.SampleCreate,
                 policy => policy

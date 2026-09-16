@@ -17,6 +17,7 @@ public static class AuthorizationPolicies
     public const string SampleCreate = "SampleCreate";
     public const string LabResultCreate = "LabResultCreate";
     public const string QualityBlock = "QualityBlock";
+    public const string QualityRelease = "QualityRelease";
     public const string TraceabilityEventCreate = "TraceabilityEventCreate";
     public const string TraceabilityRead = "TraceabilityRead";
 }

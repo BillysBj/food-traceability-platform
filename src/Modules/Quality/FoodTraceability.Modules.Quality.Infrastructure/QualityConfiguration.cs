@@ -33,6 +33,7 @@ public static class QualityConfiguration
         services.AddScoped<CreateLabResultService>();
         services.AddScoped<ILotBlockWriter, LotBlockWriter>();
         services.AddScoped<BlockLotService>();
+        services.AddScoped<ReleaseLotBlockService>();
 
         return services;
     }
