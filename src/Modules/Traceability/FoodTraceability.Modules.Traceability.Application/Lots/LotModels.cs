@@ -1,3 +1,5 @@
+using FoodTraceability.Modules.Traceability.Domain;
+
 namespace FoodTraceability.Modules.Traceability.Application.Lots;
 
 public sealed record CreateLotCommand(
@@ -14,7 +16,8 @@ public sealed record LotDetails(
     string LotNumber,
     decimal Quantity,
     Guid UnitId,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    LotQualityStatus QualityStatus);
 
 public sealed record ListLotsQuery(
     Guid OrganizationId,

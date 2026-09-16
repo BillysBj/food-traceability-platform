@@ -52,6 +52,7 @@ public sealed class CreateLotService(
             lot.LotNumber,
             lot.Quantity,
             lot.UnitId,
-            lot.CreatedAt);
+            lot.CreatedAt,
+            lot.QualityStatus);
     }
 }

@@ -21,7 +21,8 @@ internal sealed class LotReader(TraceabilityDbContext dbContext) : ILotReader
                 lot.LotNumber,
                 lot.Quantity,
                 lot.UnitId,
-                lot.CreatedAt))
+                lot.CreatedAt,
+                lot.QualityStatus))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -57,7 +58,8 @@ internal sealed class LotReader(TraceabilityDbContext dbContext) : ILotReader
                 lot.LotNumber,
                 lot.Quantity,
                 lot.UnitId,
-                lot.CreatedAt))
+                lot.CreatedAt,
+                lot.QualityStatus))
             .ToListAsync(cancellationToken);
 
         return new LotPage(items, query.Page, query.PageSize, totalCount);

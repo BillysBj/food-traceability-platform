@@ -1,4 +1,5 @@
 using FoodTraceability.Api.Contracts.LotBlocks;
+using FoodTraceability.Api.Contracts.Lots;
 using FoodTraceability.Api.Errors;
 using FoodTraceability.Api.Security;
 using FoodTraceability.Modules.Quality.Application.LotBlocks;
@@ -62,11 +63,13 @@ public sealed class LotBlockReleasesController(
                 problemDetailsFactory.CreateLotBlockReleaseConflict(HttpContext));
         }
 
+        if (block.QualityStatus != LotQualityStatus.Released)
+        {
+            throw new InvalidOperationException($"Unexpected release result status '{block.QualityStatus}'.");
+        }
+
         return Ok(new ReleasedLotBlockResponse(block.Id, block.LotId, block.Reason,
-            block.BlockedAt, block.BlockedBy, block.ReleasedAt, block.ReleasedBy, block.QualityStatus switch
-            {
-                LotQualityStatus.Released => "RELEASED",
-                _ => throw new InvalidOperationException($"Unexpected release result status '{block.QualityStatus}'."),
-            }));
+            block.BlockedAt, block.BlockedBy, block.ReleasedAt, block.ReleasedBy,
+            LotQualityStatusMapper.ToCode(block.QualityStatus)));
     }
 }
