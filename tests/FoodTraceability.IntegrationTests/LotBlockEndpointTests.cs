@@ -23,7 +23,7 @@ namespace FoodTraceability.IntegrationTests;
 
 [Collection(PostgreSqlDatabaseCollection.Name)]
 [Trait("Category", "Database")]
-public sealed class LotBlockEndpointTests(PostgreSqlContainerFixture database)
+public sealed partial class LotBlockEndpointTests(PostgreSqlContainerFixture database)
 {
     private const string ValidPassword = "Valid-test-password-42!";
     private static readonly Guid KilogramId = Guid.Parse("4ba563a7-f314-57d8-b3d7-ee5c12ff1085");
@@ -240,6 +240,12 @@ public sealed class LotBlockEndpointTests(PostgreSqlContainerFixture database)
         ILotBlockWriter inner, TraceabilityDbContext trace,
         ScopedTransaction transaction, WriteObservation observation) : ILotBlockWriter
     {
+        public Task<LotBlock?> FindAsync(Guid organizationId, Guid lotId, Guid blockId, CancellationToken cancellationToken) =>
+            inner.FindAsync(organizationId, lotId, blockId, cancellationToken);
+
+        public Task SaveReleaseAsync(LotBlock block, CancellationToken cancellationToken) =>
+            inner.SaveReleaseAsync(block, cancellationToken);
+
         public async Task AddAsync(LotBlock block, CancellationToken cancellationToken)
         {
             Assert.True(transaction.IsActive);

@@ -167,6 +167,12 @@ public sealed class BlockLotServiceTests
 
     private sealed class StubBlockWriter(List<string> calls) : ILotBlockWriter
     {
+        public Task<LotBlock?> FindAsync(Guid organizationId, Guid lotId, Guid blockId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task SaveReleaseAsync(LotBlock block, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public LotBlock? Block { get; private set; }
         public Exception? Failure { get; init; }
         public CancellationToken Token { get; private set; }
