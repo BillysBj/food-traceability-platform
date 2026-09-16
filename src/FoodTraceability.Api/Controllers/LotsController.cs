@@ -191,5 +191,6 @@ public sealed class LotsController(
             lot.LotNumber,
             lot.Quantity,
             unitCode,
-            lot.CreatedAt);
+            lot.CreatedAt,
+            LotQualityStatusMapper.ToCode(lot.QualityStatus));
 }

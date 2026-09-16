@@ -71,10 +71,13 @@ public sealed class LotApiFoundationTests
 
         var responseProperties = GetSchemaProperties(root, "LotResponse");
         Assert.True(responseProperties.TryGetProperty("unitCode", out _));
+        Assert.True(responseProperties.TryGetProperty("qualityStatus", out var qualityStatus));
+        Assert.Equal("string", qualityStatus.GetProperty("type").GetString());
         Assert.False(responseProperties.TryGetProperty("unitId", out _));
 
         var listResponseProperties = GetSchemaProperties(root, "LotListResponse");
-        Assert.True(listResponseProperties.TryGetProperty("items", out _));
+        Assert.True(listResponseProperties.TryGetProperty("items", out var items));
+        Assert.Equal("LotResponse", GetSchemaName(items.GetProperty("items")));
         Assert.True(listResponseProperties.TryGetProperty("page", out _));
         Assert.True(listResponseProperties.TryGetProperty("pageSize", out _));
         Assert.True(listResponseProperties.TryGetProperty("totalCount", out _));
