@@ -51,6 +51,10 @@ public sealed class AuthorizationPolicyGuardTests
                 "LabResultCreate",
                 "OrganizationPermissionRequirement",
                 "quality.result.create"),
+            ["QualityBlock"] = new(
+                "QualityBlock",
+                "OrganizationPermissionRequirement",
+                "quality.block"),
             ["TraceabilityRead"] = new(
                 "TraceabilityRead",
                 "OrganizationPermissionRequirement",
