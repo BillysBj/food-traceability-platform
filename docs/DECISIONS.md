@@ -79,6 +79,7 @@ Entscheidung hier als `ENTSCHIEDEN` geführt wird.
 | D-50 | Die Transaktion gehoert dem Scope, nicht dem Aufrufer | ENTSCHIEDEN |
 | D-51 | Laborergebnis: Messwert, Bewertung und der Weg zum Probenstatus | ENTSCHIEDEN |
 | D-52 | Spezifikation: Geltungsbereich, Grenzwerte und der Weg auf PASS | ENTSCHIEDEN |
+| D-53 | Qualitaetszustand eines Lots: Spalte auf dem Lot, Verlauf in Quality | ENTSCHIEDEN |
 
 ---
 
@@ -1987,6 +1988,87 @@ entstand. Identifiziert wird eine Spezifikation über Artikel und Version.
 
 ---
 
+## D-53 – Qualitätszustand eines Lots: Spalte auf dem Lot, Verlauf in Quality
+
+**Status:** ENTSCHIEDEN (2026-09-16)
+**Setzt voraus:** D-11, D-44, D-47, D-48, D-49, D-50
+**Betrifft:** QLT-005a, QLT-005, QLT-006, QLT-007, M8, M11
+
+`AGENTS.md` §9 und das ER-Diagramm führen `quality_status` auf `trace.lot`.
+Das ER-Diagramm führt zusätzlich `quality.lot_block` mit `lot_id`, `reason`,
+`blocked_at`, `released_at` und `status`. Im Code trägt `trace.lot` keins von
+beidem. §18 verlangt: ein gesperrtes Lot darf nicht ausgeliefert werden,
+Freigabe nur mit Berechtigung, jede Sperre und Freigabe wird auditiert.
+
+### Zustand auf dem Lot, Geschichte in Quality — beides
+
+**`trace.lot.quality_status`** trägt den aktuellen Zustand. Ob ein Lot
+gesperrt ist, wird ständig gelesen — vom Logistik-Guard bei jeder Auslieferung
+(QLT-007), von der öffentlichen Rückverfolgung (M8), von jeder Lot-Liste der
+Oberfläche (M11). Mit dem Zustand auf dem Lot ist das ein Feld in derselben
+Zeile statt eines Kontraktaufrufs je Lot. Gesperrt wird selten, gelesen wird
+dauernd.
+
+**`quality.lot_block`** trägt die Geschichte. Eine Spalte hält nur den
+aktuellen Zustand; wer gesperrt hat, wann und warum, ginge beim nächsten
+Wechsel verloren. §18 verlangt diese Prüfspur ausdrücklich.
+
+**Beide werden in einer Transaktion geschrieben.** Quality schreibt
+`trace.lot.quality_status` über einen Kontrakt nach D-48, innerhalb der
+Transaktion je Scope nach D-50. Das ist dasselbe Muster, mit dem QLT-002 das
+SAMPLE-Event schreibt; es ist gebaut und nachgewiesen. Die Lot-Id bleibt dabei
+eine Id — D-49 nimmt Ids, die der Aufrufer bereits besitzt, von der
+Code-Regel aus.
+
+Zur Herleitung, damit sie nicht verloren geht: Ich hatte zunächst empfohlen,
+den Zustand **nur** aus `quality.lot_block` abzuleiten, und dafür unter
+anderem D-11 angeführt. Dieser Grund trug nicht mehr — seit FND-008 und
+FND-009 ist der Schreibzugriff über die Modulgrenze ein erprobtes Muster. Die
+Leseseite hatte ich unterschätzt.
+
+### Wertevorrat des Lotstatus
+
+`trace.lot.quality_status` kennt genau **`PENDING`**, **`BLOCKED`** und
+**`RELEASED`**, gehalten von einer CHECK-Constraint. Er beantwortet eine
+einzige Frage: darf das Lot aus Qualitätssicht ausgeliefert werden?
+
+- `PENDING` — es gab keine Sperrentscheidung. Jedes neue und jedes bestehende
+  Lot startet damit.
+- `BLOCKED` — gesperrt; darf nicht ausgeliefert werden.
+- `RELEASED` — eine Sperre wurde aufgehoben.
+
+**`PASS` und `FAIL` bleiben an der Probe** (D-47). Sie auf das Lot zu spiegeln,
+hieße, dass jedes Laborergebnis auch in `trace.lot` schreibt, und ein Lot mit
+mehreren Proben bräuchte eine Regel, welches Ergebnis gewinnt — die kein
+Dokument nennt.
+
+### Eine Sperre ist immer eine Entscheidung
+
+Ein durchgefallenes Ergebnis sperrt das Lot **nicht** automatisch. §18 führt
+die Sperre als berechtigte Handlung. Ein `FAIL` ist eine Information; eine
+Sperre hält die Auslieferung an. Eine automatische Sperre hätte keinen
+Urheber, und „jede Blockierung auditieren" verlangt genau den.
+
+Sperren verlangt `quality.block`, Freigeben `quality.release` — beide
+bestehen und liegen beim `QualityManager`. Die Matrix ändert sich nicht.
+
+### Festlegungen, die aus dem Obigen folgen
+
+- **Höchstens eine offene Sperre je Lot.** Ein bereits gesperrtes Lot noch
+  einmal zu sperren ist ein Konflikt, keine zweite Sperre.
+- **`blocked_by` und `released_by` kommen hinzu.** Das ER-Diagramm führt sie
+  nicht. Eine Prüfspur ohne Urheber erfüllt §18 aber nicht; die Felder sind
+  damit fachlich begründet und keine Vorratshaltung.
+- **`lot_block.status` entfällt.** Ob eine Sperre offen ist, folgt aus
+  `released_at IS NULL`. Eine Statusspalte wäre eine dritte Stelle für
+  dieselbe Tatsache.
+- **`trace.lot.status`** aus dem ER-Diagramm wird hier **nicht** gebaut. Kein
+  Dokument legt fest, was es neben `quality_status` bedeutet.
+- Ein Sperrdatensatz ist unveränderlich bis auf das einmalige Setzen von
+  `released_at` und `released_by` bei der Freigabe (QLT-006).
+
+---
+
 ## Nächste freie ID
 
-`D-53`
+`D-54`
