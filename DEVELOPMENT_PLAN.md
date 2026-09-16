@@ -96,6 +96,7 @@ beim jeweiligen Plan-Task vermerkt.
 - **DOCS-021** Faktenprüfung vor der Übergabe verankert und die Milestone-Guard-Lücke geschlossen — **Roadmap-Status: DONE**
 - **DOCS-022** Berechtigung und Eindeutigkeit der Probenahme entschieden — **Roadmap-Status: DONE** — hält D-44 und D-45 fest, zieht `quality.sample` im ER-Diagramm nach und schneidet QLT-002 in QLT-002a und QLT-002.
 - **DOCS-023** Befund aus der Mutationsprüfung der frühen Tests als FIX-014 erfasst — **Roadmap-Status: DONE** — die frühen Tests halten; ein Konjunktionsterm in der Organisationsprüfung kann das Ergebnis jedoch nicht verändern, und die Annahme dahinter existiert nur als Kommentar.
+- **DOCS-024** QLT-007 zurückgestellt und in LOG-003 verankert — **Roadmap-Status: DONE** — der Logistik-Guard hätte vor LOG-003 keinen Aufrufer.
 - **FND-008** Modulkontrakt für das Anlegen eines Traceability-Events — **Roadmap-Status: DONE** — setzt D-48 um. Voraussetzung für QLT-002: D-11 verlangt den Aufruf über eine Application-Abstraktion, die Architekturtests verbieten aber jede Referenz zwischen Modulen. Der Kontrakt liegt deshalb unter `src/Platform`.
 - **FIX-015** Eventtypauflösung und Klassifizierungsprüfung an die Modulgrenze ziehen — **Roadmap-Status: DONE** — setzt D-49 um: der Kontrakt aus FND-008 nimmt statt der Event-Typ-Id den Code entgegen, und die Regel aus TRC-008a wandert aus dem Controller in `CreateTraceabilityEventService`. Damit sind beide Aufrufer von derselben Stelle geschützt. Vorgezogen vor QLT-002, weil der Kontrakt sonst eine fremde Id verlangen würde, die das Quality-Modul nicht kennt.
 - **FND-009** Transaktion je DI-Scope — **Roadmap-Status: DONE** — setzt D-50 um und berichtigt FND-007: dessen Helfer verlangte beide DbContexts und war über eine Modulgrenze hinweg nie anwendbar. Ein Schreibpfad benutzt ab jetzt eine laufende äußere Transaktion mit, statt unbedingt eine eigene zu eröffnen. Letzte Voraussetzung für QLT-002.
@@ -408,7 +409,7 @@ Milestone: `M4 – Traceability Core Proven`
 - **QLT-005a** Qualitaetszustand des Lots und Sperrverlauf (eingeschoben) — **Roadmap-Status: DONE** — nach D-53: `trace.lot.quality_status` mit `PENDING`/`BLOCKED`/`RELEASED` per Traceability-Migration, `quality.lot_block` als Pruefspur mit `blocked_by` und `released_by`, und der Kontrakt, ueber den Quality den Lotstatus schreibt. Ohne Endpunkt. Unit- und Integrationstests ergaenzt; Restore, Build, Testlauf und Pruefung auf ausstehende Modellaenderungen uebernimmt der Auftraggeber.
 - **QLT-005** Lot Block — **Roadmap-Status: DONE** — Voraussetzung: **QLT-005a**. POST unter dem Lot mit ausschliesslich `quality.block`; Sperrdatensatz und Lotstatus entstehen in einer Transaktion nach D-50. Keine automatische Sperre. HTTP-, Atomaritaets-, Policy-, OpenAPI- und Unit-Tests ergaenzt; Restore, Build und Testlauf uebernimmt der Auftraggeber.
 - **QLT-006** Lot Release — **Roadmap-Status: DONE** — POST mit expliziter Sperr-Id und ausschliesslich `quality.release`; Freigabefelder und Lotstatus `RELEASED` werden atomar nach D-50/D-53 geschrieben. Bedingtes Update einer noch offenen Sperre verhindert doppelte Freigaben (409), auch bei Nebenlaeufigkeit. HTTP-, Atomaritaets-, Policy-, OpenAPI- und Unit-Tests ergaenzt; Restore, Build und Testlauf uebernimmt der Auftraggeber.
-- **QLT-007** Blocked Lot Logistics Guard — **Roadmap-Status: NOT_STARTED**
+- **QLT-007** Blocked Lot Logistics Guard — **Roadmap-Status: DEFERRED** — **Grund:** Vor LOG-003 existiert kein Auslieferungsweg, den der Guard bewachen könnte. Das Logistics-Modul ist eine leere Hülle, und alle Eventtypen mit Auslieferungsbezug — `SHIP`, `DELIVER`, `SELL`, `TRANSFER`, `RECEIVE`, `RETURN` — sind als `Logistics` klassifiziert und können seit FIX-015 kein Event erzeugen. Ein Guard ohne Aufrufer wäre ein Kontrakt auf Vorrat, den D-48 ausschließt. Die Regel aus `AGENTS.md` §18 „BLOCKED lot darf nicht ausgeliefert werden" kann in M5 deshalb nicht verletzt werden. **Verankert in LOG-003**, wo eine Auslieferung entsteht; dort ist sie Abnahmebedingung. Nicht SUPERSEDED, weil der Inhalt noch nirgends gebaut ist.
 - **QLT-008** Authorization Tests — **Roadmap-Status: NOT_STARTED**
 
 Milestone: `M5 – Quality Ready`
@@ -426,7 +427,7 @@ Milestone: `M6 – Documents Ready`
 
 - **LOG-001** Transport — **Roadmap-Status: NOT_STARTED**
 - **LOG-002** Transport Item — **Roadmap-Status: NOT_STARTED**
-- **LOG-003** Delivery — **Roadmap-Status: NOT_STARTED**
+- **LOG-003** Delivery — **Roadmap-Status: NOT_STARTED** — **Übernimmt den Guard aus QLT-007:** ein Lot mit `trace.lot.quality_status = BLOCKED` darf nicht Teil einer Auslieferung sein (`AGENTS.md` §18, D-53). Das ist Abnahmebedingung dieses Tasks, mit eigenem Test, der das Anlegen einer Auslieferung für ein gesperrtes Lot ablehnt.
 - **LOG-004** Delivery Item — **Roadmap-Status: NOT_STARTED**
 - **LOG-005** Blocked Lot Guard — **Roadmap-Status: NOT_STARTED**
 - **LOG-006** Forward Trace zeigt Lieferungen/Empfänger — **Roadmap-Status: NOT_STARTED**
@@ -502,7 +503,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M2 – Organizations Ready** — **ERREICHT**. Zurückgestellt: **ORG-002c**.
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
 - **M4 – Traceability Core Proven** — **ERREICHT**. Alle Tasks des Epics sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED). Der Pflichttest `OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001` ist mit beiden Traces an derselben ueber die API aufgebauten Kette nachgewiesen.
-- **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-007** und **QLT-008**. QLT-001a, QLT-002a, QLT-002, QLT-003a, QLT-003, QLT-004a, QLT-004, QLT-005a, QLT-005 und QLT-006 sind DONE; QLT-001 ist durch QLT-001a und OLV-005 ersetzt (SUPERSEDED).
+- **M5 – Quality Ready** — **NICHT ERREICHT**. Offen: **QLT-008**. Zurückgestellt: **QLT-007**, verankert in LOG-003. QLT-001a, QLT-002a, QLT-002, QLT-003a, QLT-003, QLT-004a, QLT-004, QLT-005a, QLT-005 und QLT-006 sind DONE; QLT-001 ist durch QLT-001a und OLV-005 ersetzt (SUPERSEDED).
 - **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
 - **M8 – Public Trace Ready** — **NICHT ERREICHT**. Offen: **PUB-001**, **PUB-002**, **PUB-003**, **PUB-004** und **PUB-005**.
