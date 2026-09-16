@@ -20,6 +20,7 @@ public sealed class Lot
         Quantity = quantity;
         UnitId = unitId;
         CreatedAt = createdAt;
+        QualityStatus = LotQualityStatus.Pending;
     }
 
     public Guid Id { get; }
@@ -40,6 +41,19 @@ public sealed class Lot
     public Guid UnitId { get; }
 
     public DateTimeOffset CreatedAt { get; }
+
+    public LotQualityStatus QualityStatus { get; private set; }
+
+    // Quality owns the transition rules; Lot only holds the decided state (D-53).
+    public void SetQualityStatus(LotQualityStatus qualityStatus)
+    {
+        if (!Enum.IsDefined(qualityStatus))
+        {
+            throw new TraceabilityDomainException("Lot quality status is invalid.");
+        }
+
+        QualityStatus = qualityStatus;
+    }
 
     public static Lot Create(
         Guid id,

@@ -15,6 +15,8 @@ public sealed class QualityDbContext(DbContextOptions<QualityDbContext> options)
 
     public DbSet<LabResult> LabResults => Set<LabResult>();
 
+    public DbSet<LotBlock> LotBlocks => Set<LotBlock>();
+
     public DbSet<Specification> Specifications => Set<Specification>();
 
     public DbSet<SpecificationParameter> SpecificationParameters => Set<SpecificationParameter>();

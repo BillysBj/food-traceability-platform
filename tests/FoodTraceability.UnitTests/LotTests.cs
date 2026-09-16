@@ -101,6 +101,45 @@ public sealed class LotTests
         Assert.Equal(0.000001m, lot.Quantity);
     }
 
+    [Theory]
+    [InlineData(LotQualityStatus.Pending)]
+    [InlineData(LotQualityStatus.Blocked)]
+    [InlineData(LotQualityStatus.Released)]
+    public void QualityStatusSetterChangesOnlyTheQualityStatus(LotQualityStatus status)
+    {
+        var lot = Create();
+        Assert.Equal(LotQualityStatus.Pending, lot.QualityStatus);
+
+        lot.SetQualityStatus(status);
+
+        Assert.Equal(status, lot.QualityStatus);
+        Assert.Equal(LotId, lot.Id);
+        Assert.Equal(OrganizationId, lot.OrganizationId);
+        Assert.Equal(ArticleId, lot.ArticleId);
+        Assert.Equal("ABC-123", lot.LotNumber);
+        Assert.Equal(Quantity, lot.Quantity);
+        Assert.Equal(UnitId, lot.UnitId);
+        Assert.Equal(CreatedAt, lot.CreatedAt);
+    }
+
+    [Fact]
+    public void LotDoesNotEnforceQualityTransitionRules()
+    {
+        var lot = Create();
+        lot.SetQualityStatus(LotQualityStatus.Released);
+        lot.SetQualityStatus(LotQualityStatus.Blocked);
+        lot.SetQualityStatus(LotQualityStatus.Pending);
+        Assert.Equal(LotQualityStatus.Pending, lot.QualityStatus);
+    }
+
+    [Fact]
+    public void UndefinedQualityStatusIsRejectedWithoutChangingTheLot()
+    {
+        var lot = Create();
+        Assert.Throws<TraceabilityDomainException>(() => lot.SetQualityStatus((LotQualityStatus)99));
+        Assert.Equal(LotQualityStatus.Pending, lot.QualityStatus);
+    }
+
     private static Lot Create(
         Guid? id = null,
         Guid? organizationId = null,
