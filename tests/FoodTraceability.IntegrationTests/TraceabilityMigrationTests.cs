@@ -28,7 +28,7 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(7, migrations.Length);
+        Assert.Equal(8, migrations.Length);
         Assert.EndsWith("_InitialTraceability", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddLotArticleAndQuantity", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddEventType", migrations[2], StringComparison.Ordinal);
@@ -36,6 +36,7 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
         Assert.EndsWith("_AddEventTypeClassification", migrations[4], StringComparison.Ordinal);
         Assert.EndsWith("_AddTraceabilityEventIndexes", migrations[5], StringComparison.Ordinal);
         Assert.EndsWith("_AddLotOrganizationAlternateKey", migrations[6], StringComparison.Ordinal);
+        Assert.EndsWith("_AddLotQualityStatus", migrations[7], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -95,6 +96,7 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
                     "character varying",
                     Lot.MaximumLotNumberLength),
                 new DatabaseColumn("organization_id", "NO", "uuid", null),
+                new DatabaseColumn("quality_status", "NO", "character varying", 8),
                 new DatabaseColumn("quantity", "NO", "numeric", null),
                 new DatabaseColumn("unit_id", "NO", "uuid", null),
             ],
@@ -471,9 +473,9 @@ public sealed class TraceabilityMigrationTests(PostgreSqlContainerFixture databa
     {
         const string sql = """
             INSERT INTO trace.lot
-                (lot_id, organization_id, article_id, lot_number, quantity, unit_id, created_at)
+                (lot_id, organization_id, article_id, lot_number, quantity, unit_id, created_at, quality_status)
             VALUES
-                (@lot_id, @organization_id, @article_id, @lot_number, @quantity, @unit_id, @created_at);
+                (@lot_id, @organization_id, @article_id, @lot_number, @quantity, @unit_id, @created_at, 'PENDING');
             """;
 
         using var timeout = new CancellationTokenSource(QueryTimeout);

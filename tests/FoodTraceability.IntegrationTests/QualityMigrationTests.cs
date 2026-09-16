@@ -22,16 +22,17 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
         var appliedMigrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
 
         var migrations = appliedMigrations.ToArray();
-        Assert.Equal(4, migrations.Length);
+        Assert.Equal(5, migrations.Length);
         Assert.EndsWith("_InitialQuality", migrations[0], StringComparison.Ordinal);
         Assert.EndsWith("_AddSample", migrations[1], StringComparison.Ordinal);
         Assert.EndsWith("_AddLabResult", migrations[2], StringComparison.Ordinal);
         Assert.EndsWith("_AddSpecification", migrations[3], StringComparison.Ordinal);
+        Assert.EndsWith("_AddLotBlock", migrations[4], StringComparison.Ordinal);
         Assert.False(context.Database.HasPendingModelChanges());
     }
 
     [Fact]
-    public async Task QualitySchemaExistsWithOnlyLabResultParameterSampleSpecificationsAndMigrationHistory()
+    public async Task QualitySchemaExistsWithOnlyLabResultLotBlockParameterSampleSpecificationsAndMigrationHistory()
     {
         var tables = await QueryAsync(
             """
@@ -43,7 +44,7 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
             static reader => reader.GetString(0));
 
         Assert.Equal(
-            [PersistenceConventions.MigrationsHistoryTableName, "lab_result", "parameter", "sample", "specification", "specification_parameter"],
+            [PersistenceConventions.MigrationsHistoryTableName, "lab_result", "lot_block", "parameter", "sample", "specification", "specification_parameter"],
             tables);
     }
 
@@ -87,7 +88,7 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
         var migrationCounts = await QueryAsync(
             "SELECT COUNT(*) FROM quality.__ef_migrations_history;",
             static reader => reader.GetInt64(0));
-        Assert.Equal(4L, Assert.Single(migrationCounts));
+        Assert.Equal(5L, Assert.Single(migrationCounts));
     }
 
     [Fact]
@@ -194,13 +195,13 @@ public sealed class QualityMigrationTests(PostgreSqlContainerFixture database)
     }
 
     [Fact]
-    public void QualityModelContainsOnlyLabResultParameterSampleAndSpecificationsAndNoCrossModuleForeignKey()
+    public void QualityModelContainsOnlyLabResultLotBlockParameterSampleAndSpecificationsAndNoCrossModuleForeignKey()
     {
         using var context = database.CreateQualityDbContext();
 
         var entityTypes = context.Model.GetEntityTypes().OrderBy(entity => entity.ClrType.Name).ToArray();
         Assert.Equal(
-            [typeof(LabResult), typeof(Parameter), typeof(Sample), typeof(Specification), typeof(SpecificationParameter)],
+            [typeof(LabResult), typeof(LotBlock), typeof(Parameter), typeof(Sample), typeof(Specification), typeof(SpecificationParameter)],
             entityTypes.Select(entity => entity.ClrType));
         Assert.All(entityTypes, entityType =>
         {
