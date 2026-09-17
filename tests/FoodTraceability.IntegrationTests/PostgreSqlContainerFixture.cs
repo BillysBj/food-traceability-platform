@@ -1,4 +1,5 @@
 using FoodTraceability.Modules.Catalog.Infrastructure;
+using FoodTraceability.Modules.Documents.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Infrastructure;
 using FoodTraceability.Modules.Quality.Infrastructure;
@@ -17,6 +18,7 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
     private PostgreSqlContainer? _container;
     private string? _articleApiConnectionString;
     private string? _catalogConnectionString;
+    private string? _documentsConnectionString;
     private string? _identityConnectionString;
     private string? _lotApiConnectionString;
     private string? _organizationsConnectionString;
@@ -31,6 +33,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
     public string CatalogConnectionString => _catalogConnectionString
         ?? throw new InvalidOperationException("The Catalog test database is not initialized.");
+
+    public string DocumentsConnectionString => _documentsConnectionString
+        ?? throw new InvalidOperationException("The Documents test database is not initialized.");
 
     public string IdentityConnectionString => _identityConnectionString
         ?? throw new InvalidOperationException("The Identity test database is not initialized.");
@@ -70,6 +75,9 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
                 timeout.Token);
             _articleApiConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_article_api_tests_{Guid.NewGuid():N}",
+                timeout.Token);
+            _documentsConnectionString = await CreateDatabaseAsync(
+                $"food_traceability_documents_tests_{Guid.NewGuid():N}",
                 timeout.Token);
             _identityConnectionString = await CreateDatabaseAsync(
                 $"food_traceability_identity_tests_{Guid.NewGuid():N}",
@@ -117,6 +125,13 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
 
             await using var catalogContext = CreateCatalogDbContext();
             await catalogContext.Database.MigrateAsync(timeout.Token);
+
+            // Documents' migration-level FK requires Organizations in its own database first.
+            await using var documentsOrganizationsContext = CreateDocumentsOrganizationsDbContext();
+            await documentsOrganizationsContext.Database.MigrateAsync(timeout.Token);
+
+            await using var documentsContext = CreateDocumentsDbContext();
+            await documentsContext.Database.MigrateAsync(timeout.Token);
 
             // Quality's migration-level cross-schema FKs require Catalog, Organizations,
             // and Traceability. Traceability in turn requires Identity before migration.
@@ -402,6 +417,22 @@ public sealed class PostgreSqlContainerFixture : IAsyncLifetime
             CatalogDbContext.Schema);
 
         return new CatalogDbContext(optionsBuilder.Options);
+    }
+
+    public DocumentsDbContext CreateDocumentsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<DocumentsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(DocumentsConnectionString, DocumentsDbContext.Schema);
+
+        return new DocumentsDbContext(optionsBuilder.Options);
+    }
+
+    public OrganizationsDbContext CreateDocumentsOrganizationsDbContext()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<OrganizationsDbContext>();
+        optionsBuilder.UseFoodTraceabilityPostgres(DocumentsConnectionString, OrganizationsDbContext.Schema);
+
+        return new OrganizationsDbContext(optionsBuilder.Options);
     }
 
     public QualityDbContext CreateQualityDbContext()

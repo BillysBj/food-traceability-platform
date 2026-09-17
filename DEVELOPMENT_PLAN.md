@@ -421,7 +421,7 @@ Milestone: `M5 – Quality Ready`
 
 # EPIC 6 – Documents
 
-- **DOC-001** Document Metadata — **Roadmap-Status: NOT_STARTED**
+- **DOC-001** Document Metadata — **Roadmap-Status: DONE** — legt DbContext, Schema `docs`, erste Migration sowie `docs.document_type` und `docs.document` an. Drei deterministisch geseedete Dokumenttypen, Metadaten mit Titel und Dateiname, FK- und SHA-256-Constraints; Dokumenttypen ohne Namensspalte, solange D-07 offen ist (D-54).
 - **DOC-002** Object Storage Abstraction — **Roadmap-Status: NOT_STARTED**
 - **DOC-003** Upload API + Validation — **Roadmap-Status: NOT_STARTED**
 - **DOC-004** Links zu Lot/Sample/Organization/Delivery — **Roadmap-Status: NOT_STARTED**
@@ -509,7 +509,7 @@ Milestone: `M12 – Pilot 1 Release Candidate`
 - **M3 – Catalog Ready** — **ERREICHT**. Zurückgestellt: **CAT-001**, **CAT-005**.
 - **M4 – Traceability Core Proven** — **ERREICHT**. Alle Tasks des Epics sind DONE; TRC-012 ist durch TRC-010 ersetzt (SUPERSEDED). Der Pflichttest `OL-001 → PRESS → OIL-001 → BOTTLE → BOT-001` ist mit beiden Traces an derselben ueber die API aufgebauten Kette nachgewiesen.
 - **M5 – Quality Ready** — **ERREICHT**. Zurückgestellt: **QLT-007**, verankert in LOG-003. QLT-008 ist durch QLT-002, QLT-003, QLT-005 und QLT-006 ersetzt (SUPERSEDED). QLT-001a, QLT-002a, QLT-002, QLT-003a, QLT-003, QLT-004a, QLT-004, QLT-005a, QLT-005, QLT-006, QLT-009a, QLT-009b und QLT-009 sind DONE; QLT-001 ist durch QLT-001a und OLV-005 ersetzt (SUPERSEDED). Die Quality-Maschinerie ist gebaut und über die echte API lesbar und beschreibbar. Im Echtbetrieb nutzbar wird sie erst mit OLV-005, weil `quality.parameter` und `quality.specification` bis dahin keine Zeile enthalten.
-- **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-001**, **DOC-002**, **DOC-003** und **DOC-004**.
+- **M6 – Documents Ready** — **NICHT ERREICHT**. Offen: **DOC-002**, **DOC-003** und **DOC-004**.
 - **M7 – Logistics Ready** — **NICHT ERREICHT**. Offen: **LOG-001**, **LOG-002**, **LOG-003**, **LOG-004**, **LOG-005** und **LOG-006**.
 - **M8 – Public Trace Ready** — **NICHT ERREICHT**. Offen: **PUB-001**, **PUB-002**, **PUB-003**, **PUB-004** und **PUB-005**.
 - **M9 – Audit Ready** — **NICHT ERREICHT**. Offen: **AUD-001**, **AUD-002**, **AUD-003** und **AUD-004**.
