@@ -26,8 +26,12 @@ public static class QualityConfiguration
         });
 
         services.AddScoped<ISampleWriter, SampleWriter>();
+        services.AddScoped<ISampleReader, SampleReader>();
+        services.AddScoped<SampleQueryService>();
         services.AddScoped<CreateSampleService>();
         services.AddScoped<ILabResultWriter, LabResultWriter>();
+        services.AddScoped<ILabResultReader, LabResultReader>();
+        services.AddScoped<LabResultQueryService>();
         services.AddScoped<ISampleResultReader, SampleResultReader>();
         services.AddScoped<IApplicableSpecificationReader, ApplicableSpecificationReader>();
         services.AddScoped<CreateLabResultService>();

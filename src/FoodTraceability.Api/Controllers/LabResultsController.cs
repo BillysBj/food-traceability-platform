@@ -12,15 +12,64 @@ namespace FoodTraceability.Api.Controllers;
 [Route("api/v1/organizations/{organizationId:guid}/samples/{sampleId:guid}/results")]
 public sealed class LabResultsController(
     CreateLabResultService createService,
+    LabResultQueryService queryService,
     ApiProblemDetailsFactory problemDetailsFactory) : ControllerBase
 {
+    /// <summary>Lists laboratory results of a sample within the route organization.</summary>
+    /// <remarks>
+    /// Ordered by CreatedAt descending, then Id descending. Page starts at 1 (default 1);
+    /// pageSize is 1 to 100 (default 50). Only organization-wide quality.read is required.
+    /// Assessments are the stored PASS or FAIL codes.
+    /// </remarks>
+    /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
+    /// <param name="sampleId">The parent sample identifier within that organization.</param>
+    /// <param name="request">Page and page size.</param>
+    /// <param name="cancellationToken">Cancels request processing.</param>
+    /// <response code="200">A page with TotalCount; an existing sample without results returns an empty page.</response>
+    /// <response code="400">The pagination parameters are invalid.</response>
+    /// <response code="401">Authentication is required or the authenticated user is inactive.</response>
+    /// <response code="403">The caller lacks organization-wide quality.read permission.</response>
+    /// <response code="404">QUALITY_RESULT_LIST_SAMPLE_NOT_FOUND: the sample is missing or belongs to another organization.</response>
+    [HttpGet]
+    [Authorize(Policy = AuthorizationPolicies.QualityRead)]
+    [ProducesResponseType<LabResultListResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<LabResultListResponse>> List(
+        Guid organizationId,
+        Guid sampleId,
+        [FromQuery] LabResultListRequest request,
+        CancellationToken cancellationToken)
+    {
+        var page = await queryService.ListAsync(
+            new ListLabResultsQuery(organizationId, sampleId, request.Page, request.PageSize), cancellationToken);
+        if (page is null)
+        {
+            return problemDetailsFactory.CreateResult(
+                problemDetailsFactory.CreateQualityResultListSampleNotFound(HttpContext));
+        }
+
+        return Ok(new LabResultListResponse(page.Items.Select(result => new LabResultListItemResponse(
+            result.Id, result.SampleId, result.ParameterId, result.Value,
+            result.Assessment switch
+            {
+                LabResultAssessment.Pass => "PASS",
+                LabResultAssessment.Fail => "FAIL",
+                _ => throw new InvalidOperationException($"Unknown lab result assessment '{result.Assessment}'."),
+            },
+            result.Method, result.MeasuredAt, result.CreatedAt)).ToArray(),
+            page.Page, page.PageSize, page.TotalCount));
+    }
+
     /// <summary>Records one laboratory result for a sample and parameter.</summary>
     /// <remarks>
     /// FAIL sets the sample to FAIL permanently. PASS completes a PENDING sample when all
     /// required parameters of its applicable article specification have PASS results (D-52).
     /// Without an applicable specification the sample remains PENDING. Limits are reference values only.
     /// Only organization-wide quality.result.create is required. Result and sample change
-    /// are saved atomically. The Location identifies the result; retrieval is not yet implemented.
+    /// are saved atomically. The Location identifies the result; individual retrieval is not yet implemented.
     /// </remarks>
     /// <param name="organizationId">The organization identifier from the tenant-scoped route.</param>
     /// <param name="sampleId">The sample identifier within that organization.</param>

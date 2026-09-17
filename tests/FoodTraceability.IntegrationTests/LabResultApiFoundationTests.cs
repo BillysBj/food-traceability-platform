@@ -6,7 +6,7 @@ namespace FoodTraceability.IntegrationTests;
 public sealed class LabResultApiFoundationTests
 {
     [Fact]
-    public async Task SwaggerDocumentsResultContractsResponsesAndBearerSecurityWithoutReadEndpoint()
+    public async Task SwaggerDocumentsResultCreationContractsResponsesAndBearerSecurity()
     {
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
@@ -15,7 +15,7 @@ public sealed class LabResultApiFoundationTests
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
         var root = document.RootElement;
         var path = root.GetProperty("paths").GetProperty("/api/v1/organizations/{organizationId}/samples/{sampleId}/results");
-        Assert.False(path.TryGetProperty("get", out _));
+        Assert.True(path.TryGetProperty("get", out _));
         var operation = path.GetProperty("post");
         Assert.Contains("QUALITY_SPECIFICATION_AMBIGUOUS", operation.GetProperty("responses")
             .GetProperty("409").GetProperty("description").GetString());
