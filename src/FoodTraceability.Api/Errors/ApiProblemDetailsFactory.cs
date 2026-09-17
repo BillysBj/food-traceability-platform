@@ -35,6 +35,10 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string LotNotFoundErrorCode = "LOT_NOT_FOUND";
     private const string LotValidationTitle = "The lot request is invalid.";
     private const string LotValidationErrorCode = "LOT_VALIDATION_FAILED";
+    private const string QualitySampleListLotNotFoundTitle = "Lot not found.";
+    private const string QualitySampleListLotNotFoundErrorCode = "QUALITY_SAMPLE_LIST_LOT_NOT_FOUND";
+    private const string QualityResultListSampleNotFoundTitle = "Sample not found.";
+    private const string QualityResultListSampleNotFoundErrorCode = "QUALITY_RESULT_LIST_SAMPLE_NOT_FOUND";
     private const string SampleConflictTitle = "The sample conflicts with existing data.";
     private const string SampleConflictErrorCode = "SAMPLE_CONFLICT";
     private const string SampleValidationTitle = "The sample request is invalid.";
@@ -357,6 +361,16 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
             SampleConflictTitle,
             SampleConflictErrorCode,
             detail);
+
+    public ProblemDetails CreateQualitySampleListLotNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            QualitySampleListLotNotFoundTitle, QualitySampleListLotNotFoundErrorCode);
+
+    public ProblemDetails CreateQualityResultListSampleNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            QualityResultListSampleNotFoundTitle, QualityResultListSampleNotFoundErrorCode);
 
     public ValidationProblemDetails CreateSampleValidationError(HttpContext httpContext, string detail)
     {
