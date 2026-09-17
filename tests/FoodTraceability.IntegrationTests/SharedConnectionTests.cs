@@ -1,6 +1,7 @@
 using System.Data;
 using FoodTraceability.Modules.Catalog.Domain;
 using FoodTraceability.Modules.Catalog.Infrastructure;
+using FoodTraceability.Modules.Documents.Infrastructure;
 using FoodTraceability.Modules.Identity.Infrastructure;
 using FoodTraceability.Modules.Organizations.Domain;
 using FoodTraceability.Modules.Organizations.Infrastructure;
@@ -19,7 +20,7 @@ namespace FoodTraceability.IntegrationTests;
 public sealed class SharedConnectionTests(PostgreSqlContainerFixture database)
 {
     [Fact]
-    public void AllSixDbContextsInOneScopeShareTheScopedConnection()
+    public void AllDbContextsInOneScopeShareTheScopedConnection()
     {
         using var factory = CreateFactory();
         using var scope = factory.Services.CreateScope();
@@ -32,6 +33,7 @@ public sealed class SharedConnectionTests(PostgreSqlContainerFixture database)
             services.GetRequiredService<IdentityDbContext>(),
             services.GetRequiredService<CatalogDbContext>(),
             services.GetRequiredService<QualityDbContext>(),
+            services.GetRequiredService<DocumentsDbContext>(),
             services.GetRequiredService<TraceabilityDbContext>(),
         ];
 

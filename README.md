@@ -41,7 +41,7 @@ Put machine-specific Compose changes in `docker-compose.override.yml`. The file 
 
 Set the local PostgreSQL connection string through the standard .NET configuration environment variable `ConnectionStrings__FoodTraceability`. Keep its value in the local environment only; do not add credentials to tracked configuration files. Alternatively, the API can read machine-specific configuration from the already ignored `appsettings.Local.json` when the `Local` environment is selected.
 
-Six contexts own migrations, and they must be applied **in this order**:
+Seven contexts own migrations, and they must be applied **in this order**:
 
 1. `PlatformDbContext`
 2. `OrganizationsDbContext`
@@ -49,8 +49,9 @@ Six contexts own migrations, and they must be applied **in this order**:
 4. `CatalogDbContext`
 5. `TraceabilityDbContext`
 6. `QualityDbContext`
+7. `DocumentsDbContext`
 
-The order is not a preference. Identity, Catalog, Traceability and Quality declare cross-schema foreign keys into schemas owned by other modules, and PostgreSQL rejects a foreign key whose target schema does not exist yet. Traceability follows Identity because `trace.traceability_event.created_by` references `identity.user`. Quality comes last because `quality.parameter.unit_id` references `catalog.unit`, and `quality.sample` and `quality.lot_block` reference `trace.lot` and `trace.traceability_event`. Applying Identity before Organizations fails with:
+The order is not a preference. Identity, Catalog, Traceability, Quality and Documents declare cross-schema foreign keys into schemas owned by other modules, and PostgreSQL rejects a foreign key whose target schema does not exist yet. Traceability follows Identity because `trace.traceability_event.created_by` references `identity.user`. Quality follows Catalog and Traceability because `quality.parameter.unit_id` references `catalog.unit`, and `quality.sample` and `quality.lot_block` reference `trace.lot` and `trace.traceability_event`. Documents must follow Organizations because `docs.document.organization_id` references `org.organization`. Applying Identity before Organizations fails with:
 
 ```text
 3F000: schema "org" does not exist
@@ -88,10 +89,18 @@ dotnet ef database update --project src/Modules/Traceability/FoodTraceability.Mo
 dotnet ef database update --project src/Modules/Quality/FoodTraceability.Modules.Quality.Infrastructure --startup-project src/FoodTraceability.Api --context QualityDbContext
 ```
 
-Check that each migration still matches its model by running the same six commands with `migrations has-pending-model-changes` instead of `database update`, for example:
+```sh
+dotnet ef database update --project src/Modules/Documents/FoodTraceability.Modules.Documents.Infrastructure --startup-project src/FoodTraceability.Api --context DocumentsDbContext
+```
+
+Check that each migration still matches its model by running the same seven commands with `migrations has-pending-model-changes` instead of `database update`, for example:
 
 ```sh
 dotnet ef migrations has-pending-model-changes --project src/Platform/FoodTraceability.Platform.Persistence --startup-project src/FoodTraceability.Api --context PlatformDbContext
+```
+
+```sh
+dotnet ef migrations has-pending-model-changes --project src/Modules/Documents/FoodTraceability.Modules.Documents.Infrastructure --startup-project src/FoodTraceability.Api --context DocumentsDbContext
 ```
 
 Migrations deliberately do not run automatically when the API starts. Apply them explicitly during deployment or local setup.

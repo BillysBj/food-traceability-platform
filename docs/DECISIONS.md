@@ -2069,6 +2069,64 @@ bestehen und liegen beim `QualityManager`. Die Matrix ändert sich nicht.
 
 ---
 
+## D-54 – Dokument-Metadaten: Spaltenumfang und Dokumenttypen
+
+**Status:** ENTSCHIEDEN (2026-09-17)
+**Entschieden durch:** Auftraggeber
+**Setzt voraus:** D-07 (weiterhin OFFEN), D-11, D-17, D-33, D-36, D-43
+**Betrifft:** DOC-001, DOC-002, DOC-003, DOC-004
+
+### Drei feste Dokumenttypen
+
+`docs.document_type` wird mit **LAB_REPORT**, **CERTIFICATE** und
+**DELIVERY_NOTE** geseedet. Die Quellen sind `AGENTS.md` §44
+„Laborberichte, Lieferscheine, Zertifikate“ und Master Specification §16.3
+„Lab PDFs, certificates, delivery notes“. Keiner dieser Typen ist
+branchenspezifisch; deshalb werden sie anders als die Qualitätsparameter
+nicht auf OLV-005 verschoben. **Ein Dokument ohne Typ gibt es nicht.**
+
+Die Ids sind feste Guid-Literale nach dem Muster aus D-17, abgeleitet als
+`uuid5(DNS, "food-traceability.documents.document_type.<CODE>")`:
+
+- `LAB_REPORT`: `5b9827b8-61e4-5046-8787-ff0d1418b4a7`
+- `CERTIFICATE`: `b4f4b593-4b19-5f13-8d15-b1d51e126862`
+- `DELIVERY_NOTE`: `ae9fd5c5-e18b-5bf4-ac1a-b7ae088e14aa`
+
+### Spaltenumfang und ausdrücklich festgehaltene Abweichungen
+
+**`document_type` erhält neben seiner Id nur `code`.** D-07 ist offen;
+Anzeigename und Beschreibung werden deshalb wie bei `catalog.unit` nach
+D-33 nicht vorweggenommen. Das weicht von der Spezifikation (`name`,
+`description`) und vom ER-Diagramm (`name`) ab.
+
+**`document` führt `name` und `file_name`.** Der Auftraggeber legt
+ausdrücklich beides fest: den beim Upload vergebenen Titel und den
+Originalnamen der hochgeladenen Datei. Dies folgt der Spezifikation
+(`name`, `filename`, hier als `file_name`) und weicht vom ER-Diagramm ab,
+das nur `name` kennt.
+
+Die vollständigen Spalten sind `document_id`, `document_type_id`,
+`organization_id`, `name`, `file_name`, `storage_key`, `mime_type`,
+`document_date`, `sha256` und `created_at`. **Alle Spalten sind NOT NULL**:
+Die Spezifikation kennzeichnet nullbare Spalten ausdrücklich, hier keine.
+`document_date` ist ein reines Datum (`DateOnly` / PostgreSQL `date`).
+
+**SHA-256 wird als genau 64 Kleinbuchstaben-Hexzeichen gespeichert**, mit
+CHECK-Constraint in der Datenbank. `storage_key` ist eindeutig.
+Der Typbezug wird im EF-Modell mit RESTRICT abgebildet; der Bezug auf
+`org.organization` entsteht nach D-11 ausschließlich in der Migration,
+ebenfalls mit RESTRICT.
+
+### Bewusst nicht in DOC-001
+
+- `document_link` folgt mit **DOC-004**.
+- Das Format des Storage-Schlüssels folgt mit **DOC-002**.
+- Erlaubte MIME-Typen und Größengrenzen nach BR-012 folgen mit **DOC-003**.
+- Keine Spalten für Uploader, Sichtbarkeit oder Archivierung: keine Quelle
+  nennt sie für `docs.document`.
+
+---
+
 ## Nächste freie ID
 
-`D-54`
+`D-55`
