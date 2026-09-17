@@ -47,13 +47,19 @@ Six contexts own migrations, and they must be applied **in this order**:
 2. `OrganizationsDbContext`
 3. `IdentityDbContext`
 4. `CatalogDbContext`
-5. `QualityDbContext`
-6. `TraceabilityDbContext`
+5. `TraceabilityDbContext`
+6. `QualityDbContext`
 
-The order is not a preference. Identity, Catalog, Quality and Traceability declare cross-schema foreign keys into schemas owned by other modules, and PostgreSQL rejects a foreign key whose target schema does not exist yet. Quality follows Catalog because `quality.parameter.unit_id` references `catalog.unit`. Applying Identity before Organizations fails with:
+The order is not a preference. Identity, Catalog, Traceability and Quality declare cross-schema foreign keys into schemas owned by other modules, and PostgreSQL rejects a foreign key whose target schema does not exist yet. Traceability follows Identity because `trace.traceability_event.created_by` references `identity.user`. Quality comes last because `quality.parameter.unit_id` references `catalog.unit`, and `quality.sample` and `quality.lot_block` reference `trace.lot` and `trace.traceability_event`. Applying Identity before Organizations fails with:
 
 ```text
 3F000: schema "org" does not exist
+```
+
+Applying Quality before Traceability fails the same way:
+
+```text
+3F000: schema "trace" does not exist
 ```
 
 Apply the migrations from the repository root:
@@ -75,11 +81,11 @@ dotnet ef database update --project src/Modules/Catalog/FoodTraceability.Modules
 ```
 
 ```sh
-dotnet ef database update --project src/Modules/Quality/FoodTraceability.Modules.Quality.Infrastructure --startup-project src/FoodTraceability.Api --context QualityDbContext
+dotnet ef database update --project src/Modules/Traceability/FoodTraceability.Modules.Traceability.Infrastructure --startup-project src/FoodTraceability.Api --context TraceabilityDbContext
 ```
 
 ```sh
-dotnet ef database update --project src/Modules/Traceability/FoodTraceability.Modules.Traceability.Infrastructure --startup-project src/FoodTraceability.Api --context TraceabilityDbContext
+dotnet ef database update --project src/Modules/Quality/FoodTraceability.Modules.Quality.Infrastructure --startup-project src/FoodTraceability.Api --context QualityDbContext
 ```
 
 Check that each migration still matches its model by running the same six commands with `migrations has-pending-model-changes` instead of `database update`, for example:
