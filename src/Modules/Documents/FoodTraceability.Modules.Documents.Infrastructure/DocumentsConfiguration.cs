@@ -1,3 +1,4 @@
+using FoodTraceability.Modules.Documents.Application;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,8 @@ public static class DocumentsConfiguration
                 serviceProvider.GetRequiredService<NpgsqlConnection>(),
                 DocumentsDbContext.Schema);
         });
+
+        services.AddScoped<IDocumentContentStore, DocumentContentStore>();
 
         return services;
     }

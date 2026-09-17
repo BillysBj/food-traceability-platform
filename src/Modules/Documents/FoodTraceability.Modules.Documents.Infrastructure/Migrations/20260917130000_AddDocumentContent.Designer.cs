@@ -1,14 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace FoodTraceability.Modules.Documents.Infrastructure.Migrations;
 
 [DbContext(typeof(DocumentsDbContext))]
-partial class DocumentsDbContextModelSnapshot : ModelSnapshot
+[Migration("20260917130000_AddDocumentContent")]
+partial class AddDocumentContent
 {
-    protected override void BuildModel(ModelBuilder modelBuilder)
+    protected override void BuildTargetModel(ModelBuilder modelBuilder)
     {
         modelBuilder
             .HasAnnotation("ProductVersion", "10.0.11")
