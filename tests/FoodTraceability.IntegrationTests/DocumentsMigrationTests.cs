@@ -24,7 +24,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await context.Database.MigrateAsync(timeout.Token);
 
         var migrations = await context.Database.GetAppliedMigrationsAsync(timeout.Token);
-        Assert.Equal("20260917120000_InitialDocuments", Assert.Single(migrations));
+        Assert.Equal(["20260917120000_InitialDocuments", "20260917130000_AddDocumentContent"], migrations);
         Assert.False(context.Database.HasPendingModelChanges());
     }
 
@@ -37,7 +37,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
             WHERE table_schema = 'docs' ORDER BY table_name;
             """, static reader => reader.GetString(0));
 
-        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "document", "document_type"], tables);
+        Assert.Equal([PersistenceConventions.MigrationsHistoryTableName, "document", "document_content", "document_type"], tables);
     }
 
     [Fact]
@@ -51,14 +51,14 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         Assert.Equal(["docs", "org"], histories);
 
         var migrations = await QueryAsync(
-            "SELECT migration_id FROM docs.__ef_migrations_history;",
+            "SELECT migration_id FROM docs.__ef_migrations_history ORDER BY migration_id;",
             static reader => reader.GetString(0));
-        Assert.Equal("20260917120000_InitialDocuments", Assert.Single(migrations));
+        Assert.Equal(["20260917120000_InitialDocuments", "20260917130000_AddDocumentContent"], migrations);
 
         var foreignHistory = await QueryAsync(
             """
             SELECT COUNT(*) FROM org.__ef_migrations_history
-            WHERE migration_id = '20260917120000_InitialDocuments';
+            WHERE migration_id IN ('20260917120000_InitialDocuments', '20260917130000_AddDocumentContent');
             """, static reader => reader.GetInt64(0));
         Assert.Equal(0L, Assert.Single(foreignHistory));
     }
@@ -137,6 +137,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
         var organizationId = await InsertOrganizationAsync(context, timeout.Token);
         var document = CreateDocument(organizationId);
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
         context.Documents.Add(document);
         await context.SaveChangesAsync(timeout.Token);
         context.Documents.Add(CreateDocument(organizationId, storageKey: document.StorageKey));
@@ -154,9 +155,11 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await using var context = database.CreateDocumentsDbContext();
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
         var organizationId = await InsertOrganizationAsync(context, timeout.Token);
-        context.Documents.Add(CreateDocument(
+        var document = CreateDocument(
             unknownOrganization ? Guid.NewGuid() : organizationId,
-            documentTypeId: unknownOrganization ? StandardDocumentTypeIds.LabReport : Guid.NewGuid()));
+            documentTypeId: unknownOrganization ? StandardDocumentTypeIds.LabReport : Guid.NewGuid());
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
+        context.Documents.Add(document);
 
         var exception = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(timeout.Token));
         AssertConstraint(exception, PostgresErrorCodes.ForeignKeyViolation, constraint);
@@ -173,6 +176,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
         var organizationId = await InsertOrganizationAsync(context, timeout.Token);
         var document = CreateDocument(organizationId);
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
         context.Documents.Add(document);
         await context.SaveChangesAsync(timeout.Token);
 
@@ -195,6 +199,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
         var organizationId = await InsertOrganizationAsync(context, timeout.Token);
         var document = CreateDocument(organizationId);
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
         var invalidHash = uppercase ? new string('A', 64) : new string('a', 63);
 
         // Bypass the domain; character(64) pads the short value, which must still fail.
@@ -220,6 +225,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
         await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
         var organizationId = await InsertOrganizationAsync(context, timeout.Token);
         var document = CreateDocument(organizationId);
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
         context.Documents.Add(document);
         Assert.Equal(1, await context.SaveChangesAsync(timeout.Token));
         context.ChangeTracker.Clear();
@@ -242,7 +248,7 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
     {
         using var context = database.CreateDocumentsDbContext();
         var entityTypes = context.Model.GetEntityTypes().OrderBy(entity => entity.ClrType.Name).ToArray();
-        Assert.Equal([typeof(Document), typeof(DocumentType)], entityTypes.Select(entity => entity.ClrType));
+        Assert.Equal([typeof(Document), typeof(DocumentContent), typeof(DocumentType)], entityTypes.Select(entity => entity.ClrType));
         Assert.All(entityTypes, entityType =>
         {
             Assert.Equal("docs", entityType.GetSchema());
@@ -251,10 +257,90 @@ public sealed class DocumentsMigrationTests(PostgreSqlContainerFixture database)
             Assert.Empty(entityType.GetNavigations());
         });
 
-        var typeForeignKey = Assert.Single(context.Model.FindEntityType(typeof(Document))!.GetForeignKeys());
+        var foreignKeys = context.Model.FindEntityType(typeof(Document))!.GetForeignKeys().ToArray();
+        Assert.Equal(2, foreignKeys.Length);
+        var typeForeignKey = Assert.Single(foreignKeys,
+            foreignKey => foreignKey.PrincipalEntityType.ClrType == typeof(DocumentType));
         Assert.Equal(typeof(DocumentType), typeForeignKey.PrincipalEntityType.ClrType);
         Assert.Equal(DeleteBehavior.Restrict, typeForeignKey.DeleteBehavior);
         Assert.Equal(nameof(Document.DocumentTypeId), Assert.Single(typeForeignKey.Properties).Name);
+        var contentForeignKey = Assert.Single(foreignKeys,
+            foreignKey => foreignKey.PrincipalEntityType.ClrType == typeof(DocumentContent));
+        Assert.Equal(DeleteBehavior.Restrict, contentForeignKey.DeleteBehavior);
+        Assert.Equal(nameof(Document.StorageKey), Assert.Single(contentForeignKey.Properties).Name);
+    }
+
+    [Fact]
+    public async Task DocumentContentHasExactlyTheExpectedColumns()
+    {
+        var columns = await QueryAsync(
+            """
+            SELECT column_name, is_nullable, data_type, character_maximum_length
+            FROM information_schema.columns
+            WHERE table_schema = 'docs' AND table_name = 'document_content'
+            ORDER BY column_name;
+            """,
+            static reader => new DatabaseColumn(reader.GetString(0), reader.GetString(1), reader.GetString(2),
+                reader.IsDBNull(3) ? null : reader.GetInt32(3)));
+
+        Assert.Equal(
+            [new DatabaseColumn("content", "NO", "bytea", null),
+             new DatabaseColumn("storage_key", "NO", "character varying", 1024)], columns);
+    }
+
+    [Fact]
+    public async Task DocumentWithoutContentIsRejectedByExpectedForeignKey()
+    {
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var context = database.CreateDocumentsDbContext();
+        await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
+        var organizationId = await InsertOrganizationAsync(context, timeout.Token);
+        context.Documents.Add(CreateDocument(organizationId));
+
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync(timeout.Token));
+        AssertConstraint(exception, PostgresErrorCodes.ForeignKeyViolation, "fk_document_document_content_storage_key");
+    }
+
+    [Fact]
+    public async Task ReferencedDocumentContentCannotBeDeleted()
+    {
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var context = database.CreateDocumentsDbContext();
+        await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
+        var organizationId = await InsertOrganizationAsync(context, timeout.Token);
+        var document = CreateDocument(organizationId);
+        await InsertContentAsync(context, document.StorageKey, timeout.Token);
+        context.Documents.Add(document);
+        await context.SaveChangesAsync(timeout.Token);
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(() =>
+            context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM docs.document_content WHERE storage_key = {document.StorageKey}", timeout.Token));
+        Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, exception.SqlState);
+        Assert.Equal("fk_document_document_content_storage_key", exception.ConstraintName);
+    }
+
+    [Fact]
+    public async Task EmptyContentIsRejectedByCheckConstraintViaSql()
+    {
+        using var timeout = new CancellationTokenSource(QueryTimeout);
+        await using var context = database.CreateDocumentsDbContext();
+        await using var transaction = await context.Database.BeginTransactionAsync(timeout.Token);
+        var storageKey = DocumentStorageKey.Create(Guid.NewGuid());
+
+        var exception = await Assert.ThrowsAsync<PostgresException>(() =>
+            context.Database.ExecuteSqlInterpolatedAsync(
+                $"INSERT INTO docs.document_content (storage_key, content) VALUES ({storageKey}, {Array.Empty<byte>()})",
+                timeout.Token));
+        Assert.Equal(PostgresErrorCodes.CheckViolation, exception.SqlState);
+        Assert.Equal("ck_document_content_not_empty", exception.ConstraintName);
+    }
+
+    private static async Task InsertContentAsync(
+        DocumentsDbContext context, string storageKey, CancellationToken cancellationToken)
+    {
+        context.DocumentContents.Add(DocumentContent.Create(storageKey, [0x00]));
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private static Document CreateDocument(Guid organizationId, Guid? documentTypeId = null, string? storageKey = null) =>

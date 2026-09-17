@@ -9,6 +9,7 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
     public const string Schema = "docs";
 
     public DbSet<Document> Documents => Set<Document>();
+    public DbSet<DocumentContent> DocumentContents => Set<DocumentContent>();
     public DbSet<DocumentType> DocumentTypes => Set<DocumentType>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

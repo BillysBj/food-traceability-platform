@@ -2127,6 +2127,85 @@ ebenfalls mit RESTRICT.
 
 ---
 
+## D-55 – Dokumentinhalte vorerst in PostgreSQL
+
+**Status:** ENTSCHIEDEN (2026-09-17)
+**Entschieden durch:** Auftraggeber
+**Setzt voraus:** D-11, D-43, D-50, D-54
+**Betrifft:** DOC-002, DOC-003, DOC-003b
+
+### Entscheidung und ausdrückliche Abweichungen
+
+Dateiinhalte liegen **vorerst in PostgreSQL**, in `docs.document_content`,
+statt in einem Object Storage. Der Auftraggeber hält einen späteren Wechsel
+zu S3 offen: „vielleicht irgendwann mal in S3“.
+
+Dies weicht bewusst von folgenden Vorgaben ab:
+
+- `AGENTS.md` §19: „Metadaten in PostgreSQL. Dateien in Object Storage. Nicht
+  große PDF/Bild-Binärdaten standardmäßig in PostgreSQL speichern.“
+- `AGENTS.md` §40: „Object Storage Backups“.
+- `MASTER_SPECIFICATION` §3.1: „Files: Object storage; database stores metadata
+  and links“.
+- `MASTER_SPECIFICATION` §21.2: „object-storage (or managed equivalent)“ als
+  Docker-Dienst.
+- `MASTER_SPECIFICATION` §21.4: Health Checks „for API, DB and object storage
+  dependencies“.
+
+Die in `MASTER_SPECIFICATION` §25 zu bestätigende Entscheidung
+„S3-compatible or cloud-native object storage“ wird damit vorerst zugunsten
+von PostgreSQL getroffen. Nach der Vorrangregel dieses Decision Logs
+(Zeilen 8–9) gilt bei diesen Widersprüchen **D-55**. AGENTS.md und die
+Spezifikation selbst werden durch DOC-002 nicht geändert.
+
+### Warum und bewusst hingenommene Folgen
+
+Es braucht keine zusätzliche Infrastruktur. Inhalt und Metadaten werden in
+**einer Transaktion** nach D-50 geschrieben; eine Ausgleichslogik zwischen
+Datenbank und Object Storage entfällt. Eine PostgreSQL-Sicherung umfasst
+beides statt zweier getrennter Sicherungen. Restore-Tests nach §40 bleiben
+erforderlich.
+
+Die Datenbank wächst mit jeder Datei; Sicherung und Wiederherstellung werden
+entsprechend länger. `bytea` wird beim Schreiben und Lesen vollständig in den
+Speicher geladen. **DOC-003 muss deshalb eine Größengrenze festlegen.**
+Es gibt keinen zusätzlichen Health Check und keinen Container für Object
+Storage; die bestehende Datenbankprüfung deckt den Ablageort ab.
+
+### Ergänzung zu D-54: Schlüssel und Inhaltsbezug
+
+`DocumentStorageKey.Create(organizationId)` erzeugt
+`{organizationId:N}/{zufällige Guid:N}`: genau 65 Zeichen, zwei Gruppen aus
+je 32 Kleinbuchstaben-Hexzeichen und ein `/`. `Guid.Empty` ist als
+Organisation unzulässig. Die zufällige Guid erfüllt den „randomized storage
+key“ aus Spezifikation §14. Das Organisationspräfix hält die Inhalte einer
+Organisation zusammen; das Format ist auch als S3-Objektschlüssel gültig.
+
+`docs.document_content` hat genau `storage_key` (`varchar(1024)`,
+Primärschlüssel) und `content` (`bytea`, NOT NULL, CHECK gegen leeren Inhalt).
+`docs.document.storage_key` verweist jetzt im EF-Modell mit **RESTRICT** auf
+`docs.document_content.storage_key`. Der eindeutige Index
+`ix_document_storage_key` bleibt bestehen. Ein Dokument ohne Inhalt ist
+damit ausgeschlossen; Größe, Hash und Zeitstempel werden nicht im Inhalt
+dupliziert. SHA-256 bleibt gemäß D-54 am Dokument.
+
+### Der Weg zu S3 bleibt offen
+
+Der Zugriff auf Inhalte erfolgt ausschließlich über `IDocumentContentStore`,
+adressiert über `storage_key`. DOC-003 schreibt über `AddAsync`, der neue
+Task **DOC-003b** liest über `OpenReadAsync`. Der Upload muss Inhalt und
+Metadaten in derselben Transaktion speichern; eine Löschmethode zur
+Ausgleichslogik ist deshalb nicht erforderlich.
+
+Ein Wechsel zu S3 erfordert eine neue Implementierung von
+`IDocumentContentStore`, das Kopieren der Inhalte unter denselben Schlüsseln
+und eine Migration, die den Inhalts-Fremdschlüssel und
+`docs.document_content` entfernt. `docs.document` bleibt hinsichtlich
+Spalten und Metadaten unverändert. **Ein solcher Wechsel ist eine neue
+Entscheidung.**
+
+---
+
 ## Nächste freie ID
 
-`D-55`
+`D-56`

@@ -23,6 +23,9 @@ internal sealed class DocumentConfiguration : IEntityTypeConfiguration<Document>
         builder.Property(document => document.FileName).HasMaxLength(Document.MaximumFileNameLength).IsRequired();
         builder.Property(document => document.StorageKey).HasMaxLength(Document.MaximumStorageKeyLength).IsRequired();
         builder.HasIndex(document => document.StorageKey).IsUnique();
+        builder.HasOne<DocumentContent>().WithMany()
+            .HasForeignKey(document => document.StorageKey)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Property(document => document.MimeType).HasMaxLength(Document.MaximumMimeTypeLength).IsRequired();
         builder.Property(document => document.DocumentDate).HasColumnType("date").IsRequired();
         builder.Property(document => document.Sha256)
