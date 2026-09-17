@@ -20,6 +20,8 @@ public sealed class EndpointAuthorizationGuardTests
             new("POST", "/api/v1/organizations/{organizationId}/samples/{sampleId}/results", "LabResultCreate"),
             new("GET", "/api/v1/organizations/{organizationId}/samples/{sampleId}/results", "QualityRead"),
             new("GET", "/api/v1/organizations/{organizationId}/lots/{lotId}/samples", "QualityRead"),
+            new("GET", "/api/v1/organizations/{organizationId}/lots/{lotId}/blocks", "QualityRead"),
+            new("GET", "/api/v1/organizations/{organizationId}/samples/{sampleId}/specification", "QualityRead"),
             new("POST", "/api/v1/organizations/{organizationId}/lots/{lotId}/blocks", "QualityBlock"),
             new("POST", "/api/v1/organizations/{organizationId}/lots/{lotId}/blocks/{blockId}/release", "QualityRelease"),
             new("GET", "/api/v1/me", "ActiveUser"),

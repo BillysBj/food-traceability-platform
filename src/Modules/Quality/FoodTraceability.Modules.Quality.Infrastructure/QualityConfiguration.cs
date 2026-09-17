@@ -1,9 +1,11 @@
 using FoodTraceability.Modules.Quality.Application.LabResults;
 using FoodTraceability.Modules.Quality.Application.LotBlocks;
 using FoodTraceability.Modules.Quality.Application.Samples;
+using FoodTraceability.Modules.Quality.Application.Specifications;
 using FoodTraceability.Modules.Quality.Infrastructure.LabResults;
 using FoodTraceability.Modules.Quality.Infrastructure.LotBlocks;
 using FoodTraceability.Modules.Quality.Infrastructure.Samples;
+using FoodTraceability.Modules.Quality.Infrastructure.Specifications;
 using FoodTraceability.Platform.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +40,10 @@ public static class QualityConfiguration
         services.AddScoped<ILotBlockWriter, LotBlockWriter>();
         services.AddScoped<BlockLotService>();
         services.AddScoped<ReleaseLotBlockService>();
+        services.AddScoped<ILotBlockReader, LotBlockReader>();
+        services.AddScoped<LotBlockQueryService>();
+        services.AddScoped<ISpecificationReader, SpecificationReader>();
+        services.AddScoped<SampleSpecificationQueryService>();
 
         return services;
     }

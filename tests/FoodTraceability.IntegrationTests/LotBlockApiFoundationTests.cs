@@ -6,7 +6,7 @@ namespace FoodTraceability.IntegrationTests;
 public sealed class LotBlockApiFoundationTests
 {
     [Fact]
-    public async Task SwaggerDocumentsBlockContractsErrorsAndBearerSecurityWithoutReadEndpoint()
+    public async Task SwaggerDocumentsBlockContractsErrorsAndBearerSecurity()
     {
         await using var factory = new ApiWebApplicationFactory();
         using var client = factory.CreateClient();
@@ -15,7 +15,6 @@ public sealed class LotBlockApiFoundationTests
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(factory.RequestCancellationToken));
         var root = document.RootElement;
         var path = root.GetProperty("paths").GetProperty("/api/v1/organizations/{organizationId}/lots/{lotId}/blocks");
-        Assert.False(path.TryGetProperty("get", out _));
         Assert.False(root.GetProperty("paths").TryGetProperty(
             "/api/v1/organizations/{organizationId}/lots/{lotId}/blocks/{blockId}", out _));
         var operation = path.GetProperty("post");

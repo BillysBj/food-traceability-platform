@@ -39,6 +39,12 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
     private const string QualitySampleListLotNotFoundErrorCode = "QUALITY_SAMPLE_LIST_LOT_NOT_FOUND";
     private const string QualityResultListSampleNotFoundTitle = "Sample not found.";
     private const string QualityResultListSampleNotFoundErrorCode = "QUALITY_RESULT_LIST_SAMPLE_NOT_FOUND";
+    private const string QualityBlockListLotNotFoundTitle = "Lot not found.";
+    private const string QualityBlockListLotNotFoundErrorCode = "QUALITY_BLOCK_LIST_LOT_NOT_FOUND";
+    private const string QualitySpecificationSampleNotFoundTitle = "Sample not found.";
+    private const string QualitySpecificationSampleNotFoundErrorCode = "QUALITY_SPECIFICATION_SAMPLE_NOT_FOUND";
+    private const string QualityApplicableSpecificationNotFoundTitle = "No applicable specification found.";
+    private const string QualityApplicableSpecificationNotFoundErrorCode = "QUALITY_APPLICABLE_SPECIFICATION_NOT_FOUND";
     private const string SampleConflictTitle = "The sample conflicts with existing data.";
     private const string SampleConflictErrorCode = "SAMPLE_CONFLICT";
     private const string SampleValidationTitle = "The sample request is invalid.";
@@ -366,6 +372,21 @@ public sealed class ApiProblemDetailsFactory(IOptions<ApiBehaviorOptions> apiBeh
         CreateApiProblemDetails(
             httpContext, StatusCodes.Status404NotFound,
             QualitySampleListLotNotFoundTitle, QualitySampleListLotNotFoundErrorCode);
+
+    public ProblemDetails CreateQualityBlockListLotNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            QualityBlockListLotNotFoundTitle, QualityBlockListLotNotFoundErrorCode);
+
+    public ProblemDetails CreateQualitySpecificationSampleNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            QualitySpecificationSampleNotFoundTitle, QualitySpecificationSampleNotFoundErrorCode);
+
+    public ProblemDetails CreateQualityApplicableSpecificationNotFound(HttpContext httpContext) =>
+        CreateApiProblemDetails(
+            httpContext, StatusCodes.Status404NotFound,
+            QualityApplicableSpecificationNotFoundTitle, QualityApplicableSpecificationNotFoundErrorCode);
 
     public ProblemDetails CreateQualityResultListSampleNotFound(HttpContext httpContext) =>
         CreateApiProblemDetails(
